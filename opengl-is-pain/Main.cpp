@@ -34,12 +34,9 @@
 #include "utils/camera.h"
 #include "utils/object.h"
 #include "utils/light.h "
+#include "utils/window.h"
 
-// OpenGL version
-GLuint glMajor = 4, glMinor = 3;
-
-// dimensions of application's window
-GLuint screenWidth = 1200, screenHeight = 900;
+namespace ugo = utils::graphics::opengl;
 
 // callback function for keyboard events
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
@@ -51,9 +48,6 @@ GLuint current_subroutine = 0;
 // a vector for all the shader subroutines names used and swapped in the application
 std::vector<std::string> shader_subroutines;
 
-// the name of the subroutines are searched in the shaders, and placed in the shaders vector (to allow shaders swapping)
-void SetupShader(int shader_program);
-
 // print on console the name of current shader subroutine
 void PrintCurrentShader(int subroutine);
 
@@ -62,7 +56,7 @@ bool firstMouse = true;
 
 bool keys[1024];
 
-Camera camera(glm::vec3(0, 0, 7), GL_TRUE);
+ugo::Camera camera(glm::vec3(0, 0, 7), GL_TRUE);
 
 // parameters for time computation
 GLfloat deltaTime = 0.0f;
@@ -79,7 +73,6 @@ GLboolean spinning = GL_TRUE;
 GLboolean wireframe = GL_FALSE;
 
 // Uniforms to pass to shaders
-glm::vec3 lightPos0{ 5.f, 10.f, 10.f }; // Point light
 GLfloat mov_light_speed = 30.f;
 //for a directional light we need to specify another vec3 for position; 
 //for a colored light we need to specify another vec3 for color
@@ -101,146 +94,64 @@ GLfloat F0 = 0.9f;
 // color to be passed as uniform to the shader of the plane
 GLfloat planeColor[] = { 0.0,0.5,0.0 };
 
-// Debug callbacks in a debug context are available from OpenGL 4.3+
-inline void GLAPIENTRY debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* param) 
-{
-    // ignore non-significant error/warning codes
-    if (id == 131169 || id == 131185 || id == 131218 || id == 131204) return;
-
-    std::cout << "---------------" << std::endl;
-    std::cout << "Debug message (" << id << "): " << message << std::endl;
-
-    switch (source)
-    {
-    case GL_DEBUG_SOURCE_API:             std::cout << "Source: API"; break;
-    case GL_DEBUG_SOURCE_WINDOW_SYSTEM:   std::cout << "Source: Window System"; break;
-    case GL_DEBUG_SOURCE_SHADER_COMPILER: std::cout << "Source: Shader Compiler"; break;
-    case GL_DEBUG_SOURCE_THIRD_PARTY:     std::cout << "Source: Third Party"; break;
-    case GL_DEBUG_SOURCE_APPLICATION:     std::cout << "Source: Application"; break;
-    case GL_DEBUG_SOURCE_OTHER:           std::cout << "Source: Other"; break;
-    } std::cout << std::endl;
-
-    switch (type)
-    {
-    case GL_DEBUG_TYPE_ERROR:               std::cout << "Type: Error"; break;
-    case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: std::cout << "Type: Deprecated Behaviour"; break;
-    case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:  std::cout << "Type: Undefined Behaviour"; break;
-    case GL_DEBUG_TYPE_PORTABILITY:         std::cout << "Type: Portability"; break;
-    case GL_DEBUG_TYPE_PERFORMANCE:         std::cout << "Type: Performance"; break;
-    case GL_DEBUG_TYPE_MARKER:              std::cout << "Type: Marker"; break;
-    case GL_DEBUG_TYPE_PUSH_GROUP:          std::cout << "Type: Push Group"; break;
-    case GL_DEBUG_TYPE_POP_GROUP:           std::cout << "Type: Pop Group"; break;
-    case GL_DEBUG_TYPE_OTHER:               std::cout << "Type: Other"; break;
-    } std::cout << std::endl;
-
-    switch (severity)
-    {
-    case GL_DEBUG_SEVERITY_HIGH:         std::cout << "Severity: high"; break;
-    case GL_DEBUG_SEVERITY_MEDIUM:       std::cout << "Severity: medium"; break;
-    case GL_DEBUG_SEVERITY_LOW:          std::cout << "Severity: low"; break;
-    case GL_DEBUG_SEVERITY_NOTIFICATION: std::cout << "Severity: notification"; break;
-    } std::cout << std::endl;
-    std::cout << std::endl;
-}
+ugo::PointLight* currentLight;
 
 /////////////////// MAIN function ///////////////////////
 int main()
 {
-    // Initialization of OpenGL context using GLFW
-    glfwInit();
-    // We set OpenGL specifications required for this application
-    // In this case: 4.1 Core
-    // If not supported by your graphics HW, the context will not be created and the application will close
-    // N.B.) creating GLAD code to load extensions, try to take into account the specifications and any extensions you want to use,
-    // in relation also to the values indicated in these GLFW commands
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, glMajor);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, glMinor);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
-    // we set if the window is resizable
-    glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
+	ugo::window wdw
+	{
+		{
+			.title			  { "Prova" },
+			.gl_version_major { 4 },
+			.gl_version_minor { 3 },
+			.window_width	  { 1200 },
+			.window_height	  { 900 },
+			.resizable		  { false },
+		}
+	};
+	
+	GLFWwindow* glfw_window = wdw.get();
 
-    // we create the application's window
-    GLFWwindow* window = glfwCreateWindow(screenWidth, screenHeight, "RGP_work04", nullptr, nullptr);
-    if (!window)
-    {
-        std::cout << "Failed to create GLFW window" << std::endl;
-        glfwTerminate();
-        return -1;
-    }
-    glfwMakeContextCurrent(window);
-
-    // we put in relation the window and the callbacks
-    glfwSetKeyCallback(window, key_callback);
-    glfwSetCursorPosCallback(window, mouse_pos_callback);
-
-    // we disable the mouse cursor
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
-    // GLAD tries to load the context set by GLFW
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-    {
-        std::cout << "Failed to initialize OpenGL context" << std::endl;
-        return -1;
-    }
-
-    // we define the viewport dimensions
-    int width, height;
-    glfwGetFramebufferSize(window, &width, &height);
-    glViewport(0, 0, width, height);
-
-    // we enable Z test
-    glEnable(GL_DEPTH_TEST);
-    
-
-    // Init debug callbacks
-    int flags; glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
-    if (flags & GL_CONTEXT_FLAG_DEBUG_BIT)
-    {
-        glEnable(GL_DEBUG_OUTPUT);
-        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-        //glDebugMessageCallback(debugCallback, NULL);
-        //glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, NULL, GL_TRUE);
-    }
-    
-
-    //the "clear" color for the frame buffer
-    glClearColor(0.26f, 0.46f, 0.98f, 1.0f);
+	//// we put in relation the window and the callbacks
+	glfwSetKeyCallback(glfw_window, key_callback);
+	glfwSetCursorPosCallback(glfw_window, mouse_pos_callback);
+	//
+	//// we disable the mouse cursor
+	glfwSetInputMode(glfw_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
    
     // we create the Shader Program used for the plane
     std::vector<const GLchar*> utils_shaders { "shaders/types.glsl", "shaders/constants.glsl" };
 
-    Shader light_shader{ "shaders/procedural_base.vert", "shaders/illumination_models.frag", utils_shaders, glMajor, glMinor };
+	ugo::Shader lightShader{ "shaders/procedural_base.vert", "shaders/illumination_models.frag", utils_shaders, 4, 3};
 
-    // we create the Shader Program used for objects (which presents different subroutines we can switch)
-    // we parse the Shader Program to search for the number and names of the subroutines.
-    // the names are placed in the shaders vector
-    SetupShader(light_shader.program); //TODO move subroutine setup and handling in the shader class
-    // we print on console the name of the first subroutine used
+	shader_subroutines = {lightShader.findSubroutines(GL_FRAGMENT_SHADER)};
     PrintCurrentShader(current_subroutine);
 
     // Projection matrix: FOV angle, aspect ratio, near and far planes
-    glm::mat4 projection = glm::perspective(45.0f, (float)screenWidth / (float)screenHeight, 0.1f, 10000.0f);
+	auto window_size = wdw.get_size();
+    glm::mat4 projection = glm::perspective(45.0f, (float)window_size.first / (float)window_size.second, 0.1f, 10000.0f);
     // View matrix (=camera): position, view direction, camera "up" vector
     glm::mat4 view = glm::mat4(1);
 
     // Setup objects
-    Object plane{"models/plane.obj"}, sphere{"models/sphere.obj"}, cube{"models/cube.obj"}, bunny{"models/bunny.obj"};
+    ugo::Object plane{"models/plane.obj"}, sphere{"models/sphere.obj"}, cube{"models/cube.obj"}, bunny{"models/bunny.obj"};
 
     // Setup lights
     glm::vec3 ambient{ 0.1f, 0.1f, 0.1f }, diffuse{ 1.0f, 0.0f, 0.0f }, specular{ 1.0f, 1.0f, 1.0f };
     //GLfloat kA, kD, kS;
-    LightAttributes la{ ambient, diffuse, specular, Ka, Kd, Ks };
-    PointLight pl1{ glm::vec3{ 20.f, 10.f, 10.f}, la };
-    PointLight pl2{ glm::vec3{-20.f, 10.f, 10.f}, la };
+    ugo::LightAttributes la{ ambient, diffuse, specular, Ka, Kd, Ks };
+    ugo::PointLight pl1{ glm::vec3{ 20.f, 10.f, 10.f}, la };
+    ugo::PointLight pl2{ glm::vec3{-20.f, 10.f, 10.f}, la };
 
-    std::vector<PointLight> pls{};
-    pls.push_back(pl1);
-    pls.push_back(pl2);
+    std::vector<ugo::PointLight> pointLights{};
+    pointLights.push_back(pl1);
+    pointLights.push_back(pl2);
+	currentLight = &pointLights[0];
 
+	GLuint currentSubroutineIndex;
     // Rendering loop: this code is executed at each frame
-    while (!glfwWindowShouldClose(window))
+    while (!glfwWindowShouldClose(glfw_window))
     {
         // we determine the time passed from the beginning
         // and we calculate the time difference between current frame rendering and the previous one
@@ -269,123 +180,72 @@ int main()
 
         /////////////////// PLANE ////////////////////////////////////////////////
         // We render a plane under the objects. We apply the fullcolor shader to the plane, and we do not apply the rotation applied to the other objects.
-        light_shader.use();
+        lightShader.use();
 
-        light_shader.setUint("nPointLights", pls.size());
-        for (size_t i = 0; i < pls.size(); i++)
+        lightShader.setUint("nPointLights", pointLights.size());
+        for (size_t i = 0; i < pointLights.size(); i++)
         {
-            pls[i].setup(light_shader, i);
+            pointLights[i].setup(lightShader, i);
         }
 
-        GLuint index = glGetSubroutineIndex(light_shader.program, GL_FRAGMENT_SHADER, "Lambert");
+        currentSubroutineIndex = lightShader.getSubroutineIndex(GL_FRAGMENT_SHADER, "Lambert");
         // we activate the subroutine using the index (this is where shaders swapping happens)
-        glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &index);
+        glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &currentSubroutineIndex);
 
         // we create the transformation matrix
         plane.translate(glm::vec3(0.0f, -1.0f, 0.0f));
         plane.scale(glm::vec3(10.0f, 1.0f, 10.0f));
 
         // we render the plane
-        plane.draw(light_shader, view);
+        plane.draw(lightShader, view);
 
         /////////////////// OBJECTS ////////////////////////////////////////////////
         // We "install" the light_shader Shader Program as part of the current rendering process
-        light_shader.use();
+        lightShader.use();
         
-        if(!shader_subroutines.empty())
+        if(current_subroutine < shader_subroutines.size())
         { 
             // we search inside the Shader Program the name of the subroutine currently selected, and we get the numerical index
-            index = glGetSubroutineIndex(light_shader.program, GL_FRAGMENT_SHADER, shader_subroutines[current_subroutine].c_str());
+			currentSubroutineIndex = lightShader.getSubroutineIndex(GL_FRAGMENT_SHADER, shader_subroutines[current_subroutine].c_str());
             // we activate the subroutine using the index (this is where shaders swapping happens)
-            glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &index);
+            glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &currentSubroutineIndex);
         }
 
-        light_shader.setFloat("shininess", shininess);
-        light_shader.setFloat("alpha", alpha);
+        lightShader.setFloat("shininess", shininess);
+        lightShader.setFloat("alpha", alpha);
 
         // we pass projection and view matrices to the Shader Program
-        light_shader.setMat4("projectionMatrix", projection);
-        light_shader.setMat4("viewMatrix", view);
+        lightShader.setMat4("projectionMatrix", projection);
+        lightShader.setMat4("viewMatrix", view);
 
         // SPHERE
         sphere.translate (glm::vec3(-3.0f, 0.0f, 0.0f));
         sphere.rotate_deg(orientationY, glm::vec3(0.0f, 1.0f, 0.0f));
         sphere.scale     (glm::vec3(0.8f));
 
-        sphere.draw(light_shader, view);
+        sphere.draw(lightShader, view);
 
         //CUBE
         cube.translate (glm::vec3(0.0f, 0.0f, 0.0f));
         cube.rotate_deg(orientationY, glm::vec3(0.0f, 1.0f, 0.0f));
         cube.scale     (glm::vec3(0.8f));	// It's a bit too big for our scene, so scale it down
 
-        cube.draw(light_shader, view);
+        cube.draw(lightShader, view);
 
         //BUNNY
         bunny.translate (glm::vec3(3.0f, 0.0f, 0.0f));
         bunny.rotate_deg(orientationY, glm::vec3(0.0f, 1.0f, 0.0f));
         bunny.scale     (glm::vec3(0.3f));	// It's a bit too big for our scene, so scale it down
 
-        bunny.draw(light_shader, view);
+        bunny.draw(lightShader, view);
 
-        // light following camera
-        //lightPos0 = camera.position();
-
-        glfwSwapBuffers(window);
+        glfwSwapBuffers(glfw_window);
     }
 
     // when I exit from the graphics loop, it is because the application is closing
     // we close and delete the created context
-    glfwTerminate();
+    //glfwTerminate();
     return 0;
-}
-
-
-//////////////////////////////////////////
-// The function parses the content of the Shader Program, searches for the Subroutine type names,
-// the subroutines implemented for each type, print the names of the subroutines on the terminal, and add the names of
-// the subroutines to the shaders vector, which is used for the shaders swapping
-void SetupShader(int program)
-{
-    int maxSub = 0, maxSubU = 0, countActiveSU = 0;
-    GLchar name[256];
-    int len = 0, numCompS = 0;
-
-    // global parameters about the Subroutines parameters of the system
-    glGetIntegerv(GL_MAX_SUBROUTINES, &maxSub);
-    glGetIntegerv(GL_MAX_SUBROUTINE_UNIFORM_LOCATIONS, &maxSubU);
-    std::cout << "Max Subroutines:" << maxSub << " - Max Subroutine Uniforms:" << maxSubU << std::endl;
-
-    // get the number of Subroutine uniforms (only for the Fragment shader, due to the nature of the exercise)
-    // it is possible to add similar calls also for the Vertex shader
-    glGetProgramStageiv(program, GL_FRAGMENT_SHADER, GL_ACTIVE_SUBROUTINE_UNIFORMS, &countActiveSU);
-
-    // print info for every Subroutine uniform
-    for (int i = 0; i < countActiveSU; i++) {
-
-        // get the name of the Subroutine uniform (in this example, we have only one)
-        glGetActiveSubroutineUniformName(program, GL_FRAGMENT_SHADER, i, 256, &len, name);
-        // print index and name of the Subroutine uniform
-        std::cout << "Subroutine Uniform: " << i << " - name: " << name << std::endl;
-
-        // get the number of subroutines
-        glGetActiveSubroutineUniformiv(program, GL_FRAGMENT_SHADER, i, GL_NUM_COMPATIBLE_SUBROUTINES, &numCompS);
-
-        // get the indices of the active subroutines info and write into the array s
-        int* s = new int[numCompS];
-        glGetActiveSubroutineUniformiv(program, GL_FRAGMENT_SHADER, i, GL_COMPATIBLE_SUBROUTINES, s);
-        std::cout << "Compatible Subroutines:" << std::endl;
-
-        // for each index, get the name of the subroutines, print info, and save the name in the shaders vector
-        for (int j = 0; j < numCompS; ++j) {
-            glGetActiveSubroutineName(program, GL_FRAGMENT_SHADER, s[j], 256, &len, name);
-            std::cout << "\t" << s[j] << " - " << name << "\n";
-            shader_subroutines.push_back(name);
-        }
-        std::cout << std::endl;
-
-        delete[] s;
-    }
 }
 
 //////////////////////////////////////////
@@ -446,22 +306,22 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 void process_input()
 {
     if (keys[GLFW_KEY_W])
-        camera.ProcessKeyboard(camdir::FORWARD, deltaTime);
+        camera.ProcessKeyboard(ugo::camdir::FORWARD, deltaTime);
     if (keys[GLFW_KEY_S])
-        camera.ProcessKeyboard(camdir::BACKWARD, deltaTime);
+        camera.ProcessKeyboard(ugo::camdir::BACKWARD, deltaTime);
     if (keys[GLFW_KEY_A])
-        camera.ProcessKeyboard(camdir::LEFT, deltaTime);
+        camera.ProcessKeyboard(ugo::camdir::LEFT, deltaTime);
     if (keys[GLFW_KEY_D])
-        camera.ProcessKeyboard(camdir::RIGHT, deltaTime);
+        camera.ProcessKeyboard(ugo::camdir::RIGHT, deltaTime);
 
     if (keys[GLFW_KEY_LEFT])
-        lightPos0.x -= mov_light_speed * deltaTime;
+        currentLight->position.x -= mov_light_speed * deltaTime;
     if (keys[GLFW_KEY_RIGHT])
-        lightPos0.x += mov_light_speed * deltaTime;
+		currentLight->position.x += mov_light_speed * deltaTime;
     if (keys[GLFW_KEY_UP])
-        lightPos0.z -= mov_light_speed * deltaTime;
+		currentLight->position.z -= mov_light_speed * deltaTime;
     if (keys[GLFW_KEY_DOWN])
-        lightPos0.z += mov_light_speed * deltaTime;
+		currentLight->position.z += mov_light_speed * deltaTime;
 }
 
 void mouse_pos_callback(GLFWwindow* window, double x_pos, double y_pos)
