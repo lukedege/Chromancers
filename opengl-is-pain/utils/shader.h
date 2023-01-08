@@ -22,9 +22,11 @@ namespace utils::graphics::opengl
 	public:
 		GLuint program;
 
-		Shader(const GLchar* vertPath, const GLchar* fragPath, std::vector<const GLchar*> utilPaths = {}, GLuint glMajor = 4, GLuint glMinor = 1) :
+		Shader(const GLchar* vertPath, const GLchar* fragPath, const GLchar* geomPath = 0, std::vector<const GLchar*> utilPaths = {}, GLuint glMajor = 4, GLuint glMinor = 3) :
 			program{ glCreateProgram() }, glMajorVersion{ glMajor }, glMinorVersion{ glMinor }
 		{
+			GLuint vertexShader, fragmentShader, geometryShader;
+
 			const std::string vertSource = loadSource(vertPath);
 			const std::string fragSource = loadSource(fragPath);
 
@@ -35,22 +37,33 @@ namespace utils::graphics::opengl
 				utilsSource += loadSource(utilPath) + "\n";
 			}
 
-			GLuint   vertexShader = compileShader(vertSource, GL_VERTEX_SHADER, utilsSource);
-			GLuint fragmentShader = compileShader(fragSource, GL_FRAGMENT_SHADER, utilsSource);
+			vertexShader = compileShader(vertSource, GL_VERTEX_SHADER, utilsSource);
+			fragmentShader = compileShader(fragSource, GL_FRAGMENT_SHADER, utilsSource);
 
 			glAttachShader(program, vertexShader);
 			glAttachShader(program, fragmentShader);
+
+			if (geomPath)
+			{
+				const std::string geomSource = loadSource(geomPath);
+				geometryShader = compileShader(geomSource, GL_GEOMETRY_SHADER, utilsSource);
+				glAttachShader(program, geometryShader);
+			}
 
 			try {
 				glLinkProgram(program);
 			}
 			catch (std::exception e) { auto x = glGetError(); checkLinkingErrors(); std::cout << e.what(); }
+			checkLinkingErrors();
 
 			glDeleteShader(vertexShader);
 			glDeleteShader(fragmentShader);
+
+			if (geomPath) { glDeleteShader(geometryShader); }
 		}
 
-		~Shader() { glDeleteProgram(program); }
+		// this is necessary since we dont want to delete the program involuntarily after a move (which would call the destructor)
+		void del() const noexcept { glDeleteProgram(program); }
 
 		void use() const noexcept { glUseProgram(program); }
 
@@ -58,43 +71,51 @@ namespace utils::graphics::opengl
 		{
 			std::vector<std::string> ret;
 
-			int maxSub = 0, maxSubU = 0, countActiveSU = 0;
-			GLchar name[256];
-			int len = 0, numCompS = 0;
+			// Sub = subroutines
+			int maxSubsAmount = 0, maxSubsUniforms = 0, activeSubUniforms = 0;
+			GLchar activeSubUniformName[256];
+			int nameLength = 0, compatibleSubsAmount = 0;
 
 			// global parameters about the Subroutines parameters of the system
-			glGetIntegerv(GL_MAX_SUBROUTINES, &maxSub);
-			glGetIntegerv(GL_MAX_SUBROUTINE_UNIFORM_LOCATIONS, &maxSubU);
-			std::cout << "Max Subroutines:" << maxSub << " - Max Subroutine Uniforms:" << maxSubU << std::endl;
+			glGetIntegerv(GL_MAX_SUBROUTINES, &maxSubsAmount);
+			glGetIntegerv(GL_MAX_SUBROUTINE_UNIFORM_LOCATIONS, &maxSubsUniforms);
+			std::cout << "Max Subroutines:" << maxSubsAmount << " - Max Subroutine Uniforms:" << maxSubsUniforms << std::endl;
 
 			// get the number of Subroutine uniforms for the kind of shader used
-			glGetProgramStageiv(program, shaderType, GL_ACTIVE_SUBROUTINE_UNIFORMS, &countActiveSU);
+			glGetProgramStageiv(program, shaderType, GL_ACTIVE_SUBROUTINE_UNIFORMS, &activeSubUniforms);
 
 			// print info for every Subroutine uniform
-			for (int i = 0; i < countActiveSU; i++) {
+			for (int i = 0; i < activeSubUniforms; i++) {
 
 				// get the name of the Subroutine uniform (in this example, we have only one)
-				glGetActiveSubroutineUniformName(program, shaderType, i, 256, &len, name);
+				glGetActiveSubroutineUniformName(program, shaderType, i, 256, &nameLength, activeSubUniformName);
 				// print index and name of the Subroutine uniform
-				std::cout << "Subroutine Uniform: " << i << " - name: " << name << std::endl;
+				std::cout << "Subroutine Uniform: " << i << " - name: " << activeSubUniformName << std::endl;
 
-				// get the number of subroutines
-				glGetActiveSubroutineUniformiv(program, shaderType, i, GL_NUM_COMPATIBLE_SUBROUTINES, &numCompS);
+				// get the number of subroutines for the current active subroutine uniform
+				glGetActiveSubroutineUniformiv(program, shaderType, i, GL_NUM_COMPATIBLE_SUBROUTINES, &compatibleSubsAmount);
 
-				// get the indices of the active subroutines info and write into the array s
-				int* s = new int[numCompS];
-				glGetActiveSubroutineUniformiv(program, shaderType, i, GL_COMPATIBLE_SUBROUTINES, s);
+				// get the indices of the active subroutines info and write into the array 
+				// TODO check why there's a mismatch in indices
+				std::cout << "glGetSubroutineIndex call" << std::endl;
+				std::cout << "\t" << glGetSubroutineIndex(program, shaderType, "Lambert") << " - " << "Lambert" << std::endl;
+				std::cout << "\t" << glGetSubroutineIndex(program, shaderType, "Phong") << " - " << "Phong" << std::endl;
+				std::cout << "\t" << glGetSubroutineIndex(program, shaderType, "BlinnPhong") << " - " << "BlinnPhong" << std::endl;
+				std::cout << "\t" << glGetSubroutineIndex(program, shaderType, "GGX") << " - " << "GGX" << std::endl;
+
+				std::vector<int> compatibleSubs(compatibleSubsAmount);
+				glGetActiveSubroutineUniformiv(program, shaderType, i, GL_COMPATIBLE_SUBROUTINES, compatibleSubs.data());
 				std::cout << "Compatible Subroutines:" << std::endl;
 
 				// for each index, get the name of the subroutines, print info, and save the name in the shaders vector
-				for (int j = 0; j < numCompS; ++j) {
-					glGetActiveSubroutineName(program, shaderType, s[j], 256, &len, name);
-					std::cout << "\t" << s[j] << " - " << name << "\n";
-					ret.push_back(name);
+				std::cout << "glGetActiveSubroutineName call on glGetActiveSubroutineUniformiv returned array values" << std::endl;
+				for (int j = 0; j < compatibleSubsAmount; j++) {
+					
+					glGetActiveSubroutineName(program, shaderType, compatibleSubs[j], 256, &nameLength, activeSubUniformName);
+					std::cout << "\t" << compatibleSubs[j] << " - " << activeSubUniformName << "\n";
+					ret.push_back(activeSubUniformName);
 				}
 				std::cout << std::endl;
-
-				delete[] s;
 			}
 
 			return ret;

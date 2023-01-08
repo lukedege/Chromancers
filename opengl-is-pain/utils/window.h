@@ -54,36 +54,55 @@ namespace utils::graphics::opengl
 	public:
 		struct window_create_info
 		{
-			std::string title            { "Window" };
-			GLuint      gl_version_major { 4 };
-			GLuint      gl_version_minor { 3 };
-			GLuint      window_width     { 1200 };
-			GLuint      window_height    { 900 };
-			GLuint      viewport_width   { window_width };
-			GLuint      viewport_height  { window_height };
-			GLboolean   resizable        { GLFW_FALSE };
+			std::string title{ "Window" };
+			GLuint      gl_version_major{ 4 };
+			GLuint      gl_version_minor{ 3 };
+			GLuint      window_width{ 1200 };
+			GLuint      window_height{ 900 };
+			GLuint      viewport_width{ window_width };
+			GLuint      viewport_height{ window_height };
+			GLboolean   resizable{ GLFW_FALSE };
+			GLboolean   gl_debug{ GLFW_FALSE };
+		};
+
+		struct window_size
+		{
+			int width;
+			int height;
 		};
 
 
 		window(window_create_info create_info) : glfw_window{ init(create_info) } {}
 
-		~window(){ glfwTerminate(); }
+		window(GLFWwindow* window) : glfw_window{ window } {}
+
+		~window() { glfwTerminate(); }
 
 		GLFWwindow* get()
 		{
 			return glfw_window;
 		}
 
-		std::pair<int, int> get_size()
+		window_size get_size()
 		{
 			int width, height;
 			glfwGetWindowSize(glfw_window, &width, &height);
 			return { width, height };
 		}
 
+		bool is_open()
+		{
+			return !glfwWindowShouldClose(glfw_window);
+		}
+
+		void close()
+		{
+			glfwSetWindowShouldClose(glfw_window, GL_TRUE);
+		}
+
 	private:
 		GLFWwindow* glfw_window;
-		
+
 		GLFWwindow* init(window_create_info create_info)
 		{
 			// Initialization of OpenGL context using GLFW
@@ -97,7 +116,7 @@ namespace utils::graphics::opengl
 			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, create_info.gl_version_minor);
 			glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 			glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-			glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
+			glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, create_info.gl_debug);
 			// we set if the window is resizable
 			glfwWindowHint(GLFW_RESIZABLE, create_info.resizable);
 
@@ -130,7 +149,6 @@ namespace utils::graphics::opengl
 
 			// we enable Z test
 			glEnable(GL_DEPTH_TEST);
-
 
 			// Init debug callbacks
 			int flags; glGetIntegerv(GL_CONTEXT_FLAGS, &flags);

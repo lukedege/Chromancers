@@ -19,6 +19,9 @@
     <Filter Include="Source Files\Libraries">
       <UniqueIdentifier>{724c58f5-434d-4ec1-9b34-b16587b4cde6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\old">
+      <UniqueIdentifier>{57a948ab-3953-44ba-b50c-d026e61e4585}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -26,9 +29,6 @@
     </ClCompile>
     <ClCompile Include="..\..\..\Libraries\glad\glad.c">
       <Filter>Source Files\Libraries</Filter>
-    </ClCompile>
-    <ClCompile Include="mvpdef.cpp">
-      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

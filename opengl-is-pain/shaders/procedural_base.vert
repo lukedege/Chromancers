@@ -1,4 +1,4 @@
-// #version 410 core
+// #version 430 core
 
 layout (location = 0) in vec3 position; // vertex position in world coordinates
 layout (location = 1) in vec3 normal; // vertex normal
@@ -29,19 +29,14 @@ out      LightIncidence                dirLI[MAX_DIR_LIGHTS];
 uniform  SpotLight         spotLights[MAX_SPOT_LIGHTS];
 out      LightIncidence        spotLI[MAX_SPOT_LIGHTS];
 
-//uniform vec3 pointLightPosition;
-//out vec3 lightDir; // we calculate per-vertex the direction of the light coming from the point light source
-//out vec3 vNormal;  		// we pass the vertex normal vector
-//out vec3 vViewPosition; // we pass the vector pointing to the camera, useful for specular component
-
 // the output variable for UV coordinates
 out vec2 interp_UV;
 
 void calcPointLI(uint plIndex)
 {
-	pointLI[plIndex].vViewPosition = -mvPosition.xyz; // it would be camera pos - vertex pos in view coords, but camera in view coords is the origin thus is zero
+	pointLI[plIndex].vViewPosition = -mvPosition.xyz; // it would be camera_pos - vertex_pos in view coords, but camera in view coords is the origin thus is zero
 	
-	vec4 lightPos = viewMatrix * vec4(pointLights[plIndex].position, 1); // convert lightposition from world to view coordinates
+	vec4 lightPos = viewMatrix * vec4(pointLights[plIndex].position, 1); // convert light position from world to view coordinates
 	pointLI[plIndex].lightDir = lightPos.xyz - mvPosition.xyz; // vector from light to vertex position in view coords
 	
 	pointLI[plIndex].vNormal = normalize(normalMatrix * normal);
