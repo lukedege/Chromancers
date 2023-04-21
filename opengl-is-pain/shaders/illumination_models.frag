@@ -205,6 +205,7 @@ vec4 calculatePointLights()
 		currLI = pointLI[i];
 		color += vec4(Illumination_Model(), 1.0f) * pointLights[i].color * pointLights[i].intensity;
 	}
+	color.a = normalize(color.a);
 	return color;
 }
 

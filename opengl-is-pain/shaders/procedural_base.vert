@@ -4,6 +4,15 @@ layout (location = 0) in vec3 position; // vertex position in world coordinates
 layout (location = 1) in vec3 normal; // vertex normal
 layout (location = 2) in vec2 UV; // UV texture coordinates
 
+//TODO move matrices into uniform buffer instead of single uniforms
+//layout (std140, binding = 0) uniform Matrices
+//{
+//	mat4 model_matrix;
+//	mat4 view_matrix;
+//	mat4 projection_matrix;
+//	mat4 normal_matrix;
+//};
+
 // the numbers used for the location in the layout qualifier are the positions of the vertex attribute
 // as defined in the Mesh class
 
