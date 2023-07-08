@@ -38,11 +38,15 @@ namespace utils::graphics::opengl
 			shader.setMat3("normalMatrix", normal);
 
 			model.draw();
+		}
 
+		void reset_transform()
+		{
 			// reset to identity
 			transform = glm::mat4(1);
 			normal = glm::mat3(1);
 		}
+
 	private:
 		void recomputeNormal(glm::mat4 viewProjection) { normal = glm::inverseTranspose(glm::mat3(viewProjection * transform)); }
 	};

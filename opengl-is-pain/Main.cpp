@@ -35,6 +35,7 @@ void process_input();
 GLfloat lastX, lastY;
 bool firstMouse = true;
 bool keys[1024];
+bool capture_mouse = false;
 
 ugl::Camera camera(glm::vec3(0, 0, 7), GL_TRUE);
 
@@ -77,11 +78,10 @@ int main()
 	GLFWwindow* glfw_window = wdw.get();
 	ugl::window::window_size ws = wdw.get_size();
 	float width = static_cast<float>(ws.width), height = static_cast<float>(ws.height);
-
+	
 	// Callbacks linking with glfw
 	glfwSetKeyCallback(glfw_window, key_callback);
 	glfwSetCursorPosCallback(glfw_window, mouse_pos_callback);
-	//glfwSetInputMode(glfw_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); // we disable the mouse cursor
 	
 	// Shader setup
 	std::vector<const GLchar*> utils_shaders { "shaders/types.glsl", "shaders/constants.glsl" };
@@ -94,6 +94,8 @@ int main()
 
 	// Objects setup
 	ugl::Object plane{ "models/plane.obj" }, bird{ "models/Bird/Bird_up.obj" };
+	std::vector<ugl::Object*> scene_objects;
+	scene_objects.push_back(&plane); scene_objects.push_back(&bird);
 
 	// Scene material/lighting setup 
 	glm::vec3 ambient{ 0.1f, 0.1f, 0.1f }, diffuse{ 1.0f, 1.0f, 1.0f }, specular{ 1.0f, 1.0f, 1.0f };
@@ -107,8 +109,7 @@ int main()
 	ugl::PointLight pl2{ glm::vec3{ 20.f, 10.f, 10.f}, glm::vec4{1,1,1,1},1 };
 
 	std::vector<ugl::PointLight> pointLights;
-	pointLights.push_back(pl1);
-	pointLights.push_back(pl2);
+	pointLights.push_back(pl1); pointLights.push_back(pl2);
 	currentLight = &pointLights[0];
 
 	GLuint currentSubroutineIndex;
@@ -120,6 +121,11 @@ int main()
 		GLfloat currentFrame = glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
+
+		if(capture_mouse)
+			glfwSetInputMode(wdw.get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		else
+			glfwSetInputMode(wdw.get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
 		// Check is an I/O event is happening
 		glfwPollEvents();
@@ -155,25 +161,58 @@ int main()
 		lightShader.setFloat("shininess", shininess);
 		lightShader.setFloat("alpha", alpha);
 
-		currentSubroutineIndex = lightShader.getSubroutineIndex(GL_FRAGMENT_SHADER, "Lambert");
-		glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &currentSubroutineIndex);
-		
-		// PLANE
+		// OBJECTS
+		ws = wdw.get_size();
+		glViewport(0, 0, ws.width, ws.height); // we render objects in full screen
+
+		// Plane
 		plane.translate(glm::vec3(0.0f, -1.0f, 0.0f));
 		plane.scale    (glm::vec3(10.0f, 1.0f, 10.0f));
 
-		plane.draw(lightShader, view);
-
-		currentSubroutineIndex = lightShader.getSubroutineIndex(GL_FRAGMENT_SHADER, "BlinnPhong");
+		currentSubroutineIndex = lightShader.getSubroutineIndex(GL_FRAGMENT_SHADER, "Lambert");
 		glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &currentSubroutineIndex);
+
+		plane.draw(lightShader, view);
 
 		// BIRD
 		bird.translate (glm::vec3(0.0f, -1.0f, 0.0f));
 		bird.rotate_deg(orientationY, glm::vec3(0.0f, 1.0f, 0.0f));
 		bird.scale     (glm::vec3(0.2f));	// It's a bit too big for our scene, so scale it down
 
+		currentSubroutineIndex = lightShader.getSubroutineIndex(GL_FRAGMENT_SHADER, "BlinnPhong");
+		glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &currentSubroutineIndex);
+
 		bird.draw(lightShader, view);
 
+		// MAP
+		// framebuffer setup
+		//unsigned int fbo_map;
+		//glGenFramebuffers(1, &fbo_map);
+		//glBindFramebuffer(GL_FRAMEBUFFER, fbo_map);
+		//
+		//// texture setup
+		//unsigned int texture;
+		//glGenTextures(1, &texture);
+		//glBindTexture(GL_TEXTURE_2D, texture);
+		//
+		//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 200, 100, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		//
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		//
+		//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+
+
+		glViewport(100,100, 200, 200); // we render objects in full screen
+
+		// Reset all objects transforms
+		for (ugl::Object* o : scene_objects)
+		{
+			o->draw(lightShader, view);
+			o->reset_transform();
+		}
+
+		// Swap buffers
 		glfwSwapBuffers(glfw_window);
 	}
 
@@ -190,6 +229,10 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	// if ESC is pressed, we close the application
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GL_TRUE);
+
+	// if C is pressed, capture the mouse cursor
+	if (key == GLFW_KEY_C && action == GLFW_PRESS)
+		capture_mouse = !capture_mouse;
 
 	// if P is pressed, we start/stop the animated rotation of models
 	if (key == GLFW_KEY_P && action == GLFW_PRESS)
