@@ -1,18 +1,4 @@
-/*
-
-08_random_patterns.frag: a fragment shader with different noise-based effects
-
-N.B. 1)  "06_procedural_base.vert" must be used as vertex shader
-
-N.B. 2)  the different effects are implemented using Shaders Subroutines
-
-N.B. 3) we use simplex noise implementation from
-        https://github.com/stegu/webgl-noise//wiki
-        to generate the fragments colors
-
-*/
-
-// #version 410 core
+#version 410 core
 
 // output shader variable
 out vec4 colorFrag;

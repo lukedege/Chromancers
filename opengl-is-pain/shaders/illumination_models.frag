@@ -1,4 +1,4 @@
-// #version 430 core
+#version 430 core
 
 // output variable for the fragment shader
 out vec4 colorFrag;

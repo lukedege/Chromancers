@@ -1,12 +1,4 @@
-/*
-
-01_fullcolor.frag : basic Fragment shader, it applies an uniform color to all the fragments. Color is passed as uniform from the main application
-
-N.B.)  "00_basic.vert" must be used as vertex shader
-
-*/
-
-// #version 410 core
+#version 410 core
 
 // output shader variable
 out vec4 colorFrag;

@@ -89,6 +89,11 @@ namespace utils::graphics::opengl
 			return pos;
 		}
 
+		glm::vec3 forward()
+		{
+			return front;
+		}
+
 	private:
 		void updateCameraVectors()
 		{

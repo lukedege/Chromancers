@@ -93,7 +93,7 @@ int main()
 	glm::mat4 view = glm::mat4(1);
 
 	// Objects setup
-	ugl::Object plane{ "models/plane.obj" }, bird{ "models/Bird/Bird_up.obj" };
+	ugl::Object plane{ "models/plane.obj" }, bird{ "models/bunny.obj" };
 	std::vector<ugl::Object*> scene_objects;
 	scene_objects.push_back(&plane); scene_objects.push_back(&bird);
 
@@ -175,7 +175,7 @@ int main()
 		plane.draw(lightShader, view);
 
 		// BIRD
-		bird.translate (glm::vec3(0.0f, -1.0f, 0.0f));
+		bird.translate (glm::vec3(0.0f, 0.0f, 0.0f));
 		bird.rotate_deg(orientationY, glm::vec3(0.0f, 1.0f, 0.0f));
 		bird.scale     (glm::vec3(0.2f));	// It's a bit too big for our scene, so scale it down
 
@@ -203,12 +203,16 @@ int main()
 		//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 
 
-		glViewport(100,100, 200, 200); // we render objects in full screen
-
+		glViewport(ws.width - 200, ws.height - 150, 200, 150); // we render now into the smaller map viewport
+		
+		float topdown_height = 20;
+		glm::mat4 topdown_view = glm::lookAt(camera.position() + glm::vec3{0, topdown_height, 0}, camera.position(), camera.forward());
+		//glm::mat4 topdown_view = glm::lookAt(glm::vec3{ 0, 50, 0 }, glm::vec3{ 0, 0, 0 }, glm::vec3{0,0,-1});
+		lightShader.setMat4("viewMatrix", topdown_view);
 		// Reset all objects transforms
 		for (ugl::Object* o : scene_objects)
 		{
-			o->draw(lightShader, view);
+			o->draw(lightShader, topdown_view);
 			o->reset_transform();
 		}
 

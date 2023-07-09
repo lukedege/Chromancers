@@ -1,4 +1,4 @@
-// #version 410 core
+#version 410 core
 
 ////////////////////////////////////////////////////////////////////
 // Description : Array and textureless GLSL 2D/3D/4D simplex

@@ -22,44 +22,13 @@ namespace utils::graphics::opengl
 	public:
 		GLuint program;
 
-		Shader(const GLchar* vertPath, const GLchar* fragPath, const GLchar* geomPath = 0, std::vector<const GLchar*> utilPaths = {}, GLuint glMajor = 4, GLuint glMinor = 3) :
+		Shader(const GLchar* vertPath, const GLchar* fragPath, const GLchar* geomPath = 0, std::vector<const GLchar*> utilPaths = {}, GLuint glMajor = 4, GLuint glMinor = 3, bool fromSpirvBinary = false) :
 			program{ glCreateProgram() }, glMajorVersion{ glMajor }, glMinorVersion{ glMinor }
 		{
-			GLuint vertexShader, fragmentShader, geometryShader;
-
-			const std::string vertSource = loadSource(vertPath);
-			const std::string fragSource = loadSource(fragPath);
-
-			std::string utilsSource;
-
-			for (const GLchar* utilPath : utilPaths)
-			{
-				utilsSource += loadSource(utilPath) + "\n";
-			}
-
-			vertexShader = compileShader(vertSource, GL_VERTEX_SHADER, utilsSource);
-			fragmentShader = compileShader(fragSource, GL_FRAGMENT_SHADER, utilsSource);
-
-			glAttachShader(program, vertexShader);
-			glAttachShader(program, fragmentShader);
-
-			if (geomPath)
-			{
-				const std::string geomSource = loadSource(geomPath);
-				geometryShader = compileShader(geomSource, GL_GEOMETRY_SHADER, utilsSource);
-				glAttachShader(program, geometryShader);
-			}
-
-			try {
-				glLinkProgram(program);
-			}
-			catch (std::exception e) { auto x = glGetError(); checkLinkingErrors(); std::cout << e.what(); }
-			checkLinkingErrors();
-
-			glDeleteShader(vertexShader);
-			glDeleteShader(fragmentShader);
-
-			if (geomPath) { glDeleteShader(geometryShader); }
+			if (fromSpirvBinary)
+				loadFromSpirV(vertPath, fragPath, geomPath, utilPaths);
+			else
+				loadFromText(vertPath, fragPath, geomPath, utilPaths);
 		}
 
 		// this is necessary since we dont want to delete the program involuntarily after a move (which would call the destructor)
@@ -155,6 +124,54 @@ namespace utils::graphics::opengl
 		GLuint glMajorVersion;
 		GLuint glMinorVersion;
 
+		void loadFromText(const GLchar* vertPath, const GLchar* fragPath, const GLchar* geomPath, std::vector<const GLchar*> utilPaths = {})
+		{
+			GLuint vertexShader, fragmentShader, geometryShader;
+
+			const std::string vertSource = loadSource(vertPath);
+			const std::string fragSource = loadSource(fragPath);
+
+			std::string utilsSource;
+
+			for (const GLchar* utilPath : utilPaths)
+				{
+				utilsSource += loadSource(utilPath) + "\n";
+				}
+
+			vertexShader = compileShader(vertSource, GL_VERTEX_SHADER, utilsSource);
+			fragmentShader = compileShader(fragSource, GL_FRAGMENT_SHADER, utilsSource);
+
+			glAttachShader(program, vertexShader);
+			glAttachShader(program, fragmentShader);
+
+			if (geomPath)
+				{
+				const std::string geomSource = loadSource(geomPath);
+				geometryShader = compileShader(geomSource, GL_GEOMETRY_SHADER, utilsSource);
+				glAttachShader(program, geometryShader);
+				}
+
+			try {
+				glLinkProgram(program);
+				}
+			catch (std::exception e) { auto x = glGetError(); checkLinkingErrors(); std::cout << e.what(); }
+			checkLinkingErrors();
+
+			glDeleteShader(vertexShader);
+			glDeleteShader(fragmentShader);
+
+			if (geomPath) { glDeleteShader(geometryShader); }
+		}
+
+		void loadFromSpirV(const GLchar* vertPath, const GLchar* fragPath, const GLchar* geomPath, std::vector<const GLchar*> utilPaths = {})
+		{
+			//TODO from example code at https://www.khronos.org/opengl/wiki/SPIR-V
+			// probably hard to do / not doable considering the shader "includes" done manually
+			// UPDATE: actually glslc (spirv compiler) supports #include as long as included stuff doesnt have
+			// "#version ..." in it, so its doable but will require some changes to loadfromtext
+			// to keep both methods working
+		}
+
 		const std::string loadSource(const GLchar* sourcePath) const noexcept
 		{
 			std::string         sourceCode;
@@ -166,6 +183,8 @@ namespace utils::graphics::opengl
 			try
 			{
 				sourceFile.open(sourcePath);
+				// ignore the first line containing "version #..."
+				sourceFile.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 				sourceStream << sourceFile.rdbuf();
 				sourceFile.close();
 				sourceCode = sourceStream.str();

@@ -1,7 +1,4 @@
-// Vertex shader
-// The output of a vertex shader is the position of the vertex
-// after any kind of elaboration
-// #version 410 core
+#version 410 core
 
 layout (location = 0) in vec3 position;
 

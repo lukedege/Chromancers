@@ -1,4 +1,4 @@
-// #version 410 core
+#version 410 core
 
 // output variable for the fragment shader. Usually, it is the final color of the fragment
 out vec4 color;
