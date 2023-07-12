@@ -148,6 +148,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\..\Libraries\glad\glad.c" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="quick_tests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="utils\camera.h" />
@@ -156,6 +157,7 @@
     <ClInclude Include="utils\model.h" />
     <ClInclude Include="utils\object.h" />
     <ClInclude Include="utils\shader.h" />
+    <ClInclude Include="utils\utils.h" />
     <ClInclude Include="utils\window.h" />
   </ItemGroup>
   <ItemGroup>

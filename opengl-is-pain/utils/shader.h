@@ -14,6 +14,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "utils.h"
+
 namespace utils::graphics::opengl
 {
 
@@ -128,14 +130,14 @@ namespace utils::graphics::opengl
 		{
 			GLuint vertexShader, fragmentShader, geometryShader;
 
-			const std::string vertSource = loadSource(vertPath);
-			const std::string fragSource = loadSource(fragPath);
+			const std::string vertSource = loadSourceText(vertPath);
+			const std::string fragSource = loadSourceText(fragPath);
 
 			std::string utilsSource;
 
 			for (const GLchar* utilPath : utilPaths)
 				{
-				utilsSource += loadSource(utilPath) + "\n";
+				utilsSource += loadSourceText(utilPath) + "\n";
 				}
 
 			vertexShader = compileShader(vertSource, GL_VERTEX_SHADER, utilsSource);
@@ -146,7 +148,7 @@ namespace utils::graphics::opengl
 
 			if (geomPath)
 				{
-				const std::string geomSource = loadSource(geomPath);
+				const std::string geomSource = loadSourceText(geomPath);
 				geometryShader = compileShader(geomSource, GL_GEOMETRY_SHADER, utilsSource);
 				glAttachShader(program, geometryShader);
 				}
@@ -172,9 +174,9 @@ namespace utils::graphics::opengl
 			// to keep both methods working
 		}
 
-		const std::string loadSource(const GLchar* sourcePath) const noexcept
+		const std::string loadSourceText(const GLchar* sourcePath) const noexcept
 		{
-			std::string         sourceCode;
+			std::string         sourceText;
 			std::ifstream       sourceFile;
 			std::stringstream sourceStream;
 
@@ -183,18 +185,21 @@ namespace utils::graphics::opengl
 			try
 			{
 				sourceFile.open(sourcePath);
-				// ignore the first line containing "version #..."
-				sourceFile.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 				sourceStream << sourceFile.rdbuf();
 				sourceFile.close();
-				sourceCode = sourceStream.str();
+				sourceText = sourceStream.str();
 			}
 			catch (const std::exception& e)
 			{
 				std::cerr << e.what() << '\n';
 			}
 
-			return sourceCode;
+			// Pre-process for merged text compilation 
+			// Find and remove #version (will be added later) and eventual #include 
+			sourceText = utils::strings::eraseLineContaining(sourceText, "#version");
+			sourceText = utils::strings::eraseAllLinesContaining(sourceText, "#include");
+
+			return sourceText;
 		}
 
 		GLuint compileShader(const std::string& shaderSource, GLenum shaderType, const std::string& utilsSource = "") const noexcept
