@@ -22,6 +22,12 @@
     <Filter Include="Source Files\old">
       <UniqueIdentifier>{57a948ab-3953-44ba-b50c-d026e61e4585}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shaders\spv">
+      <UniqueIdentifier>{8761cc1d-f6ff-4ed2-a538-5024a8151df0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\text">
+      <UniqueIdentifier>{4d596378-d45c-4f06-b18e-8fd69a4bc691}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -59,49 +65,58 @@
     <ClInclude Include="utils\utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="utils\drawable.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\basic.frag">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="shaders\basic.vert">
-      <Filter>Shaders</Filter>
-    </None>
     <None Include="shaders\constants.glsl">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="shaders\deform.vert">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="shaders\fullcolor.frag">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="shaders\glow.frag">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="shaders\mvp.vert">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="shaders\noise.frag">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="shaders\normals.frag">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="shaders\procedural_base.vert">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="shaders\random_patterns.frag">
       <Filter>Shaders</Filter>
     </None>
     <None Include="shaders\types.glsl">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="shaders\uvs.frag">
-      <Filter>Shaders</Filter>
+    <None Include="shaders\basic.frag">
+      <Filter>Shaders\text</Filter>
+    </None>
+    <None Include="shaders\basic.vert">
+      <Filter>Shaders\text</Filter>
+    </None>
+    <None Include="shaders\deform.vert">
+      <Filter>Shaders\text</Filter>
+    </None>
+    <None Include="shaders\fullcolor.frag">
+      <Filter>Shaders\text</Filter>
+    </None>
+    <None Include="shaders\glow.frag">
+      <Filter>Shaders\text</Filter>
     </None>
     <None Include="shaders\illumination_models.frag">
-      <Filter>Shaders</Filter>
+      <Filter>Shaders\text</Filter>
+    </None>
+    <None Include="shaders\mvp.vert">
+      <Filter>Shaders\text</Filter>
+    </None>
+    <None Include="shaders\noise.frag">
+      <Filter>Shaders\text</Filter>
+    </None>
+    <None Include="shaders\normals.frag">
+      <Filter>Shaders\text</Filter>
+    </None>
+    <None Include="shaders\procedural_base.vert">
+      <Filter>Shaders\text</Filter>
+    </None>
+    <None Include="shaders\random_patterns.frag">
+      <Filter>Shaders\text</Filter>
+    </None>
+    <None Include="shaders\uvs.frag">
+      <Filter>Shaders\text</Filter>
+    </None>
+    <None Include="shaders\spv\buny_lights.frag">
+      <Filter>Shaders\spv</Filter>
+    </None>
+    <None Include="shaders\spv\buny_lights.vert">
+      <Filter>Shaders\spv</Filter>
     </None>
   </ItemGroup>
 </Project>

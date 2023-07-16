@@ -7,6 +7,8 @@
 #include <glad.h>
 #include <glm/glm.hpp>
 
+#include "drawable.h"
+
 namespace utils::graphics::opengl
 {
 
@@ -16,7 +18,7 @@ namespace utils::graphics::opengl
 		glm::vec2 texCoords;
 	};
 
-	class Mesh
+	class Mesh : public Drawable
 	{
 	public:
 		std::vector<Vertex> vertices;
@@ -24,6 +26,11 @@ namespace utils::graphics::opengl
 		GLuint VAO;
 
 		Mesh(std::vector<Vertex>& v, std::vector<GLuint>& i) noexcept :
+			vertices(std::move(v)), indices(std::move(i)) {
+			setupMesh();
+		}
+
+		Mesh(std::vector<Vertex>&& v, std::vector<GLuint>&& i) noexcept :
 			vertices(std::move(v)), indices(std::move(i)) {
 			setupMesh();
 		}
@@ -64,7 +71,7 @@ namespace utils::graphics::opengl
 			freeGPU();
 		}
 
-		void draw() const
+		void draw() const override
 		{
 			glBindVertexArray(VAO);
 			glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);

@@ -89,6 +89,11 @@ namespace utils::graphics::opengl
 			return pos;
 		}
 
+		glm::vec3 rotation()
+		{
+			return { roll, yaw, pitch };
+		}
+
 		glm::vec3 forward()
 		{
 			return front;

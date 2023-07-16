@@ -152,6 +152,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="utils\camera.h" />
+    <ClInclude Include="utils\drawable.h" />
     <ClInclude Include="utils\light.h" />
     <ClInclude Include="utils\mesh.h" />
     <ClInclude Include="utils\model.h" />
@@ -173,6 +174,8 @@
     <None Include="shaders\normals.frag" />
     <None Include="shaders\procedural_base.vert" />
     <None Include="shaders\random_patterns.frag" />
+    <None Include="shaders\spv\buny_lights.frag" />
+    <None Include="shaders\spv\buny_lights.vert" />
     <None Include="shaders\types.glsl" />
     <None Include="shaders\uvs.frag" />
   </ItemGroup>

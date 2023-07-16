@@ -1,7 +1,4 @@
-#version 410 core
-
-#include "types.glsl"
-#include "constants.glsl"
+#version 460 core
 
 layout (location = 0) in vec3 position;
 

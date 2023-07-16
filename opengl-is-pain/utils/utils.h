@@ -47,3 +47,27 @@ namespace utils::strings
 	}
 }
 
+namespace utils::graphics::opengl
+{
+	inline void setup_buffer_object(GLuint& buffer_object, GLenum target, size_t element_size, size_t element_amount, int bind_index, void* data)
+	{
+		glGenBuffers(1, &buffer_object);
+		glBindBuffer(target, buffer_object);
+
+		size_t alloc_size = element_size * element_amount;
+		glBufferData(target, alloc_size, NULL, GL_DYNAMIC_DRAW); // allocate alloc_size bytes of memory
+		glBindBufferBase(target, bind_index, buffer_object);
+
+		if (data != 0)
+			glBufferSubData(target, 0, alloc_size, data);        // fill buffer object with data
+
+		glBindBuffer(target, 0);
+	}
+
+	inline void update_buffer_object(GLuint& buffer_object, GLenum target, size_t offset, size_t element_size, size_t element_amount, void* data)
+	{
+		glBindBuffer(target, buffer_object);
+		glBufferSubData(target, offset, element_amount * element_size, data);
+		glBindBuffer(target, 0);
+	}
+}

@@ -10,7 +10,8 @@
 #include <glad.h>
 #include <glm/glm.hpp>
 
-#include "utils/mesh.h"
+#include "drawable.h"
+#include "mesh.h"
 
 // Model class purpose:
 // 1. Open file from disk
@@ -20,7 +21,7 @@
 
 namespace utils::graphics::opengl
 {
-	class Model
+	class Model : public Drawable
 	{
 	public:
 		std::vector<Mesh> meshes;
@@ -38,7 +39,7 @@ namespace utils::graphics::opengl
 		Model(const std::string& path) : meshes{ std::move(loadModel(path)) }
 		{}
 
-		void draw() const
+		void draw() const override
 		{
 			for (size_t i = 0; i < meshes.size(); i++) { meshes[i].draw(); }
 		}

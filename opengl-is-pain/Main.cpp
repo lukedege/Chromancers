@@ -65,7 +65,7 @@ int main()
 		{
 			{ "Lighting test" }, //.title
 			{ 4       }, //.gl_version_major
-			{ 3       }, //.gl_version_minor
+			{ 6       }, //.gl_version_minor
 			{ 1280    }, //.window_width
 			{ 720     }, //.window_height
 			{ 1280    }, //.viewport_width
@@ -84,18 +84,33 @@ int main()
 	glfwSetCursorPosCallback(glfw_window, mouse_pos_callback);
 	
 	// Shader setup
-	std::vector<const GLchar*> utils_shaders { "shaders/types.glsl", "shaders/constants.glsl" };
+	ugl::Shader lightShader{"shaders/spv/mvp.vert.spv", "shaders/spv/basic.frag.spv"};
 
-	ugl::Shader lightShader{ "shaders/procedural_base.vert", "shaders/illumination_models.frag", nullptr, utils_shaders, 4, 3};
+	GLuint ubo_cam_matrices, ubo_obj_matrices;
+	ugl::setup_buffer_object(ubo_cam_matrices, GL_UNIFORM_BUFFER, sizeof(glm::mat4), 2, 0, 0);
+	ugl::setup_buffer_object(ubo_obj_matrices, GL_UNIFORM_BUFFER, sizeof(glm::mat4), 2, 1, 0);
 
 	// Camera setup
 	glm::mat4 projection = glm::perspective(45.0f, width / height, 0.1f, 10000.0f);
 	glm::mat4 view = glm::mat4(1);
 
 	// Objects setup
-	ugl::Object plane{ "models/plane.obj" }, bird{ "models/bunny.obj" };
+	ugl::Model plane_model{ "models/plane.obj" }, bunny_model{ "models/bunny.obj" };
+	ugl::Object plane{ &plane_model }, bunny{ &bunny_model };
+	ugl::Mesh triangle_mesh
+	{
+		std::vector<ugl::Vertex>
+		{
+			ugl::Vertex{ glm::vec3{-0.5f, -0.5f, 0.0f} /* position */ },
+			ugl::Vertex{ glm::vec3{ 0.0f,  0.5f, 0.0f} /* position */ },
+			ugl::Vertex{ glm::vec3{ 0.5f, -0.5f, 0.0f} /* position */ }
+		},
+		std::vector<GLuint>{0, 2, 1}
+	};
+	ugl::Object cursor{ &triangle_mesh };
+
 	std::vector<ugl::Object*> scene_objects;
-	scene_objects.push_back(&plane); scene_objects.push_back(&bird);
+	scene_objects.push_back(&plane); scene_objects.push_back(&bunny);
 
 	// Scene material/lighting setup 
 	glm::vec3 ambient{ 0.1f, 0.1f, 0.1f }, diffuse{ 1.0f, 1.0f, 1.0f }, specular{ 1.0f, 1.0f, 1.0f };
@@ -141,80 +156,63 @@ int main()
 
 		lightShader.use();
 
-		lightShader.setMat4("projectionMatrix", projection);
-		lightShader.setMat4("viewMatrix", view);
+		ugl::update_buffer_object(ubo_cam_matrices, GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), 1, (void*)glm::value_ptr(view));
+		ugl::update_buffer_object(ubo_cam_matrices, GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), 1, (void*)glm::value_ptr(projection));
 		
 		// LIGHTING 
-		lightShader.setUint("nPointLights", pointLights.size());
-		for (size_t i = 0; i < pointLights.size(); i++)
-		{
-			pointLights[i].setup(lightShader, i);
-		}
-		lightShader.setVec3("ambient" , ambient);
-		lightShader.setVec3("diffuse" , diffuse);
-		lightShader.setVec3("specular", specular);
-
-		lightShader.setFloat("kA", kA);
-		lightShader.setFloat("kD", kD);
-		lightShader.setFloat("kS", kS);
-
-		lightShader.setFloat("shininess", shininess);
-		lightShader.setFloat("alpha", alpha);
+		//lightShader.setUint("nPointLights", pointLights.size());
+		//for (size_t i = 0; i < pointLights.size(); i++)
+		//{
+		//	pointLights[i].setup(lightShader, i);
+		//}
+		//lightShader.setVec3("ambient" , ambient);
+		//lightShader.setVec3("diffuse" , diffuse);
+		//lightShader.setVec3("specular", specular);
+		//
+		//lightShader.setFloat("kA", kA);
+		//lightShader.setFloat("kD", kD);
+		//lightShader.setFloat("kS", kS);
+		//
+		//lightShader.setFloat("shininess", shininess);
+		//lightShader.setFloat("alpha", alpha);
 
 		// OBJECTS
 		ws = wdw.get_size();
 		glViewport(0, 0, ws.width, ws.height); // we render objects in full screen
-
+		
 		// Plane
 		plane.translate(glm::vec3(0.0f, -1.0f, 0.0f));
 		plane.scale    (glm::vec3(10.0f, 1.0f, 10.0f));
 
-		currentSubroutineIndex = lightShader.getSubroutineIndex(GL_FRAGMENT_SHADER, "Lambert");
-		glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &currentSubroutineIndex);
-
-		plane.draw(lightShader, view);
+		plane.draw(ubo_obj_matrices, view);
 
 		// BIRD
-		bird.translate (glm::vec3(0.0f, 0.0f, 0.0f));
-		bird.rotate_deg(orientationY, glm::vec3(0.0f, 1.0f, 0.0f));
-		bird.scale     (glm::vec3(0.2f));	// It's a bit too big for our scene, so scale it down
-
-		currentSubroutineIndex = lightShader.getSubroutineIndex(GL_FRAGMENT_SHADER, "BlinnPhong");
-		glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &currentSubroutineIndex);
-
-		bird.draw(lightShader, view);
+		bunny.translate (glm::vec3(0.0f, 0.0f, 0.0f));
+		bunny.rotate_deg(orientationY, glm::vec3(0.0f, 1.0f, 0.0f));
+		bunny.scale     (glm::vec3(0.2f));	// It's a bit too big for our scene, so scale it down
+		
+		bunny.draw(ubo_obj_matrices, view);
 
 		// MAP
-		// framebuffer setup
-		//unsigned int fbo_map;
-		//glGenFramebuffers(1, &fbo_map);
-		//glBindFramebuffer(GL_FRAMEBUFFER, fbo_map);
-		//
-		//// texture setup
-		//unsigned int texture;
-		//glGenTextures(1, &texture);
-		//glBindTexture(GL_TEXTURE_2D, texture);
-		//
-		//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 200, 100, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-		//
-		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		//
-		//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
-
-
 		glViewport(ws.width - 200, ws.height - 150, 200, 150); // we render now into the smaller map viewport
 		
 		float topdown_height = 20;
 		glm::mat4 topdown_view = glm::lookAt(camera.position() + glm::vec3{0, topdown_height, 0}, camera.position(), camera.forward());
-		//glm::mat4 topdown_view = glm::lookAt(glm::vec3{ 0, 50, 0 }, glm::vec3{ 0, 0, 0 }, glm::vec3{0,0,-1});
-		lightShader.setMat4("viewMatrix", topdown_view);
+		ugl::update_buffer_object(ubo_cam_matrices, GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), 1, (void*)glm::value_ptr(topdown_view));
+		
+		cursor.translate(camera.position());
+		cursor.rotate_deg(90.f, { -1.0f, 0.0f, 0.0f });
+		cursor.rotate_deg(camera.rotation().y + 90.f, { 0.0f, 0.0f, -1.0f });
+		cursor.scale(glm::vec3(3.0f));
+		cursor.draw(ubo_obj_matrices, view);
+
 		// Reset all objects transforms
 		for (ugl::Object* o : scene_objects)
 		{
-			o->draw(lightShader, topdown_view);
+			o->draw(ubo_obj_matrices, topdown_view);
 			o->reset_transform();
 		}
+		cursor.reset_transform();
 
 		// Swap buffers
 		glfwSwapBuffers(glfw_window);

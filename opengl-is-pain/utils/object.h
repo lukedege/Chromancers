@@ -16,13 +16,12 @@ namespace utils::graphics::opengl
 	// Object in scene
 	class Object
 	{
-		Model model;
+		Drawable* drawable; // can be either Model or Mesh
 		glm::mat4 transform;
 		glm::mat3 normal;
 
 	public:
-		Object(const std::string& modelPath, const glm::mat4& transform = glm::mat4(1)) : model{ modelPath }, transform{ transform }, normal{ glm::mat3(1) } {}
-		Object(Model&& otherModel, const glm::mat4& transform = glm::mat4(1)) : model{ std::move(otherModel) }, transform{ transform }, normal{ glm::mat3(1) } {}
+		Object(Drawable* othDrawable, const glm::mat4& transform = glm::mat4(1)) : drawable{ othDrawable }, transform{ transform }, normal{ glm::mat3(1) } {}
 
 		void scale(glm::vec3 scaling) { transform = glm::scale(transform, scaling); }
 		void translate(glm::vec3 translation) { transform = glm::translate(transform, translation); }
@@ -37,7 +36,17 @@ namespace utils::graphics::opengl
 			shader.setMat4("modelMatrix", transform);
 			shader.setMat3("normalMatrix", normal);
 
-			model.draw();
+			drawable->draw();
+		}
+
+		void draw(GLuint ubo_obj_matrices, const glm::mat4& viewProjection)
+		{
+			recomputeNormal(viewProjection);
+
+			opengl::update_buffer_object(ubo_obj_matrices, GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), 1, (void*)glm::value_ptr(transform));
+			opengl::update_buffer_object(ubo_obj_matrices, GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat3), 1, (void*)glm::value_ptr(normal));
+
+			drawable->draw();
 		}
 
 		void reset_transform()

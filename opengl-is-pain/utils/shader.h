@@ -24,13 +24,16 @@ namespace utils::graphics::opengl
 	public:
 		GLuint program;
 
-		Shader(const GLchar* vertPath, const GLchar* fragPath, const GLchar* geomPath = 0, std::vector<const GLchar*> utilPaths = {}, GLuint glMajor = 4, GLuint glMinor = 3, bool fromSpirvBinary = false) :
+		Shader(const GLchar* vertPath, const GLchar* fragPath, GLuint glMajor, GLuint glMinor, const GLchar* geomPath = 0, std::vector<const GLchar*> utilPaths = {}) :
 			program{ glCreateProgram() }, glMajorVersion{ glMajor }, glMinorVersion{ glMinor }
 		{
-			if (fromSpirvBinary)
-				loadFromSpirV(vertPath, fragPath, geomPath, utilPaths);
-			else
-				loadFromText(vertPath, fragPath, geomPath, utilPaths);
+			loadFromText(vertPath, fragPath, geomPath, utilPaths);
+		}
+		
+		Shader(const GLchar* vertSpirvPath, const GLchar* fragSpirvPath, const GLchar* geomSpirvPath = 0) :
+			program{ glCreateProgram() }, glMajorVersion{ 4 }, glMinorVersion{ 6 } // SpirV is core from version 4.6
+		{
+			loadFromSpirV(vertSpirvPath, fragSpirvPath, geomSpirvPath);
 		}
 
 		// this is necessary since we dont want to delete the program involuntarily after a move (which would call the destructor)
@@ -140,8 +143,8 @@ namespace utils::graphics::opengl
 				utilsSource += loadSourceText(utilPath) + "\n";
 				}
 
-			vertexShader = compileShader(vertSource, GL_VERTEX_SHADER, utilsSource);
-			fragmentShader = compileShader(fragSource, GL_FRAGMENT_SHADER, utilsSource);
+			vertexShader = compileShaderText(vertSource, GL_VERTEX_SHADER, utilsSource);
+			fragmentShader = compileShaderText(fragSource, GL_FRAGMENT_SHADER, utilsSource);
 
 			glAttachShader(program, vertexShader);
 			glAttachShader(program, fragmentShader);
@@ -149,7 +152,7 @@ namespace utils::graphics::opengl
 			if (geomPath)
 				{
 				const std::string geomSource = loadSourceText(geomPath);
-				geometryShader = compileShader(geomSource, GL_GEOMETRY_SHADER, utilsSource);
+				geometryShader = compileShaderText(geomSource, GL_GEOMETRY_SHADER, utilsSource);
 				glAttachShader(program, geometryShader);
 				}
 
@@ -168,10 +171,68 @@ namespace utils::graphics::opengl
 		void loadFromSpirV(const GLchar* vertPath, const GLchar* fragPath, const GLchar* geomPath, std::vector<const GLchar*> utilPaths = {})
 		{
 			//TODO from example code at https://www.khronos.org/opengl/wiki/SPIR-V
-			// probably hard to do / not doable considering the shader "includes" done manually
-			// UPDATE: actually glslc (spirv compiler) supports #include as long as included stuff doesnt have
-			// "#version ..." in it, so its doable but will require some changes to loadfromtext
-			// to keep both methods working
+			GLuint vertexShader, fragmentShader;
+
+			// Read our shaders into the appropriate buffers
+			std::vector<char> vertexSpirv = loadSourceSpirV(vertPath);// Get SPIR-V for vertex shader.
+			std::vector<char> fragmentSpirv = loadSourceSpirV(fragPath);// Get SPIR-V for fragment shader.
+
+			fragmentShader = compileShaderSpirv(fragmentSpirv, GL_FRAGMENT_SHADER);
+			vertexShader = compileShaderSpirv(vertexSpirv, GL_VERTEX_SHADER);
+			
+
+			// Vertex and fragment shaders are successfully compiled.
+			// Now time to link them together into a program.
+
+			// Attach our shaders to our program
+			glAttachShader(program, vertexShader);
+			glAttachShader(program, fragmentShader);
+
+			// Link our program
+			try {
+				glLinkProgram(program);
+				}
+			catch (std::exception e) { auto x = glGetError(); checkLinkingErrors(); std::cout << e.what(); }
+			checkLinkingErrors();
+
+			// Always detach shaders after a successful link.
+			glDetachShader(program, vertexShader); // delete or detach??
+			glDetachShader(program, fragmentShader);
+		}
+
+		std::vector<char> loadSourceSpirV(const GLchar* spirvPath)
+		{
+			std::ifstream shaderFile;
+			shaderFile.open(spirvPath, std::ios::binary | std::ios::ate);
+			if (shaderFile.is_open())
+			{
+				size_t size = shaderFile.tellg();
+				char* bin = new char[size];
+				shaderFile.seekg(0, std::ios::beg);
+				shaderFile.read(bin, size);
+				std::vector<char> ret{ bin, bin + size };
+				delete[] bin;
+				return ret;
+			}
+			return {};
+		}
+
+		GLuint compileShaderSpirv(const std::vector<char> shaderSpirv, GLenum shaderType)
+		{
+			// Create an empty shader handle
+			GLuint shader = glCreateShader(shaderType);
+
+			// Apply the shader SPIR-V to the shader object.
+			glShaderBinary(1, &shader, GL_SHADER_BINARY_FORMAT_SPIR_V, shaderSpirv.data(), shaderSpirv.size());
+
+			// Specialize the shader.
+			//std::string entrypoint = "main"; // Get VS entry point name
+			glSpecializeShader(shader, "main", 0, nullptr, nullptr);
+
+			// Specialization is equivalent to compilation.
+			checkCompileErrors(shader);
+
+			return shader;
 		}
 
 		const std::string loadSourceText(const GLchar* sourcePath) const noexcept
@@ -202,7 +263,7 @@ namespace utils::graphics::opengl
 			return sourceText;
 		}
 
-		GLuint compileShader(const std::string& shaderSource, GLenum shaderType, const std::string& utilsSource = "") const noexcept
+		GLuint compileShaderText(const std::string& shaderSource, GLenum shaderType, const std::string& utilsSource = "") const noexcept
 		{
 			std::string mergedSource = "";
 			// Prepending version
