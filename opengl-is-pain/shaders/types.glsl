@@ -10,26 +10,26 @@ struct LightIncidence
 
 struct PointLight
 {
-	vec3  position;
-
-	float intensity;
 	vec4  color;
+	float intensity;
+	
+	vec3  position;
 };
 
 struct DirectionalLight
 {
-	vec3 direction;
-	
-	float intensity;
 	vec4  color;
+	float intensity;
+
+	vec3 direction;
 };
 
 struct SpotLight
 {
+	vec4  color;
+	float intensity;
+
 	vec3 position;
 	vec3 direction;
 	float cutoffAngle;
-	
-	float intensity;
-	vec4  color;
 };

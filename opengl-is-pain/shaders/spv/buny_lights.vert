@@ -18,17 +18,21 @@ layout (std140, binding = 1) uniform ObjectMatrices
 {
 	mat4 modelMatrix;
 	mat3 normalMatrix;
+	float fill;
 };
 
-layout (std140, binding = 2) uniform Lights
+layout (std140, binding = 2) uniform LightsAmount
 {
 	uint nPointLights;
 	uint nDirLights;
 	uint nSpotLights;
+};
 
- 	PointLight        pointLights[MAX_POINT_LIGHTS];
- 	DirectionalLight  directionalLights[MAX_DIR_LIGHTS];
- 	SpotLight         spotLights[MAX_SPOT_LIGHTS];
+layout (std140, binding = 3) uniform LightsData
+{
+	PointLight        pointLights[MAX_POINT_LIGHTS];
+ 	//DirectionalLight  directionalLights[MAX_DIR_LIGHTS];
+ 	//SpotLight         spotLights[MAX_SPOT_LIGHTS];
 };
 
 layout(location = 20) out LightIncidence   pointLI[MAX_POINT_LIGHTS];

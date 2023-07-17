@@ -49,12 +49,11 @@ namespace utils::strings
 
 namespace utils::graphics::opengl
 {
-	inline void setup_buffer_object(GLuint& buffer_object, GLenum target, size_t element_size, size_t element_amount, int bind_index, void* data)
+	inline void setup_buffer_object(GLuint& buffer_object, GLenum target, int bind_index, void* data, size_t alloc_size)
 	{
 		glGenBuffers(1, &buffer_object);
 		glBindBuffer(target, buffer_object);
 
-		size_t alloc_size = element_size * element_amount;
 		glBufferData(target, alloc_size, NULL, GL_DYNAMIC_DRAW); // allocate alloc_size bytes of memory
 		glBindBufferBase(target, bind_index, buffer_object);
 

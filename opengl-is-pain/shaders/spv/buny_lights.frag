@@ -9,15 +9,18 @@ layout(location = 0) out vec4 colorFrag;
 // the output variable for UV coordinates
 layout(location = 10) in vec2 interp_UV;
 
-layout (std140, binding = 2) uniform Lights
+layout (std140, binding = 2) uniform LightsAmount
 {
 	uint nPointLights;
 	uint nDirLights;
 	uint nSpotLights;
+};
 
- 	PointLight        pointLights[MAX_POINT_LIGHTS];
- 	DirectionalLight  directionalLights[MAX_DIR_LIGHTS];
- 	SpotLight         spotLights[MAX_SPOT_LIGHTS];
+layout (std140, binding = 3) uniform LightsData
+{
+	PointLight        pointLights[MAX_POINT_LIGHTS];
+ 	//DirectionalLight  directionalLights[MAX_DIR_LIGHTS];
+ 	//SpotLight         spotLights[MAX_SPOT_LIGHTS];
 };
 
 layout(location = 20) in LightIncidence   pointLI[MAX_POINT_LIGHTS];
@@ -27,7 +30,7 @@ layout(location = 60) in LightIncidence   spotLI [MAX_SPOT_LIGHTS];
 
 LightIncidence  currLI;
 
-layout (std140, binding = 1) uniform ShadingAttributes
+layout (std140, binding = 4) uniform ShadingAttributes
 {
 	// Material-light attributes (for now the whole scene is a single material)
 	uniform vec3 ambient ;

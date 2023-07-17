@@ -56,6 +56,11 @@ GLboolean wireframe = GL_FALSE;
 ugl::PointLight* currentLight;
 GLfloat mov_light_speed = 30.f;
 
+#define MAX_POINT_LIGHTS 3
+#define MAX_SPOT_LIGHTS  3
+#define MAX_DIR_LIGHTS   3
+#define MAX_LIGHTS MAX_POINT_LIGHTS+MAX_SPOT_LIGHTS+MAX_DIR_LIGHTS
+
 /////////////////// MAIN function ///////////////////////
 int main()
 {
@@ -84,19 +89,17 @@ int main()
 	glfwSetCursorPosCallback(glfw_window, mouse_pos_callback);
 	
 	// Shader setup
-	ugl::Shader lightShader{"shaders/spv/mvp.vert.spv", "shaders/spv/basic.frag.spv"};
+	std::vector<const GLchar*> utils_shaders { "shaders/types.glsl", "shaders/constants.glsl" };
 
-	GLuint ubo_cam_matrices, ubo_obj_matrices;
-	ugl::setup_buffer_object(ubo_cam_matrices, GL_UNIFORM_BUFFER, sizeof(glm::mat4), 2, 0, 0);
-	ugl::setup_buffer_object(ubo_obj_matrices, GL_UNIFORM_BUFFER, sizeof(glm::mat4), 2, 1, 0);
+	ugl::Shader lightShader{ "shaders/procedural_base.vert", "shaders/illumination_models.frag", 4, 3, nullptr, utils_shaders};
 
 	// Camera setup
 	glm::mat4 projection = glm::perspective(45.0f, width / height, 0.1f, 10000.0f);
 	glm::mat4 view = glm::mat4(1);
 
 	// Objects setup
-	ugl::Model plane_model{ "models/plane.obj" }, bunny_model{ "models/bunny.obj" };
-	ugl::Object plane{ &plane_model }, bunny{ &bunny_model };
+	ugl::Model plane_model{ "models/plane.obj" }, bunny_model{ "models/cube.obj" };
+	ugl::Object<ugl::Model> plane{ plane_model }, bunny{ bunny_model };
 	ugl::Mesh triangle_mesh
 	{
 		std::vector<ugl::Vertex>
@@ -107,9 +110,9 @@ int main()
 		},
 		std::vector<GLuint>{0, 2, 1}
 	};
-	ugl::Object cursor{ &triangle_mesh };
+	ugl::Object<ugl::Mesh> cursor{ triangle_mesh };
 
-	std::vector<ugl::Object*> scene_objects;
+	std::vector<ugl::Object<ugl::Model>*> scene_objects;
 	scene_objects.push_back(&plane); scene_objects.push_back(&bunny);
 
 	// Scene material/lighting setup 
@@ -118,6 +121,9 @@ int main()
 	GLfloat shininess = 25.f;
 	GLfloat alpha = 0.2f;
 	GLfloat F0 = 0.9f;
+
+	std::vector<glm::vec3> shading_attrs_colors{ ambient, diffuse, specular };
+	std::vector<float> shading_attrs_coeff{ kD, kS, kA, shininess, alpha, F0 };
 	
 	// Lights setup 
 	ugl::PointLight pl1{ glm::vec3{-20.f, 10.f, 10.f}, glm::vec4{1,0,1,1},1 };
@@ -137,7 +143,7 @@ int main()
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
-		if(capture_mouse)
+		if (capture_mouse)
 			glfwSetInputMode(wdw.get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		else
 			glfwSetInputMode(wdw.get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
@@ -156,63 +162,71 @@ int main()
 
 		lightShader.use();
 
-		ugl::update_buffer_object(ubo_cam_matrices, GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), 1, (void*)glm::value_ptr(view));
-		ugl::update_buffer_object(ubo_cam_matrices, GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), 1, (void*)glm::value_ptr(projection));
-		
+		lightShader.setMat4("projectionMatrix", projection);
+		lightShader.setMat4("viewMatrix", view);
+
 		// LIGHTING 
-		//lightShader.setUint("nPointLights", pointLights.size());
-		//for (size_t i = 0; i < pointLights.size(); i++)
-		//{
-		//	pointLights[i].setup(lightShader, i);
-		//}
-		//lightShader.setVec3("ambient" , ambient);
-		//lightShader.setVec3("diffuse" , diffuse);
-		//lightShader.setVec3("specular", specular);
-		//
-		//lightShader.setFloat("kA", kA);
-		//lightShader.setFloat("kD", kD);
-		//lightShader.setFloat("kS", kS);
-		//
-		//lightShader.setFloat("shininess", shininess);
-		//lightShader.setFloat("alpha", alpha);
+		lightShader.setUint("nPointLights", pointLights.size());
+		for (size_t i = 0; i < pointLights.size(); i++)
+		{
+			pointLights[i].setup(lightShader, i);
+		}
+		lightShader.setVec3("ambient", ambient);
+		lightShader.setVec3("diffuse", diffuse);
+		lightShader.setVec3("specular", specular);
+
+		lightShader.setFloat("kA", kA);
+		lightShader.setFloat("kD", kD);
+		lightShader.setFloat("kS", kS);
+
+		lightShader.setFloat("shininess", shininess);
+		lightShader.setFloat("alpha", alpha);
 
 		// OBJECTS
 		ws = wdw.get_size();
 		glViewport(0, 0, ws.width, ws.height); // we render objects in full screen
-		
+
 		// Plane
 		plane.translate(glm::vec3(0.0f, -1.0f, 0.0f));
-		plane.scale    (glm::vec3(10.0f, 1.0f, 10.0f));
+		plane.scale(glm::vec3(10.0f, 1.0f, 10.0f));
 
-		plane.draw(ubo_obj_matrices, view);
+		currentSubroutineIndex = lightShader.getSubroutineIndex(GL_FRAGMENT_SHADER, "Lambert");
+		glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &currentSubroutineIndex);
+
+		plane.draw(lightShader, view);
 
 		// BIRD
-		bunny.translate (glm::vec3(0.0f, 0.0f, 0.0f));
+		bunny.translate(glm::vec3(0.0f, 0.0f, 0.0f));
 		bunny.rotate_deg(orientationY, glm::vec3(0.0f, 1.0f, 0.0f));
-		bunny.scale     (glm::vec3(0.2f));	// It's a bit too big for our scene, so scale it down
-		
-		bunny.draw(ubo_obj_matrices, view);
+		bunny.scale(glm::vec3(0.2f));	// It's a bit too big for our scene, so scale it down
+
+		currentSubroutineIndex = lightShader.getSubroutineIndex(GL_FRAGMENT_SHADER, "BlinnPhong");
+		glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &currentSubroutineIndex);
+
+		bunny.draw(lightShader, view);
+
 
 		// MAP
 		glViewport(ws.width - 200, ws.height - 150, 200, 150); // we render now into the smaller map viewport
 		
 		float topdown_height = 20;
 		glm::mat4 topdown_view = glm::lookAt(camera.position() + glm::vec3{0, topdown_height, 0}, camera.position(), camera.forward());
-		ugl::update_buffer_object(ubo_cam_matrices, GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), 1, (void*)glm::value_ptr(topdown_view));
-		
+		lightShader.setMat4("viewMatrix", topdown_view);
+
 		cursor.translate(camera.position());
 		cursor.rotate_deg(90.f, { -1.0f, 0.0f, 0.0f });
 		cursor.rotate_deg(camera.rotation().y + 90.f, { 0.0f, 0.0f, -1.0f });
 		cursor.scale(glm::vec3(3.0f));
-		cursor.draw(ubo_obj_matrices, view);
-
+		cursor.draw(lightShader, topdown_view);
+		cursor.reset_transform();
+		
 		// Reset all objects transforms
-		for (ugl::Object* o : scene_objects)
+		for (ugl::Object<ugl::Model>* o : scene_objects)
 		{
-			o->draw(ubo_obj_matrices, topdown_view);
+			o->draw(lightShader, topdown_view);
 			o->reset_transform();
 		}
-		cursor.reset_transform();
+		
 
 		// Swap buffers
 		glfwSwapBuffers(glfw_window);

@@ -148,6 +148,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\..\Libraries\glad\glad.c" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Main_spv.cpp" />
     <ClCompile Include="quick_tests.cpp" />
   </ItemGroup>
   <ItemGroup>

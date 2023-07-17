@@ -71,7 +71,7 @@ namespace utils::graphics::opengl
 			freeGPU();
 		}
 
-		void draw() const override
+		void draw() const
 		{
 			glBindVertexArray(VAO);
 			glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);

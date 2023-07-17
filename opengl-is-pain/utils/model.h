@@ -39,7 +39,7 @@ namespace utils::graphics::opengl
 		Model(const std::string& path) : meshes{ std::move(loadModel(path)) }
 		{}
 
-		void draw() const override
+		void draw() const
 		{
 			for (size_t i = 0; i < meshes.size(); i++) { meshes[i].draw(); }
 		}
