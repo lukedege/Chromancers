@@ -159,6 +159,7 @@
     <ClInclude Include="utils\model.h" />
     <ClInclude Include="utils\object.h" />
     <ClInclude Include="utils\shader.h" />
+    <ClInclude Include="utils\texture.h" />
     <ClInclude Include="utils\utils.h" />
     <ClInclude Include="utils\window.h" />
   </ItemGroup>

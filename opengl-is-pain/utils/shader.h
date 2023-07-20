@@ -37,7 +37,7 @@ namespace utils::graphics::opengl
 		}
 
 		// this is necessary since we dont want to delete the program involuntarily after a move (which would call the destructor)
-		void del() const noexcept { glDeleteProgram(program); }
+		void dispose() const noexcept { glDeleteProgram(program); }
 
 		void use() const noexcept { glUseProgram(program); }
 

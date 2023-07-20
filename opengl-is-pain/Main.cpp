@@ -24,6 +24,7 @@
 #include "utils/object.h"
 #include "utils/light.h "
 #include "utils/window.h"
+#include "utils/texture.h"
 
 namespace ugl = utils::graphics::opengl;
 
@@ -91,7 +92,8 @@ int main()
 	// Shader setup
 	std::vector<const GLchar*> utils_shaders { "shaders/types.glsl", "shaders/constants.glsl" };
 
-	ugl::Shader lightShader{ "shaders/procedural_base.vert", "shaders/illumination_models.frag", 4, 3, nullptr, utils_shaders};
+	ugl::Shader light_shader{ "shaders/BP_normal_mapping.vert", "shaders/BP_normal_mapping.frag", 4, 3, nullptr, utils_shaders};
+	ugl::Shader basic_shader{ "shaders/mvp.vert", "shaders/basic.frag", 4, 3 };
 
 	// Camera setup
 	glm::mat4 projection = glm::perspective(45.0f, width / height, 0.1f, 10000.0f);
@@ -99,7 +101,7 @@ int main()
 
 	// Objects setup
 	ugl::Model plane_model{ "models/plane.obj" }, bunny_model{ "models/cube.obj" };
-	ugl::Object<ugl::Model> plane{ plane_model }, bunny{ bunny_model };
+	ugl::Object<ugl::Model> plane{ plane_model }, cube{ bunny_model };
 	ugl::Mesh triangle_mesh
 	{
 		std::vector<ugl::Vertex>
@@ -113,7 +115,7 @@ int main()
 	ugl::Object<ugl::Mesh> cursor{ triangle_mesh };
 
 	std::vector<ugl::Object<ugl::Model>*> scene_objects;
-	scene_objects.push_back(&plane); scene_objects.push_back(&bunny);
+	scene_objects.push_back(&plane); scene_objects.push_back(&cube);
 
 	// Scene material/lighting setup 
 	glm::vec3 ambient{ 0.1f, 0.1f, 0.1f }, diffuse{ 1.0f, 1.0f, 1.0f }, specular{ 1.0f, 1.0f, 1.0f };
@@ -129,11 +131,18 @@ int main()
 	ugl::PointLight pl1{ glm::vec3{-20.f, 10.f, 10.f}, glm::vec4{1,0,1,1},1 };
 	ugl::PointLight pl2{ glm::vec3{ 20.f, 10.f, 10.f}, glm::vec4{1,1,1,1},1 };
 
-	std::vector<ugl::PointLight> pointLights;
-	pointLights.push_back(pl1); pointLights.push_back(pl2);
-	currentLight = &pointLights[0];
+	std::vector<ugl::PointLight> point_lights;
+	point_lights.push_back(pl1); point_lights.push_back(pl2);
+	currentLight = &point_lights[0];
 
-	GLuint currentSubroutineIndex;
+	// Textures setup
+	Texture uv_tex{ "textures/UV_Grid_Sm.png" }, soil_tex { "textures/SoilCracked.png" };
+	Texture wall_diffuse_tex{ "textures/brickwall.jpg" }, wall_normal_tex{ "textures/brickwall_normal.jpg" };
+
+	//GLuint currentSubroutineIndex;
+	//currentSubroutineIndex = light_shader.getSubroutineIndex(GL_FRAGMENT_SHADER, "BlinnPhong");
+	//glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &currentSubroutineIndex);
+	
 	// Rendering loop: this code is executed at each frame
 	while (wdw.is_open())
 	{
@@ -160,27 +169,28 @@ int main()
 		if (spinning)
 			orientationY += (deltaTime * spin_speed);
 
-		lightShader.use();
+		light_shader.use();
 
-		lightShader.setMat4("projectionMatrix", projection);
-		lightShader.setMat4("viewMatrix", view);
+		light_shader.setMat4("projectionMatrix", projection);
+		light_shader.setMat4("viewMatrix", view);
+		light_shader.setVec3("cameraPos", camera.position());
 
 		// LIGHTING 
-		lightShader.setUint("nPointLights", pointLights.size());
-		for (size_t i = 0; i < pointLights.size(); i++)
+		light_shader.setUint("nPointLights", point_lights.size());
+		for (size_t i = 0; i < point_lights.size(); i++)
 		{
-			pointLights[i].setup(lightShader, i);
+			point_lights[i].setup(light_shader, i);
 		}
-		lightShader.setVec3("ambient", ambient);
-		lightShader.setVec3("diffuse", diffuse);
-		lightShader.setVec3("specular", specular);
+		light_shader.setVec3("ambient", ambient);
+		light_shader.setVec3("diffuse", diffuse);
+		light_shader.setVec3("specular", specular);
 
-		lightShader.setFloat("kA", kA);
-		lightShader.setFloat("kD", kD);
-		lightShader.setFloat("kS", kS);
+		light_shader.setFloat("kA", kA);
+		light_shader.setFloat("kD", kD);
+		light_shader.setFloat("kS", kS);
 
-		lightShader.setFloat("shininess", shininess);
-		lightShader.setFloat("alpha", alpha);
+		light_shader.setFloat("shininess", shininess);
+		light_shader.setFloat("alpha", alpha);
 
 		// OBJECTS
 		ws = wdw.get_size();
@@ -190,55 +200,79 @@ int main()
 		plane.translate(glm::vec3(0.0f, -1.0f, 0.0f));
 		plane.scale(glm::vec3(10.0f, 1.0f, 10.0f));
 
-		currentSubroutineIndex = lightShader.getSubroutineIndex(GL_FRAGMENT_SHADER, "Lambert");
-		glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &currentSubroutineIndex);
+		wall_diffuse_tex.activate();
+		wall_normal_tex.activate();
+		light_shader.setInt("diffuse_tex", wall_diffuse_tex.id);
+		light_shader.setInt("normal_tex", wall_normal_tex.id);
+		light_shader.setFloat("repeat", 90.f);
 
-		plane.draw(lightShader, view);
+		plane.draw(light_shader, view);
 
-		// BIRD
-		bunny.translate(glm::vec3(0.0f, 0.0f, 0.0f));
-		bunny.rotate_deg(orientationY, glm::vec3(0.0f, 1.0f, 0.0f));
-		bunny.scale(glm::vec3(0.2f));	// It's a bit too big for our scene, so scale it down
+		// cube
+		cube.translate(glm::vec3(0.0f, 0.0f, 0.0f));
+		cube.rotate_deg(orientationY, glm::vec3(0.0f, 1.0f, 0.0f));
+		cube.scale(glm::vec3(0.2f));	// It's a bit too big for our scene, so scale it down
 
-		currentSubroutineIndex = lightShader.getSubroutineIndex(GL_FRAGMENT_SHADER, "BlinnPhong");
-		glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &currentSubroutineIndex);
+		wall_diffuse_tex.activate();
+		wall_normal_tex.activate();
+		light_shader.setInt("diffuse_tex", wall_diffuse_tex.id);
+		light_shader.setInt("normal_tex", wall_normal_tex.id);
+		light_shader.setFloat("repeat", 2.f);
 
-		bunny.draw(lightShader, view);
-
+		cube.draw(light_shader, view);
 
 		// MAP
+		glClear(GL_DEPTH_BUFFER_BIT); // clears depth information, thus everything rendered from now on will be on top https://stackoverflow.com/questions/5526704/how-do-i-keep-an-object-always-in-front-of-everything-else-in-opengl
 		glViewport(ws.width - 200, ws.height - 150, 200, 150); // we render now into the smaller map viewport
 		
 		float topdown_height = 20;
 		glm::mat4 topdown_view = glm::lookAt(camera.position() + glm::vec3{0, topdown_height, 0}, camera.position(), camera.forward());
-		lightShader.setMat4("viewMatrix", topdown_view);
+		
+		// Redraw all scene objects from map pov
+		light_shader.setMat4("viewMatrix", topdown_view);
+
+		uv_tex.activate();
+		light_shader.setInt("diffuse_tex", uv_tex.id);
+		light_shader.setFloat("repeat", 1.f);
+
+		for (ugl::Object<ugl::Model>* o : scene_objects)
+		{
+			o->draw(light_shader, topdown_view);
+		}
+
+		// Prepare cursor shader
+		glClear(GL_DEPTH_BUFFER_BIT);
+		basic_shader.use();
+		basic_shader.setMat4("projectionMatrix", projection);
+		basic_shader.setMat4("viewMatrix", topdown_view);
 
 		cursor.translate(camera.position());
 		cursor.rotate_deg(90.f, { -1.0f, 0.0f, 0.0f });
 		cursor.rotate_deg(camera.rotation().y + 90.f, { 0.0f, 0.0f, -1.0f });
-		cursor.scale(glm::vec3(3.0f));
-		cursor.draw(lightShader, topdown_view);
+		cursor.scale(glm::vec3(3.0f)); 
+
+		cursor.draw(basic_shader, topdown_view);
 		cursor.reset_transform();
 		
 		// Reset all objects transforms
 		for (ugl::Object<ugl::Model>* o : scene_objects)
 		{
-			o->draw(lightShader, topdown_view);
 			o->reset_transform();
 		}
-		
 
 		// Swap buffers
 		glfwSwapBuffers(glfw_window);
 	}
 
 	// cleanup
-	lightShader.del();
+	basic_shader.dispose();
+	light_shader.dispose();
 
 	return 0;
 }
 
 //////////////////////////////////////////
+
 // callback for keyboard events
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {

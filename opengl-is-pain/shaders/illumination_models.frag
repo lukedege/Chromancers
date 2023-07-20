@@ -3,22 +3,27 @@
 // output variable for the fragment shader
 out vec4 colorFrag;
 
-in vec2 interp_UV;
+in VS_OUT 
+{
+	vec3 pointLightDir[MAX_POINT_LIGHTS];
+	vec3 directionalLightDir[MAX_POINT_LIGHTS];
+	vec3 spotLightDir[MAX_POINT_LIGHTS];
 
+	vec3 vNormal;
+	vec3 vViewPosition;
+
+	// the output variable for UV coordinates
+	vec2 interp_UV;
+} fs_in;
+
+//Lights
 uniform uint nPointLights;
 uniform uint nDirLights;
 uniform uint nSpotLights;
 
-uniform  PointLight            pointLights[MAX_POINT_LIGHTS];
-in       LightIncidence            pointLI[MAX_POINT_LIGHTS];
-
-uniform  DirectionalLight  directionalLights[MAX_DIR_LIGHTS];
-in       LightIncidence                dirLI[MAX_DIR_LIGHTS];
-
-uniform  SpotLight               spotLights[MAX_SPOT_LIGHTS];
-in       LightIncidence              spotLI[MAX_SPOT_LIGHTS];
-
-LightIncidence  currLI;
+uniform PointLight        pointLights[MAX_POINT_LIGHTS];
+uniform DirectionalLight  directionalLights[MAX_DIR_LIGHTS];
+uniform SpotLight         spotLights[MAX_SPOT_LIGHTS];
 
 // Material-light attributes (for now the whole scene is a single material)
 uniform vec3 ambient ;
@@ -37,6 +42,9 @@ uniform float shininess;
 uniform float alpha; // rugosity - 0 : smooth, 1: rough
 uniform float F0; // fresnel reflectance at normal incidence
 
+// Current light incidence
+vec3 currLightDir;
+
 subroutine vec3 illum_model();
 layout (location = 0) subroutine uniform illum_model Illumination_Model;
 
@@ -44,9 +52,9 @@ layout(index = 0) subroutine(illum_model)
 vec3 Lambert()
 {
 	// normalization of the per-fragment normal
-	vec3 N = normalize(currLI.vNormal);
+	vec3 N = normalize(fs_in.vNormal);
 	// normalization of the per-fragment light incidence direction
-	vec3 L = normalize(currLI.lightDir);
+	vec3 L = normalize(currLightDir);
 	
 	// Lambert coefficient
 	float lambertian = max(dot(L,N), 0.0);
@@ -62,10 +70,10 @@ vec3 Phong()
 	vec3 color = kA * ambient;
 	
 	// normalization of the per-fragment normal
-	vec3 N = normalize(currLI.vNormal);
+	vec3 N = normalize(fs_in.vNormal);
 	
 	// normalization of the per-fragment light incidence direction
-	vec3 L = normalize(currLI.lightDir);
+	vec3 L = normalize(currLightDir);
 	
 	// Lambert coefficient
 	float lambertian = max(dot(L,N), 0.0);
@@ -74,7 +82,7 @@ vec3 Phong()
 	if(lambertian > 0.0)
 	{
 		// the view vector has been calculated in the vertex shader, already negated to have direction from the mesh to the camera
-		vec3 V = normalize( currLI.vViewPosition );
+		vec3 V = normalize( fs_in.vViewPosition );
 		
 		// reflection vector
 		vec3 R = reflect(-L, N);
@@ -98,10 +106,10 @@ vec3 BlinnPhong()
 	vec3 color = kA * ambient;
 	
 	// normalization of the per-fragment normal
-	vec3 N = normalize(currLI.vNormal);
+	vec3 N = normalize(fs_in.vNormal);
 	
 	// normalization of the per-fragment light incidence direction
-	vec3 L = normalize(currLI.lightDir);
+	vec3 L = normalize(currLightDir);
 	
 	// Lambert coefficient
 	float lambertian = max(dot(L,N), 0.0);
@@ -110,7 +118,7 @@ vec3 BlinnPhong()
 	if(lambertian > 0.0)
 	{
 		// the view vector has been calculated in the vertex shader, already negated to have direction from the mesh to the camera
-		vec3 V = normalize( currLI.vViewPosition );
+		vec3 V = normalize( fs_in.vViewPosition );
 		
 		// in the Blinn-Phong model we do not use the reflection vector, but the half vector
 		vec3 H = normalize(L + V);
@@ -143,9 +151,9 @@ float G1(float angle, float alpha)
 layout(index = 3) subroutine(illum_model)
 vec3 GGX()
 {
-	vec3 N = normalize(currLI.vNormal);
+	vec3 N = normalize(fs_in.vNormal);
 	// normalization of the per-fragment light incidence direction
-	vec3 L = normalize(currLI.lightDir);
+	vec3 L = normalize(currLightDir);
 	
 	// cosine angle between direction of light and normal
 	float NdotL = max(dot(N, L), 0.0);
@@ -159,7 +167,7 @@ vec3 GGX()
 	if(NdotL > 0.0)
 	{
 		// the view vector has been calculated in the vertex shader, already negated to have direction from the mesh to the camera
-		vec3 V = normalize( currLI.vViewPosition );
+		vec3 V = normalize( fs_in.vViewPosition );
 		
 		// half vector
 		vec3 H = normalize(L + V);
@@ -173,7 +181,7 @@ vec3 GGX()
 		float NdotH_Squared = NdotH * NdotH;
 		
 		// Geometric factor G2
-		// Smith’s method (uses Schlick-GGX method for both geometry obstruction and shadowing )
+		// Smithï¿½s method (uses Schlick-GGX method for both geometry obstruction and shadowing )
 		float G2 = G1(NdotV, alpha)*G1(NdotL, alpha);
 		
 		// Rugosity D
@@ -202,7 +210,7 @@ vec4 calculatePointLights()
 	vec4 color = vec4(0);
 	for(int i = 0; i < nPointLights; i++)
 	{
-		currLI = pointLI[i];
+		currLightDir = fs_in.pointLightDir[i];
 		color += vec4(Illumination_Model(), 1.0f) * pointLights[i].color * pointLights[i].intensity;
 	}
 	color.a = normalize(color.a);

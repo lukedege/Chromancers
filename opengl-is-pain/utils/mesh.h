@@ -14,8 +14,9 @@ namespace utils::graphics::opengl
 
 	struct Vertex
 	{
-		glm::vec3 position, normal, tangent, bitangent;
+		glm::vec3 position; 
 		glm::vec2 texCoords;
+		glm::vec3 normal, tangent, bitangent;
 	};
 
 	class Mesh : public Drawable

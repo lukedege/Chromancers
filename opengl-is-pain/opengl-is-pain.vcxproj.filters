@@ -71,6 +71,9 @@
     <ClInclude Include="utils\drawable.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="utils\texture.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\constants.glsl">
