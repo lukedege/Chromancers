@@ -93,6 +93,7 @@ int main()
 	std::vector<const GLchar*> utils_shaders { "shaders/types.glsl", "shaders/constants.glsl" };
 
 	ugl::Shader light_shader{ "shaders/BP_normal_mapping.vert", "shaders/BP_normal_mapping.frag", 4, 3, nullptr, utils_shaders};
+	//ugl::Shader light_shader{ "shaders/normal_mapping.vert", "shaders/normal_mapping.frag", 4, 3, nullptr, utils_shaders};
 	ugl::Shader basic_shader{ "shaders/mvp.vert", "shaders/basic.frag", 4, 3 };
 
 	// Camera setup
@@ -132,7 +133,8 @@ int main()
 	ugl::PointLight pl2{ glm::vec3{ 20.f, 10.f, 10.f}, glm::vec4{1,1,1,1},1 };
 
 	std::vector<ugl::PointLight> point_lights;
-	point_lights.push_back(pl1); point_lights.push_back(pl2);
+	point_lights.push_back(pl1); 
+	point_lights.push_back(pl2);
 	currentLight = &point_lights[0];
 
 	// Textures setup
@@ -173,7 +175,8 @@ int main()
 
 		light_shader.setMat4("projectionMatrix", projection);
 		light_shader.setMat4("viewMatrix", view);
-		light_shader.setVec3("cameraPos", camera.position());
+		light_shader.setVec3("wCameraPos", camera.position());
+		//light_shader.setVec3("wLightPos", point_lights[0].position);
 
 		// LIGHTING 
 		light_shader.setUint("nPointLights", point_lights.size());
@@ -205,6 +208,7 @@ int main()
 		light_shader.setInt("diffuse_tex", wall_diffuse_tex.id);
 		light_shader.setInt("normal_tex", wall_normal_tex.id);
 		light_shader.setFloat("repeat", 90.f);
+		light_shader.setBool("use_normalmap", true);
 
 		plane.draw(light_shader, view);
 
@@ -218,22 +222,27 @@ int main()
 		light_shader.setInt("diffuse_tex", wall_diffuse_tex.id);
 		light_shader.setInt("normal_tex", wall_normal_tex.id);
 		light_shader.setFloat("repeat", 2.f);
+		light_shader.setBool("use_normalmap", true);
 
 		cube.draw(light_shader, view);
 
 		// MAP
+		
 		glClear(GL_DEPTH_BUFFER_BIT); // clears depth information, thus everything rendered from now on will be on top https://stackoverflow.com/questions/5526704/how-do-i-keep-an-object-always-in-front-of-everything-else-in-opengl
 		glViewport(ws.width - 200, ws.height - 150, 200, 150); // we render now into the smaller map viewport
 		
 		float topdown_height = 20;
-		glm::mat4 topdown_view = glm::lookAt(camera.position() + glm::vec3{0, topdown_height, 0}, camera.position(), camera.forward());
+		glm::vec3 new_cam_pos = camera.position() + glm::vec3{ 0, topdown_height, 0 };
+		glm::mat4 topdown_view = glm::lookAt(new_cam_pos, camera.position(), camera.forward());
 		
 		// Redraw all scene objects from map pov
 		light_shader.setMat4("viewMatrix", topdown_view);
+		light_shader.setVec3("wCameraPos", new_cam_pos);
 
 		uv_tex.activate();
 		light_shader.setInt("diffuse_tex", uv_tex.id);
-		light_shader.setFloat("repeat", 1.f);
+		light_shader.setFloat("repeat", 2.f);
+		light_shader.setBool("use_normalmap", false);
 
 		for (ugl::Object<ugl::Model>* o : scene_objects)
 		{

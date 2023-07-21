@@ -6,8 +6,15 @@ out vec4 colorFrag;
 in VS_OUT 
 {
 	// tangent space data
-	vec3 tPointLightDir[MAX_POINT_LIGHTS];
-	vec3 tViewPosition;
+	vec3 twPointLightPos[MAX_POINT_LIGHTS];
+	vec3 twFragPos; // Local -> World -> Tangent position of frag N.B. THE FIRST LETTER SPECIFIES THE FINAL SPACE 
+	vec3 twCameraPos; 
+	vec3 tNormal;
+
+	//view space data
+	vec3 vwPointLightPos[MAX_POINT_LIGHTS];
+	vec3 vwFragPos; // Local -> World -> View position of frag 
+	vec3 vNormal;
 
 	// the output variable for UV coordinates
 	vec2 interp_UV;
@@ -22,6 +29,7 @@ uniform PointLight pointLights[MAX_POINT_LIGHTS];
 uniform sampler2D diffuse_tex; // texture samplers
 uniform sampler2D normal_tex;
 
+uniform bool use_normalmap; // use normal map or not
 uniform float repeat; // texture repetitions
 
 // Material-light attributes
@@ -41,10 +49,11 @@ uniform float shininess;
 uniform float alpha; // rugosity - 0 : smooth, 1: rough
 uniform float F0; // fresnel reflectance at normal incidence
 
-// Current light incidence
-vec3 currLightDir;
+// Current light position
+vec3 curr_twLightPos;
+vec3 curr_vwLightPos;
 
-vec3 BlinnPhong()
+vec3 BlinnPhongTangent()
 {
 	// we repeat the UVs and we sample the texture
     vec2 repeated_UV = mod(fs_in.interp_UV * repeat, 1.0);
@@ -54,12 +63,52 @@ vec3 BlinnPhong()
 	vec3 color = kA * ambient;
 	
 	// obtain normal from normal map in range [0,1]
-    vec3 N = texture(normal_tex, repeated_UV).rgb;
-    // transform normal vector to range [-1,1]
-    N = normalize(N * 2.0 - 1.0);  // this normal is in tangent space
+	vec3 N = texture(normal_tex, repeated_UV).rgb;
+	
+	// transform normal vector to range [-1,1]
+	N = normalize(N * 2.0 - 1.0);  // this normal is in tangent space
 	
 	// normalization of the per-fragment light incidence direction
-	vec3 L = normalize(currLightDir);
+	vec3 L = normalize(curr_twLightPos - fs_in.twFragPos);
+	
+	// Lambert coefficient
+	float lambertian = max(dot(L,N), 0.0);
+	
+	// if the lambert coefficient is positive, then I can calculate the specular component
+	if(lambertian > 0.0)
+	{
+		// the tangent space vector has been calculated in the vertex shader
+		vec3 V = normalize( fs_in.twCameraPos - fs_in.twFragPos );
+		
+		// in the Blinn-Phong model we do not use the reflection vector, but the half vector
+		vec3 H = normalize(L + V);
+		
+		// we use H to calculate the specular component
+		float specAngle = max(dot(H, N), 0.0);
+		// shininess application to the specular component
+		float spec = pow(specAngle, shininess);
+		
+		// We add diffusive and specular components to the final color
+		// N.B. ): in this implementation, the sum of the components can be different than 1
+		color += vec3( kD * lambertian * surfaceColor.xyz + kS * spec * specular);
+	}
+	return color;
+}
+
+vec3 BlinnPhongView()
+{
+	// we repeat the UVs and we sample the texture
+    vec2 repeated_UV = mod(fs_in.interp_UV * repeat, 1.0);
+    vec4 surfaceColor = texture(diffuse_tex, repeated_UV);
+
+	// ambient component can be calculated at the beginning
+	vec3 color = kA * ambient;
+	
+	// normalization of the per-fragment normal
+	vec3 N = normalize(fs_in.vNormal);
+	
+	// normalization of the per-fragment light incidence direction
+	vec3 L = normalize(curr_vwLightPos - fs_in.vwFragPos);
 	
 	// Lambert coefficient
 	float lambertian = max(dot(L,N), 0.0);
@@ -68,7 +117,7 @@ vec3 BlinnPhong()
 	if(lambertian > 0.0)
 	{
 		// the view vector has been calculated in the vertex shader, already negated to have direction from the mesh to the camera
-		vec3 V = normalize( fs_in.tViewPosition );
+		vec3 V = normalize( -fs_in.vwFragPos );
 		
 		// in the Blinn-Phong model we do not use the reflection vector, but the half vector
 		vec3 H = normalize(L + V);
@@ -90,8 +139,10 @@ vec4 calculatePointLights()
 	vec4 color = vec4(0);
 	for(int i = 0; i < nPointLights; i++)
 	{
-		currLightDir = fs_in.tPointLightDir[i];
-		color += vec4(BlinnPhong(), 1.0f) * pointLights[i].color * pointLights[i].intensity;
+		curr_twLightPos = fs_in.twPointLightPos[i];
+		curr_vwLightPos = fs_in.vwPointLightPos[i];
+		color += vec4(use_normalmap ? BlinnPhongTangent() : BlinnPhongView(), 1.0f);
+		color *= pointLights[i].color * pointLights[i].intensity;
 	}
 	//color.a = normalize(color.a);
 	return color;

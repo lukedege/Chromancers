@@ -129,45 +129,8 @@ namespace utils::graphics::opengl
 		GLuint glMajorVersion;
 		GLuint glMinorVersion;
 
-		void loadFromText(const GLchar* vertPath, const GLchar* fragPath, const GLchar* geomPath, std::vector<const GLchar*> utilPaths = {})
-		{
-			GLuint vertexShader, fragmentShader, geometryShader;
-
-			const std::string vertSource = loadSourceText(vertPath);
-			const std::string fragSource = loadSourceText(fragPath);
-
-			std::string utilsSource;
-
-			for (const GLchar* utilPath : utilPaths)
-				{
-				utilsSource += loadSourceText(utilPath) + "\n";
-				}
-
-			vertexShader = compileShaderText(vertSource, GL_VERTEX_SHADER, utilsSource);
-			fragmentShader = compileShaderText(fragSource, GL_FRAGMENT_SHADER, utilsSource);
-
-			glAttachShader(program, vertexShader);
-			glAttachShader(program, fragmentShader);
-
-			if (geomPath)
-				{
-				const std::string geomSource = loadSourceText(geomPath);
-				geometryShader = compileShaderText(geomSource, GL_GEOMETRY_SHADER, utilsSource);
-				glAttachShader(program, geometryShader);
-				}
-
-			try {
-				glLinkProgram(program);
-				}
-			catch (std::exception e) { auto x = glGetError(); checkLinkingErrors(); std::cout << e.what(); }
-			checkLinkingErrors();
-
-			glDeleteShader(vertexShader);
-			glDeleteShader(fragmentShader);
-
-			if (geomPath) { glDeleteShader(geometryShader); }
-		}
-
+		
+#pragma region spirv
 		void loadFromSpirV(const GLchar* vertPath, const GLchar* fragPath, const GLchar* geomPath, std::vector<const GLchar*> utilPaths = {})
 		{
 			//TODO from example code at https://www.khronos.org/opengl/wiki/SPIR-V
@@ -230,9 +193,50 @@ namespace utils::graphics::opengl
 			glSpecializeShader(shader, "main", 0, nullptr, nullptr);
 
 			// Specialization is equivalent to compilation.
-			checkCompileErrors(shader);
+			checkCompileErrors(shader, shaderType);
 
 			return shader;
+		}
+#pragma endregion
+
+#pragma region text
+		void loadFromText(const GLchar* vertPath, const GLchar* fragPath, const GLchar* geomPath, std::vector<const GLchar*> utilPaths = {})
+		{
+			GLuint vertexShader, fragmentShader, geometryShader;
+
+			const std::string vertSource = loadSourceText(vertPath);
+			const std::string fragSource = loadSourceText(fragPath);
+
+			std::string utilsSource;
+
+			for (const GLchar* utilPath : utilPaths)
+			{
+				utilsSource += loadSourceText(utilPath) + "\n";
+			}
+
+			vertexShader = compileShaderText(vertSource, GL_VERTEX_SHADER, utilsSource);
+			fragmentShader = compileShaderText(fragSource, GL_FRAGMENT_SHADER, utilsSource);
+
+			glAttachShader(program, vertexShader);
+			glAttachShader(program, fragmentShader);
+
+			if (geomPath)
+			{
+				const std::string geomSource = loadSourceText(geomPath);
+				geometryShader = compileShaderText(geomSource, GL_GEOMETRY_SHADER, utilsSource);
+				glAttachShader(program, geometryShader);
+			}
+
+			try {
+				glLinkProgram(program);
+			}
+			catch (std::exception e) { auto x = glGetError(); checkLinkingErrors(); std::cout << e.what(); }
+			checkLinkingErrors();
+
+			glDeleteShader(vertexShader);
+			glDeleteShader(fragmentShader);
+
+			if (geomPath) { glDeleteShader(geometryShader); }
 		}
 
 		const std::string loadSourceText(const GLchar* sourcePath) const noexcept
@@ -280,11 +284,12 @@ namespace utils::graphics::opengl
 			
 			glShaderSource(shader, 1, &c, NULL);   // as of documentation, glShaderSource is supposed to copy the content of the c string so we can trash it afterwards
 			glCompileShader(shader);
-			checkCompileErrors(shader);
+			checkCompileErrors(shader, shaderType);
 			return shader;
 		}
+#pragma endregion
 
-		void checkCompileErrors(GLuint shader) const noexcept
+		void checkCompileErrors(GLuint shader, GLenum shaderType) const noexcept
 		{
 			// Check for compile time errors TODO
 			GLint success; GLchar infoLog[512];
@@ -292,7 +297,11 @@ namespace utils::graphics::opengl
 			if (!success)
 			{
 				glGetShaderInfoLog(shader, 512, NULL, infoLog);
-				std::cout << "ERROR::SHADER::COMPILATION_FAILED\n" << infoLog << std::endl;
+				std::string shader_type;
+				if (shaderType == GL_VERTEX_SHADER)        shader_type = "VERTEX";
+				else if (shaderType == GL_FRAGMENT_SHADER) shader_type = "FRAGMENT";
+				else if (shaderType == GL_GEOMETRY_SHADER) shader_type = "GEOMETRY";
+				std::cout << "ERROR::" << shader_type << " SHADER::COMPILATION_FAILED\n" << infoLog << std::endl;
 			}
 		}
 
