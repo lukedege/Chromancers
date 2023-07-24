@@ -72,9 +72,9 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>..\..\..\Libraries\glfw\include;..\..\..\Libraries\glm;..\..\..\Libraries\glad;..\..\..\Libraries\assimp\include;..\..\..\Libraries\stb_image;$(VC_IncludePath)</IncludePath>
+    <IncludePath>..\..\..\Libraries\imgui-1.88;..\..\..\Libraries\imgui-1.88\backends;..\..\..\Libraries\glfw\include;..\..\..\Libraries\glm;..\..\..\Libraries\glad;..\..\..\Libraries\assimp\include;..\..\..\Libraries\stb_image;$(VC_IncludePath)</IncludePath>
     <LibraryPath>..\..\..\Libraries\glfw\lib-vc2022;..\..\..\Libraries\assimp\build\lib\Debug;..\..\..\Libraries\various;$(LibraryPath)</LibraryPath>
-    <SourcePath>$(SourcePath)</SourcePath>
+    <SourcePath>..\..\..\Libraries\glad;$(SourcePath)</SourcePath>
     <ReferencePath>$(ReferencePath)</ReferencePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -147,6 +147,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Libraries\glad\glad.c" />
+    <ClCompile Include="..\..\..\Libraries\imgui-1.88\backends\imgui_impl_glfw.cpp" />
+    <ClCompile Include="..\..\..\Libraries\imgui-1.88\backends\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="..\..\..\Libraries\imgui-1.88\imgui.cpp" />
+    <ClCompile Include="..\..\..\Libraries\imgui-1.88\imgui_draw.cpp" />
+    <ClCompile Include="..\..\..\Libraries\imgui-1.88\imgui_tables.cpp" />
+    <ClCompile Include="..\..\..\Libraries\imgui-1.88\imgui_widgets.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Main_spv.cpp" />
     <ClCompile Include="quick_tests.cpp" />

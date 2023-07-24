@@ -14,6 +14,10 @@
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_opengl3.h>
+
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
@@ -62,6 +66,16 @@ GLfloat mov_light_speed = 30.f;
 #define MAX_DIR_LIGHTS   3
 #define MAX_LIGHTS MAX_POINT_LIGHTS+MAX_SPOT_LIGHTS+MAX_DIR_LIGHTS
 
+void set_matrices(ugl::Shader& shader);
+void set_light_attributes(ugl::Shader& shader);
+
+// Scene material/lighting setup 
+glm::vec3 ambient{ 0.1f, 0.1f, 0.1f }, diffuse{ 1.0f, 1.0f, 1.0f }, specular{ 1.0f, 1.0f, 1.0f };
+GLfloat kD = 0.5f, kS = 0.4f, kA = 0.1f; // Generally we'd like a normalized sum of these coefficients Kd + Ks + Ka = 1
+GLfloat shininess = 25.f;
+GLfloat alpha = 0.2f;
+GLfloat F0 = 0.9f;
+
 /////////////////// MAIN function ///////////////////////
 int main()
 {
@@ -88,13 +102,21 @@ int main()
 	// Callbacks linking with glfw
 	glfwSetKeyCallback(glfw_window, key_callback);
 	glfwSetCursorPosCallback(glfw_window, mouse_pos_callback);
+
+	// Imgui setup
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGui::StyleColorsDark();
+	ImGui_ImplGlfw_InitForOpenGL(glfw_window, true);
+	ImGui_ImplOpenGL3_Init("#version 430");
 	
 	// Shader setup
 	std::vector<const GLchar*> utils_shaders { "shaders/types.glsl", "shaders/constants.glsl" };
 
-	ugl::Shader light_shader{ "shaders/BP_normal_mapping.vert", "shaders/BP_normal_mapping.frag", 4, 3, nullptr, utils_shaders};
+	ugl::Shader norm_map_shader{ "shaders/BP_normal_mapping.vert", "shaders/BP_normal_mapping.frag", 4, 3, nullptr, utils_shaders};
 	//ugl::Shader light_shader{ "shaders/normal_mapping.vert", "shaders/normal_mapping.frag", 4, 3, nullptr, utils_shaders};
 	ugl::Shader basic_shader{ "shaders/mvp.vert", "shaders/basic.frag", 4, 3 };
+	ugl::Shader parallax_map_shader{ "shaders/BP_parallax_mapping.vert", "shaders/BP_parallax_mapping.frag", 4, 3, nullptr, utils_shaders };
 
 	// Camera setup
 	glm::mat4 projection = glm::perspective(45.0f, width / height, 0.1f, 10000.0f);
@@ -118,15 +140,8 @@ int main()
 	std::vector<ugl::Object<ugl::Model>*> scene_objects;
 	scene_objects.push_back(&plane); scene_objects.push_back(&cube);
 
-	// Scene material/lighting setup 
-	glm::vec3 ambient{ 0.1f, 0.1f, 0.1f }, diffuse{ 1.0f, 1.0f, 1.0f }, specular{ 1.0f, 1.0f, 1.0f };
-	GLfloat kD = 0.5f, kS = 0.4f, kA = 0.1f; // Generally we'd like a normalized sum of these coefficients Kd + Ks + Ka = 1
-	GLfloat shininess = 25.f;
-	GLfloat alpha = 0.2f;
-	GLfloat F0 = 0.9f;
-
-	std::vector<glm::vec3> shading_attrs_colors{ ambient, diffuse, specular };
-	std::vector<float> shading_attrs_coeff{ kD, kS, kA, shininess, alpha, F0 };
+	//std::vector<glm::vec3> shading_attrs_colors{ ambient, diffuse, specular };
+	//std::vector<float> shading_attrs_coeff{ kD, kS, kA, shininess, alpha, F0 };
 	
 	// Lights setup 
 	ugl::PointLight pl1{ glm::vec3{-20.f, 10.f, 10.f}, glm::vec4{1,0,1,1},1 };
@@ -140,10 +155,19 @@ int main()
 	// Textures setup
 	Texture uv_tex{ "textures/UV_Grid_Sm.png" }, soil_tex { "textures/SoilCracked.png" };
 	Texture wall_diffuse_tex{ "textures/brickwall.jpg" }, wall_normal_tex{ "textures/brickwall_normal.jpg" };
+	Texture redbricks_diffuse_tex{ "textures/bricks2.jpg" }, 
+		redbricks_normal_tex{ "textures/bricks2_normal.jpg" },
+		redbricks_depth_tex{ "textures/bricks2_disp.jpg" };
+	float parallax_heightscale = .1f;
 
 	//GLuint currentSubroutineIndex;
 	//currentSubroutineIndex = light_shader.getSubroutineIndex(GL_FRAGMENT_SHADER, "BlinnPhong");
 	//glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &currentSubroutineIndex);
+
+	// Shader "constants" setup
+	set_light_attributes(norm_map_shader);
+	set_light_attributes(parallax_map_shader);
+	float norm_map_repeat = 90.f, parallax_map_repeat = 3.f;
 	
 	// Rendering loop: this code is executed at each frame
 	while (wdw.is_open())
@@ -162,7 +186,6 @@ int main()
 		// Check is an I/O event is happening
 		glfwPollEvents();
 		process_input();
-		view = camera.GetViewMatrix();
 
 		// we "clear" the frame and z buffer
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -170,30 +193,6 @@ int main()
 		// if animated rotation is activated, than we increment the rotation angle using delta time and the rotation speed parameter
 		if (spinning)
 			orientationY += (deltaTime * spin_speed);
-
-		light_shader.use();
-
-		light_shader.setMat4("projectionMatrix", projection);
-		light_shader.setMat4("viewMatrix", view);
-		light_shader.setVec3("wCameraPos", camera.position());
-		//light_shader.setVec3("wLightPos", point_lights[0].position);
-
-		// LIGHTING 
-		light_shader.setUint("nPointLights", point_lights.size());
-		for (size_t i = 0; i < point_lights.size(); i++)
-		{
-			point_lights[i].setup(light_shader, i);
-		}
-		light_shader.setVec3("ambient", ambient);
-		light_shader.setVec3("diffuse", diffuse);
-		light_shader.setVec3("specular", specular);
-
-		light_shader.setFloat("kA", kA);
-		light_shader.setFloat("kD", kD);
-		light_shader.setFloat("kS", kS);
-
-		light_shader.setFloat("shininess", shininess);
-		light_shader.setFloat("alpha", alpha);
 
 		// OBJECTS
 		ws = wdw.get_size();
@@ -203,31 +202,57 @@ int main()
 		plane.translate(glm::vec3(0.0f, -1.0f, 0.0f));
 		plane.scale(glm::vec3(10.0f, 1.0f, 10.0f));
 
+		norm_map_shader.use();
 		wall_diffuse_tex.activate();
 		wall_normal_tex.activate();
-		light_shader.setInt("diffuse_tex", wall_diffuse_tex.id);
-		light_shader.setInt("normal_tex", wall_normal_tex.id);
-		light_shader.setFloat("repeat", 90.f);
-		light_shader.setBool("use_normalmap", true);
+		
+		norm_map_shader.setMat4("viewMatrix", view);
+		norm_map_shader.setMat4("projectionMatrix", projection);
+		norm_map_shader.setVec3("wCameraPos", camera.position());
 
-		plane.draw(light_shader, view);
+		// LIGHTING 
+		norm_map_shader.setUint("nPointLights", point_lights.size());
+		for (size_t i = 0; i < point_lights.size(); i++)
+		{
+			point_lights[i].setup(norm_map_shader, i);
+		}
+
+		norm_map_shader.setInt("diffuse_tex", wall_diffuse_tex.id);
+		norm_map_shader.setInt("normal_tex", wall_normal_tex.id);
+		norm_map_shader.setFloat("repeat", norm_map_repeat);
+		norm_map_shader.setBool("use_normalmap", true);
+
+		plane.draw(norm_map_shader, view);
 
 		// cube
 		cube.translate(glm::vec3(0.0f, 0.0f, 0.0f));
 		cube.rotate_deg(orientationY, glm::vec3(0.0f, 1.0f, 0.0f));
 		cube.scale(glm::vec3(0.2f));	// It's a bit too big for our scene, so scale it down
 
-		wall_diffuse_tex.activate();
-		wall_normal_tex.activate();
-		light_shader.setInt("diffuse_tex", wall_diffuse_tex.id);
-		light_shader.setInt("normal_tex", wall_normal_tex.id);
-		light_shader.setFloat("repeat", 2.f);
-		light_shader.setBool("use_normalmap", true);
+		parallax_map_shader.use();
+		redbricks_diffuse_tex.activate();
+		redbricks_normal_tex.activate();
+		redbricks_depth_tex.activate();
 
-		cube.draw(light_shader, view);
+		parallax_map_shader.setMat4("viewMatrix", view);
+		parallax_map_shader.setMat4("projectionMatrix", projection);
+		parallax_map_shader.setVec3("wCameraPos", camera.position());
+
+		parallax_map_shader.setUint("nPointLights", point_lights.size());
+		for (size_t i = 0; i < point_lights.size(); i++)
+		{
+			point_lights[i].setup(parallax_map_shader, i);
+		}
+
+		parallax_map_shader.setFloat("heightScale", parallax_heightscale);
+		parallax_map_shader.setInt("diffuse_tex", redbricks_diffuse_tex.id);
+		parallax_map_shader.setInt("normal_tex", redbricks_normal_tex.id);
+		parallax_map_shader.setInt("depth_tex", redbricks_depth_tex.id);
+		parallax_map_shader.setFloat("repeat", parallax_map_repeat);
+
+		cube.draw(parallax_map_shader, view);
 
 		// MAP
-		
 		glClear(GL_DEPTH_BUFFER_BIT); // clears depth information, thus everything rendered from now on will be on top https://stackoverflow.com/questions/5526704/how-do-i-keep-an-object-always-in-front-of-everything-else-in-opengl
 		glViewport(ws.width - 200, ws.height - 150, 200, 150); // we render now into the smaller map viewport
 		
@@ -236,24 +261,25 @@ int main()
 		glm::mat4 topdown_view = glm::lookAt(new_cam_pos, camera.position(), camera.forward());
 		
 		// Redraw all scene objects from map pov
-		light_shader.setMat4("viewMatrix", topdown_view);
-		light_shader.setVec3("wCameraPos", new_cam_pos);
+		norm_map_shader.use();
+		norm_map_shader.setMat4("viewMatrix", topdown_view);
+		norm_map_shader.setVec3("wCameraPos", new_cam_pos);
 
 		uv_tex.activate();
-		light_shader.setInt("diffuse_tex", uv_tex.id);
-		light_shader.setFloat("repeat", 2.f);
-		light_shader.setBool("use_normalmap", false);
+		norm_map_shader.setInt("diffuse_tex", uv_tex.id);
+		norm_map_shader.setFloat("repeat", 2.f);
+		norm_map_shader.setBool("use_normalmap", false);
 
 		for (ugl::Object<ugl::Model>* o : scene_objects)
 		{
-			o->draw(light_shader, topdown_view);
+			o->draw(norm_map_shader, topdown_view);
 		}
 
 		// Prepare cursor shader
 		glClear(GL_DEPTH_BUFFER_BIT);
 		basic_shader.use();
-		basic_shader.setMat4("projectionMatrix", projection);
 		basic_shader.setMat4("viewMatrix", topdown_view);
+		basic_shader.setMat4("projectionMatrix", projection);
 
 		cursor.translate(camera.position());
 		cursor.rotate_deg(90.f, { -1.0f, 0.0f, 0.0f });
@@ -269,20 +295,60 @@ int main()
 			o->reset_transform();
 		}
 
+		// ImGUI window creation
+		ImGui_ImplOpenGL3_NewFrame();// Tell OpenGL a new Imgui frame is about to begin
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+
+		ImGui::Begin("Coefficients and scales");
+		ImGui::Separator(); ImGui::Text("Normal");
+		ImGui::SliderFloat("Repeat tex##norm", &norm_map_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
+		ImGui::Separator(); ImGui::Text("Parallax");
+		ImGui::SliderFloat("Height Scale", &parallax_heightscale, 0, 2, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+		ImGui::SliderFloat("Repeat tex##prlx", &parallax_map_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
+		ImGui::End();
+
+		// Renders the ImGUI elements
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+		view = camera.GetViewMatrix();
+
 		// Swap buffers
 		glfwSwapBuffers(glfw_window);
 	}
 
-	// cleanup
+	// Cleanup
 	basic_shader.dispose();
-	light_shader.dispose();
+	norm_map_shader.dispose();
+	parallax_map_shader.dispose();
+	
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
 
 	return 0;
 }
 
 //////////////////////////////////////////
 
-// callback for keyboard events
+// HELPERS
+
+void set_light_attributes(ugl::Shader& shader)
+{
+	shader.use();
+	shader.setVec3("ambient", ambient);
+	shader.setVec3("diffuse", diffuse);
+	shader.setVec3("specular", specular);
+
+	shader.setFloat("kA", kA);
+	shader.setFloat("kD", kD);
+	shader.setFloat("kS", kS);
+
+	shader.setFloat("shininess", shininess);
+	shader.setFloat("alpha", alpha);
+}
+
+// INPUT
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
 	// if ESC is pressed, we close the application
@@ -350,5 +416,6 @@ void mouse_pos_callback(GLFWwindow* window, double x_pos, double y_pos)
 	lastX = x_pos;
 	lastY = y_pos;
 
-	camera.ProcessMouseMovement(x_offset, y_offset);
+	if(capture_mouse)
+		camera.ProcessMouseMovement(x_offset, y_offset);
 }

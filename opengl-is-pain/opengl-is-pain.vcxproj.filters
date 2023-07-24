@@ -28,6 +28,9 @@
     <Filter Include="Shaders\text">
       <UniqueIdentifier>{4d596378-d45c-4f06-b18e-8fd69a4bc691}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Libraries\imgui">
+      <UniqueIdentifier>{d85dde33-c73b-4f1a-ae25-e072ea9203cf}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -41,6 +44,24 @@
     </ClCompile>
     <ClCompile Include="Main_spv.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Libraries\imgui-1.88\imgui.cpp">
+      <Filter>Source Files\Libraries\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Libraries\imgui-1.88\imgui_draw.cpp">
+      <Filter>Source Files\Libraries\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Libraries\imgui-1.88\imgui_tables.cpp">
+      <Filter>Source Files\Libraries\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Libraries\imgui-1.88\imgui_widgets.cpp">
+      <Filter>Source Files\Libraries\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Libraries\imgui-1.88\backends\imgui_impl_opengl3.cpp">
+      <Filter>Source Files\Libraries\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Libraries\imgui-1.88\backends\imgui_impl_glfw.cpp">
+      <Filter>Source Files\Libraries\imgui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
