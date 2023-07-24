@@ -40,9 +40,9 @@ void process_input();
 GLfloat lastX, lastY;
 bool firstMouse = true;
 bool keys[1024];
-bool capture_mouse = false;
+bool capture_mouse = true;
 
-ugl::Camera camera(glm::vec3(0, 0, 7), GL_TRUE);
+ugl::Camera camera;
 
 // parameters for time computation
 GLfloat deltaTime = 0.0f;
@@ -119,8 +119,9 @@ int main()
 	ugl::Shader parallax_map_shader{ "shaders/BP_parallax_mapping.vert", "shaders/BP_parallax_mapping.frag", 4, 3, nullptr, utils_shaders };
 
 	// Camera setup
-	glm::mat4 projection = glm::perspective(45.0f, width / height, 0.1f, 10000.0f);
-	glm::mat4 view = glm::mat4(1);
+	camera = ugl::Camera{ glm::vec3{0,0,5} };
+	glm::mat4 view = camera.view_matrix();
+	glm::mat4 projection = camera.projection_matrix();
 
 	// Objects setup
 	ugl::Model plane_model{ "models/plane.obj" }, bunny_model{ "models/cube.obj" };
@@ -194,6 +195,9 @@ int main()
 		if (spinning)
 			orientationY += (deltaTime * spin_speed);
 
+		// get matrices from camera
+		view = camera.view_matrix();
+
 		// OBJECTS
 		ws = wdw.get_size();
 		glViewport(0, 0, ws.width, ws.height); // we render objects in full screen
@@ -227,7 +231,7 @@ int main()
 		// cube
 		cube.translate(glm::vec3(0.0f, 0.0f, 0.0f));
 		cube.rotate_deg(orientationY, glm::vec3(0.0f, 1.0f, 0.0f));
-		cube.scale(glm::vec3(0.2f));	// It's a bit too big for our scene, so scale it down
+		cube.scale(glm::vec3(1.f));	// It's a bit too big for our scene, so scale it down
 
 		parallax_map_shader.use();
 		redbricks_diffuse_tex.activate();
@@ -311,7 +315,7 @@ int main()
 		// Renders the ImGUI elements
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-		view = camera.GetViewMatrix();
+		view = camera.view_matrix();
 
 		// Swap buffers
 		glfwSwapBuffers(glfw_window);
@@ -355,8 +359,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GL_TRUE);
 
-	// if C is pressed, capture the mouse cursor
-	if (key == GLFW_KEY_C && action == GLFW_PRESS)
+	// if LAlt is pressed, capture the mouse cursor
+	if (key == GLFW_KEY_LEFT_ALT && action == GLFW_PRESS)
 		capture_mouse = !capture_mouse;
 
 	// if P is pressed, we start/stop the animated rotation of models
@@ -390,6 +394,12 @@ void process_input()
 		camera.ProcessKeyboard(ugl::Camera::Directions::LEFT    , deltaTime);
 	if (keys[GLFW_KEY_D])
 		camera.ProcessKeyboard(ugl::Camera::Directions::RIGHT   , deltaTime);
+	if (keys[GLFW_KEY_Q])
+		camera.ProcessKeyboard(ugl::Camera::Directions::DOWN, deltaTime);
+	if (keys[GLFW_KEY_E])
+		camera.ProcessKeyboard(ugl::Camera::Directions::UP, deltaTime);
+	if (keys[GLFW_KEY_SPACE])
+		camera.toggle_fly();
 
 	if (keys[GLFW_KEY_LEFT])
 		currentLight->position.x -= mov_light_speed * deltaTime;

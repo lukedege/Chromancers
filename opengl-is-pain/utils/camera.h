@@ -7,6 +7,7 @@ namespace utils::graphics::opengl
 {
 	class Camera
 	{
+		// input related
 		const float YAW = -90.f;
 		const float PITCH = 0.f;
 		const float ROLL = 0.f;
@@ -14,13 +15,18 @@ namespace utils::graphics::opengl
 		const float SPEED = 6.f;
 		const float SENSITIVITY = 0.05f;
 
+		float mov_speed{ SPEED }, mouse_sensitivity{ SENSITIVITY };
+		bool on_ground;
+
+		// angles
+		float yaw{ YAW }, pitch{ PITCH }, roll{ ROLL };
+
+		// vectors
 		glm::vec3 pos, front, up, right;
 		glm::vec3 world_front, world_up;
 
-		float yaw, pitch, roll;
-		float mov_speed, mouse_sensitivity;
-
-		bool on_ground;
+		// matrix related
+		float fov, aspect_ratio, near_plane, far_plane;
 
 	public:
 		enum Directions
@@ -28,16 +34,29 @@ namespace utils::graphics::opengl
 			FORWARD, BACKWARD, LEFT, RIGHT, UP, DOWN
 		};
 
-		Camera(glm::vec3 pos, bool on_ground) : pos(pos), on_ground(on_ground),
-			yaw(YAW), pitch(PITCH), roll(ROLL),
-			mov_speed(SPEED), mouse_sensitivity(SENSITIVITY)
+		Camera(glm::vec3 pos = {0,0,0}, bool on_ground = true) : pos{pos}, on_ground{on_ground},
+			world_up{ 0, 1, 0 }
 		{
-			world_up = glm::vec3(0.f, 1.f, 0.f);
 			updateCameraVectors();
 		}
-		glm::mat4 GetViewMatrix()
+
+		Camera(const Camera& copy) = delete;
+		Camera& operator=(const Camera& copy) = delete;
+
+		Camera(Camera&& move) noexcept
+			: pos{ move.pos }, on_ground{ move.on_ground }, world_up{ move.world_up }
+			// TODO add yaw, pitch, roll and other variables to move over
 		{
-			return glm::lookAt(pos, pos + front, up);
+			updateCameraVectors();
+		}
+
+		Camera& operator=(Camera&& move) noexcept
+		{
+			pos = move.pos;
+			on_ground = move.on_ground;
+			world_up = move.world_up;
+			updateCameraVectors();
+			return *this;
 		}
 
 		void ProcessKeyboard(Directions dir, float deltaTime)
@@ -82,6 +101,21 @@ namespace utils::graphics::opengl
 			}
 
 			updateCameraVectors();
+		}
+
+		void toggle_fly()
+		{
+			on_ground = !on_ground;
+		}
+
+		glm::mat4 view_matrix()
+		{
+			return glm::lookAt(pos, pos + front, up);
+		}
+
+		glm::mat4 projection_matrix()
+		{
+			return glm::perspective(45.0f, 16.f / 9.f, 0.1f, 100.0f);
 		}
 
 		glm::vec3 position()
