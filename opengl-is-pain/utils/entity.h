@@ -7,35 +7,34 @@
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "utils/model.h"
-#include "utils/shader.h"
+#include "transform.h"
+#include "model.h"
+#include "shader.h"
 
 namespace utils::graphics::opengl
 {
 
 	// Object in scene
 	template <typename drawable_T>
-	class Object
+	class Entity
 	{
 		drawable_T drawable; // can be either Model or Mesh
-		glm::mat4 transform;
 		glm::mat3 normal;
-
+		
 	public:
-		Object(drawable_T&  drawable, const glm::mat4& transform = glm::mat4(1)) : drawable{ std::move(drawable) }, transform{ transform }, normal{ glm::mat3(1) } {}
-		Object(drawable_T&& drawable, const glm::mat4& transform = glm::mat4(1)) : drawable{ std::move(drawable) }, transform{ transform }, normal{ glm::mat3(1) } {}
+		Entity(drawable_T&  drawable) : drawable{ std::move(drawable) }, normal{ glm::mat3(1) } {}
+		Entity(drawable_T&& drawable) : drawable{ std::move(drawable) }, normal{ glm::mat3(1) } {}
 
-		void scale(glm::vec3 scaling) { transform = glm::scale(transform, scaling); }
-		void translate(glm::vec3 translation) { transform = glm::translate(transform, translation); }
-		void rotate(float angle_rad, glm::vec3 rotationAxis) { transform = glm::rotate(transform, angle_rad, rotationAxis); }
-		void rotate_deg(float angle_deg, glm::vec3 rotationAxis) { rotate(glm::radians(angle_deg), rotationAxis); }
+		//void rotate(float angle_rad, glm::vec3 rotationAxis) { transform = glm::rotate(transform, angle_rad, rotationAxis); }
+		//void rotate_deg(float angle_deg, glm::vec3 rotationAxis) { rotate(glm::radians(angle_deg), rotationAxis); }
+		Transform transform;
 
 		void draw(const Shader& shader, const glm::mat4& viewProjection)
 		{
 			shader.use();
 			recomputeNormal(viewProjection);
 
-			shader.setMat4("modelMatrix", transform);
+			shader.setMat4("modelMatrix", transform.world_matrix());
 			shader.setMat3("normalMatrix", normal);
 
 			drawable.draw();
@@ -46,7 +45,7 @@ namespace utils::graphics::opengl
 			recomputeNormal(viewProjection);
 
 			glBindBuffer(GL_UNIFORM_BUFFER, ubo_obj_matrices);
-			glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), glm::value_ptr(transform));
+			glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), glm::value_ptr(transform.world_matrix()));
 			glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat3), glm::value_ptr(normal));
 			glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
@@ -59,11 +58,11 @@ namespace utils::graphics::opengl
 		void reset_transform()
 		{
 			// reset to identity
-			transform = glm::mat4(1);
+			//transform = glm::mat4(1);
 			normal = glm::mat3(1);
 		}
 
 	private:
-		void recomputeNormal(glm::mat4 viewProjection) { normal = glm::inverseTranspose(glm::mat3(viewProjection * transform)); }
+		void recomputeNormal(glm::mat4 viewProjection) { normal = glm::inverseTranspose(glm::mat3(viewProjection * transform.world_matrix())); }
 	};
 }

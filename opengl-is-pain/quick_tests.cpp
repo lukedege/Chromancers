@@ -18,7 +18,7 @@
 #include "utils/shader.h"
 #include "utils/model.h "
 #include "utils/camera.h"
-#include "utils/object.h"
+#include "utils/entity.h"
 #include "utils/light.h "
 #include "utils/window.h"
 

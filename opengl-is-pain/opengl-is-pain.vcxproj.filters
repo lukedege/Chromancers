@@ -77,7 +77,7 @@
     <ClInclude Include="utils\model.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="utils\object.h">
+    <ClInclude Include="utils\entity.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="utils\shader.h">
@@ -93,6 +93,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="utils\texture.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\transform.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

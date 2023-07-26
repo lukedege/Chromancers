@@ -3,7 +3,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "utils/shader.h"
+#include "shader.h"
 namespace utils::graphics::opengl
 {
 

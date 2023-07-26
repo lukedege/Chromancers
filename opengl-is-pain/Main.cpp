@@ -25,7 +25,7 @@
 #include "utils/shader.h"
 #include "utils/model.h "
 #include "utils/camera.h"
-#include "utils/object.h"
+#include "utils/entity.h"
 #include "utils/light.h "
 #include "utils/window.h"
 #include "utils/texture.h"
@@ -125,7 +125,7 @@ int main()
 
 	// Objects setup
 	ugl::Model plane_model{ "models/plane.obj" }, bunny_model{ "models/cube.obj" };
-	ugl::Object<ugl::Model> plane{ plane_model }, cube{ bunny_model };
+	ugl::Entity<ugl::Model> plane{ plane_model }, cube{ bunny_model };
 	ugl::Mesh triangle_mesh
 	{
 		std::vector<ugl::Vertex>
@@ -136,9 +136,9 @@ int main()
 		},
 		std::vector<GLuint>{0, 2, 1}
 	};
-	ugl::Object<ugl::Mesh> cursor{ triangle_mesh };
+	ugl::Entity<ugl::Mesh> cursor{ triangle_mesh };
 
-	std::vector<ugl::Object<ugl::Model>*> scene_objects;
+	std::vector<ugl::Entity<ugl::Model>*> scene_objects;
 	scene_objects.push_back(&plane); scene_objects.push_back(&cube);
 
 	//std::vector<glm::vec3> shading_attrs_colors{ ambient, diffuse, specular };
@@ -169,7 +169,16 @@ int main()
 	set_light_attributes(norm_map_shader);
 	set_light_attributes(parallax_map_shader);
 	float norm_map_repeat = 90.f, parallax_map_repeat = 3.f;
-	
+
+	// Objects setup
+	plane.transform.set_position(glm::vec3(0.0f, -1.0f, 0.0f));
+	plane.transform.set_size(glm::vec3(10.0f, 1.0f, 10.0f));
+
+	cube.transform.set_position(glm::vec3(0.0f, 0.5f, 0.0f));
+	cube.transform.set_size(glm::vec3(1.f));	// It's a bit too big for our scene, so scale it down
+
+	cursor.transform.set_size(glm::vec3(3.0f));
+
 	// Rendering loop: this code is executed at each frame
 	while (wdw.is_open())
 	{
@@ -203,9 +212,6 @@ int main()
 		glViewport(0, 0, ws.width, ws.height); // we render objects in full screen
 
 		// Plane
-		plane.translate(glm::vec3(0.0f, -1.0f, 0.0f));
-		plane.scale(glm::vec3(10.0f, 1.0f, 10.0f));
-
 		norm_map_shader.use();
 		wall_diffuse_tex.activate();
 		wall_normal_tex.activate();
@@ -229,10 +235,8 @@ int main()
 		plane.draw(norm_map_shader, view);
 
 		// cube
-		cube.translate(glm::vec3(0.0f, 0.0f, 0.0f));
-		cube.rotate_deg(orientationY, glm::vec3(0.0f, 1.0f, 0.0f));
-		cube.scale(glm::vec3(1.f));	// It's a bit too big for our scene, so scale it down
-
+		cube.transform.rotate(glm::vec3(0.0f, 30.0f * deltaTime, 0.0f));
+		
 		parallax_map_shader.use();
 		redbricks_diffuse_tex.activate();
 		redbricks_normal_tex.activate();
@@ -274,7 +278,7 @@ int main()
 		norm_map_shader.setFloat("repeat", 2.f);
 		norm_map_shader.setBool("use_normalmap", false);
 
-		for (ugl::Object<ugl::Model>* o : scene_objects)
+		for (ugl::Entity<ugl::Model>* o : scene_objects)
 		{
 			o->draw(norm_map_shader, topdown_view);
 		}
@@ -285,18 +289,17 @@ int main()
 		basic_shader.setMat4("viewMatrix", topdown_view);
 		basic_shader.setMat4("projectionMatrix", projection);
 
-		cursor.translate(camera.position());
-		cursor.rotate_deg(90.f, { -1.0f, 0.0f, 0.0f });
-		cursor.rotate_deg(camera.rotation().y + 90.f, { 0.0f, 0.0f, -1.0f });
-		cursor.scale(glm::vec3(3.0f)); 
+		cursor.transform.set_position(camera.position());
+		cursor.transform.set_rotation({ -90.0f, 0.0f, 0.0f });
+		//cursor.transform.rotate(camera.rotation().y + 90.f, { 0.0f, 0.0f, -1.0f });
+		cursor.transform.rotate({ 0.0f, 0.0f, -camera.rotation().y - 90.f });
 
 		cursor.draw(basic_shader, topdown_view);
-		cursor.reset_transform();
 		
 		// Reset all objects transforms
-		for (ugl::Object<ugl::Model>* o : scene_objects)
+		for (ugl::Entity<ugl::Model>* o : scene_objects)
 		{
-			o->reset_transform();
+			//o->reset_transform();
 		}
 
 		// ImGUI window creation
