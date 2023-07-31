@@ -45,15 +45,19 @@ uniform float alpha; // rugosity - 0 : smooth, 1: rough
 uniform float F0; // fresnel reflectance at normal incidence
 
 // uniform for parallax map
-uniform float heightScale;
+uniform float height_scale;
 
 // Current light position
 vec3 curr_twLightPos;
 
 vec2 CheapParallaxMapping(vec2 texCoords, vec3 viewDir)
 { 
-    float height =  texture(depth_tex, texCoords).r;     
-    return texCoords - viewDir.xy * (height * heightScale);        
+	// Sample the heightmap
+    float height = texture(depth_tex, texCoords).r; 
+	// Calculate vector towards approximate height
+	vec2 p = viewDir.xy * (height * height_scale);
+	// Return displacement
+    return texCoords - p; 
 }
 
 vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
@@ -67,7 +71,7 @@ vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
     // depth of current layer
     float currentLayerDepth = 0.0;
     // the amount to shift the texture coordinates per layer (from vector P)
-    vec2 P = viewDir.xy / viewDir.z * heightScale; 
+    vec2 P = viewDir.xy / viewDir.z * height_scale; 
     vec2 deltaTexCoords = P / numLayers;
   
     // get initial values
@@ -105,9 +109,11 @@ vec3 BlinnPhong()
 	// view direction
 	vec3 V = normalize( fs_in.twCameraPos - fs_in.twFragPos );
 
-    vec2 displaced_texCoords = ParallaxMapping(repeated_UV,  V);       
-    if(displaced_texCoords.x > 1.0 || displaced_texCoords.y > 1.0 || displaced_texCoords.x < 0.0 || displaced_texCoords.y < 0.0)
-    	discard;
+    vec2 displaced_texCoords = ParallaxMapping(repeated_UV,  V);   
+	    
+	float max_height = 1.0f; float min_height = 0.0f;
+    //if(displaced_texCoords.x > max_height || displaced_texCoords.y > max_height || displaced_texCoords.x < min_height || displaced_texCoords.y < min_height)
+    //	discard;
 
 	// we repeat the UVs and we sample the texture
     vec4 surfaceColor = texture(diffuse_tex, displaced_texCoords);

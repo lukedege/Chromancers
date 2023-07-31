@@ -164,7 +164,7 @@ int main()
 	Texture redbricks_diffuse_tex{ "textures/bricks2.jpg" }, 
 		redbricks_normal_tex{ "textures/bricks2_normal.jpg" },
 		redbricks_depth_tex{ "textures/bricks2_disp.jpg" };
-	float parallax_heightscale = .1f;
+	float parallax_heightscale = 0.05f;
 
 	//GLuint currentSubroutineIndex;
 	//currentSubroutineIndex = light_shader.getSubroutineIndex(GL_FRAGMENT_SHADER, "BlinnPhong");
@@ -179,7 +179,7 @@ int main()
 	plane.transform.set_position(glm::vec3(0.0f, -1.0f, 0.0f));
 	plane.transform.set_size(glm::vec3(10.0f, 1.0f, 10.0f));
 
-	cube.transform.set_position(glm::vec3(0.0f, 0.5f, 0.0f));
+	cube.transform.set_position(glm::vec3(0.0f, 0.0f, 0.0f));
 	cube.transform.set_size(glm::vec3(1.f));	// It's a bit too big for our scene, so scale it down
 
 	cursor.transform.set_size(glm::vec3(3.0f));
@@ -257,7 +257,7 @@ int main()
 			point_lights[i].setup(parallax_map_shader, i);
 		}
 
-		parallax_map_shader.setFloat("heightScale", parallax_heightscale);
+		parallax_map_shader.setFloat("height_scale", parallax_heightscale);
 		parallax_map_shader.setInt("diffuse_tex", redbricks_diffuse_tex.id);
 		parallax_map_shader.setInt("normal_tex", redbricks_normal_tex.id);
 		parallax_map_shader.setInt("depth_tex", redbricks_depth_tex.id);
@@ -315,7 +315,7 @@ int main()
 		ImGui::Separator(); ImGui::Text("Normal");
 		ImGui::SliderFloat("Repeat tex##norm", &norm_map_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
 		ImGui::Separator(); ImGui::Text("Parallax");
-		ImGui::SliderFloat("Height Scale", &parallax_heightscale, 0, 2, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+		ImGui::SliderFloat("Height Scale", &parallax_heightscale, 0, 0.5, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 		ImGui::SliderFloat("Repeat tex##prlx", &parallax_map_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
 		ImGui::End();
 

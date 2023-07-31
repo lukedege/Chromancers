@@ -44,6 +44,7 @@ void main()
 	vec3 T = normalize(worldNormalMatrix * tangent);
     T = normalize(T - dot(T, N) * N);
     vec3 B = cross(N, T);
+	B = -B; // idk
 
 	// we calculate the inverse transform matrix to transform coords world space -> tangent space
 	// we prefer calcs in the vertex shader since it is called less, thus less expensive computationally over time
