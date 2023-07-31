@@ -24,11 +24,15 @@
 // utils libraries
 #include "utils/shader.h"
 #include "utils/model.h "
-#include "utils/camera.h"
-#include "utils/entity.h"
-#include "utils/light.h "
-#include "utils/window.h"
 #include "utils/texture.h"
+
+#include "utils/scene/camera.h"
+#include "utils/scene/entity.h"
+#include "utils/scene/light.h "
+
+#include "utils/window.h"
+
+#include "utils/components/texture_component.h"
 
 namespace ugl = utils::graphics::opengl;
 
@@ -137,6 +141,7 @@ int main()
 		std::vector<GLuint>{0, 2, 1}
 	};
 	ugl::Entity<ugl::Mesh> cursor{ triangle_mesh };
+	cursor.add_component<ugl::components::TextureComponent>("popo");
 
 	std::vector<ugl::Entity<ugl::Model>*> scene_objects;
 	scene_objects.push_back(&plane); scene_objects.push_back(&cube);
@@ -282,7 +287,7 @@ int main()
 		{
 			o->draw(norm_map_shader, topdown_view);
 		}
-
+		
 		// Prepare cursor shader
 		glClear(GL_DEPTH_BUFFER_BIT);
 		basic_shader.use();
@@ -290,9 +295,8 @@ int main()
 		basic_shader.setMat4("projectionMatrix", projection);
 
 		cursor.transform.set_position(camera.position());
-		cursor.transform.set_rotation({ -90.0f, 0.0f, 0.0f });
 		//cursor.transform.rotate(camera.rotation().y + 90.f, { 0.0f, 0.0f, -1.0f });
-		cursor.transform.rotate({ 0.0f, 0.0f, -camera.rotation().y - 90.f });
+		cursor.transform.set_rotation({ -90.0f, 0.0f, -camera.rotation().y - 90.f });
 
 		cursor.draw(basic_shader, topdown_view);
 		

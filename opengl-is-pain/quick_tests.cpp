@@ -17,9 +17,11 @@
 // utils libraries
 #include "utils/shader.h"
 #include "utils/model.h "
-#include "utils/camera.h"
-#include "utils/entity.h"
-#include "utils/light.h "
+
+#include "utils/scene/camera.h"
+#include "utils/scene/entity.h"
+#include "utils/scene/light.h "
+
 #include "utils/window.h"
 
 bool loadBinaryShader(const char* fileName, GLuint stage, GLuint binaryFormat, GLuint& shader)

@@ -31,6 +31,12 @@
     <Filter Include="Source Files\Libraries\imgui">
       <UniqueIdentifier>{d85dde33-c73b-4f1a-ae25-e072ea9203cf}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\components">
+      <UniqueIdentifier>{d57ebf08-91e9-4b74-9e60-5b31b8c88269}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\scene">
+      <UniqueIdentifier>{34e2fd4a-248c-4f43-b37d-917ca88dfc0d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -65,19 +71,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="utils\camera.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="utils\light.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="utils\mesh.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="utils\model.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="utils\entity.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="utils\shader.h">
@@ -89,14 +86,26 @@
     <ClInclude Include="utils\utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="utils\drawable.h">
+    <ClInclude Include="utils\interfaces.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="utils\texture.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="utils\transform.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="utils\components\texture_component.h">
+      <Filter>Header Files\components</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\scene\camera.h">
+      <Filter>Header Files\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\scene\entity.h">
+      <Filter>Header Files\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\scene\light.h">
+      <Filter>Header Files\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\scene\transform.h">
+      <Filter>Header Files\scene</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

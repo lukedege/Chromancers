@@ -7,7 +7,7 @@
 #include <glad.h>
 #include <glm/glm.hpp>
 
-#include "drawable.h"
+#include "interfaces.h"
 
 namespace utils::graphics::opengl
 {

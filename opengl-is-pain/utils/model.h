@@ -10,7 +10,7 @@
 #include <glad.h>
 #include <glm/glm.hpp>
 
-#include "drawable.h"
+#include "interfaces.h"
 #include "mesh.h"
 
 // Model class purpose:

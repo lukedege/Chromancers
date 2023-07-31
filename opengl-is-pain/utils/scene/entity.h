@@ -1,38 +1,43 @@
 #pragma once
 
 #include <iostream>
+#include <memory>
+#include <unordered_map>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "../interfaces.h"
+#include "../model.h"
+#include "../shader.h"
+
 #include "transform.h"
-#include "model.h"
-#include "shader.h"
 
 namespace utils::graphics::opengl
 {
+	
 
 	// Object in scene
 	template <typename drawable_T>
+	requires is_drawable<drawable_T>
 	class Entity
 	{
 		drawable_T drawable; // can be either Model or Mesh
 		glm::mat3 normal;
+		std::unordered_map<std::string, std::unique_ptr<Component>> components;
 		
 	public:
 		Entity(drawable_T&  drawable) : drawable{ std::move(drawable) }, normal{ glm::mat3(1) } {}
 		Entity(drawable_T&& drawable) : drawable{ std::move(drawable) }, normal{ glm::mat3(1) } {}
 
-		//void rotate(float angle_rad, glm::vec3 rotationAxis) { transform = glm::rotate(transform, angle_rad, rotationAxis); }
-		//void rotate_deg(float angle_deg, glm::vec3 rotationAxis) { rotate(glm::radians(angle_deg), rotationAxis); }
 		Transform transform;
 
 		void draw(const Shader& shader, const glm::mat4& viewProjection)
 		{
 			shader.use();
-			recomputeNormal(viewProjection);
+			recompute_normal(viewProjection);
 
 			shader.setMat4("modelMatrix", transform.world_matrix());
 			shader.setMat3("normalMatrix", normal);
@@ -42,7 +47,7 @@ namespace utils::graphics::opengl
 
 		void draw(GLuint ubo_obj_matrices, const glm::mat4& viewProjection)
 		{
-			recomputeNormal(viewProjection);
+			recompute_normal(viewProjection);
 
 			glBindBuffer(GL_UNIFORM_BUFFER, ubo_obj_matrices);
 			glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), glm::value_ptr(transform.world_matrix()));
@@ -55,14 +60,18 @@ namespace utils::graphics::opengl
 			drawable.draw();
 		}
 
-		void reset_transform()
+		template <typename Component_t, typename... Args>
+		void add_component(const std::string key, Args&&... args)
 		{
-			// reset to identity
-			//transform = glm::mat4(1);
-			normal = glm::mat3(1);
+			components.emplace(key, std::make_unique<Component_t>(std::forward<Args>(args)...));
+		}
+
+		void remove_component(const std::string key)
+		{
+			components.erase(key);
 		}
 
 	private:
-		void recomputeNormal(glm::mat4 viewProjection) { normal = glm::inverseTranspose(glm::mat3(viewProjection * transform.world_matrix())); }
+		void recompute_normal(glm::mat4 viewProjection) { normal = glm::inverseTranspose(glm::mat3(viewProjection * transform.world_matrix())); }
 	};
 }

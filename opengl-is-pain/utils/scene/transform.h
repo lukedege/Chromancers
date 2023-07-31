@@ -23,9 +23,9 @@ namespace utils::graphics::opengl
 		inline glm::vec3 orientation() const noexcept { return _orientation; }
 		inline glm::vec3 size       () const noexcept { return _size;        }
 
-		void set_position(const glm::vec3 new_position   ) { dirty = true; _position = new_position; }
-		void set_rotation(const glm::vec3 new_orientation) { dirty = true; _orientation = new_orientation; }
-		void set_size    (const glm::vec3 new_size       ) { dirty = true; _size = new_size;            }
+		void set_position(const glm::vec3 new_position   ) { if(new_position != _position)       { dirty = true; _position = new_position;       } }
+		void set_rotation(const glm::vec3 new_orientation) { if(new_orientation != _orientation) { dirty = true; _orientation = new_orientation; } }
+		void set_size    (const glm::vec3 new_size       ) { if(new_size != _size)               { dirty = true; _size = new_size;               } }
 
 		void translate(const glm::vec3 translation) { dirty = true; _position += translation; }
 		void rotate   (const glm::vec3 rotation   ) { dirty = true; _orientation += rotation; }
