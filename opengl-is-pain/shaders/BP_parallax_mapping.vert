@@ -42,9 +42,10 @@ void main()
 	mat3 worldNormalMatrix = transpose(inverse(mat3(modelMatrix)));
 	vec3 N = normalize(worldNormalMatrix * normal);
 	vec3 T = normalize(worldNormalMatrix * tangent);
+	vec3 B = normalize(worldNormalMatrix * bitangent);
     T = normalize(T - dot(T, N) * N);
-    vec3 B = cross(N, T);
-	B = -B; // idk
+    vec3 reortho_B = cross(N, T);
+	if(dot(B, reortho_B) < 0) B = -reortho_B; // if they are opposite, adjust the ortho to match B facing and use the reorthogonalized value
 
 	// we calculate the inverse transform matrix to transform coords world space -> tangent space
 	// we prefer calcs in the vertex shader since it is called less, thus less expensive computationally over time
