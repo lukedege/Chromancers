@@ -172,22 +172,28 @@
     <ClInclude Include="utils\window.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\basic.frag" />
-    <None Include="shaders\basic.vert" />
     <None Include="shaders\constants.glsl" />
-    <None Include="shaders\deform.vert" />
-    <None Include="shaders\fullcolor.frag" />
-    <None Include="shaders\glow.frag" />
-    <None Include="shaders\illumination_models.frag" />
-    <None Include="shaders\mvp.vert" />
-    <None Include="shaders\noise.frag" />
-    <None Include="shaders\normals.frag" />
-    <None Include="shaders\procedural_base.vert" />
-    <None Include="shaders\random_patterns.frag" />
     <None Include="shaders\spv\buny_lights.frag" />
     <None Include="shaders\spv\buny_lights.vert" />
+    <None Include="shaders\text\basic.frag" />
+    <None Include="shaders\text\basic.vert" />
+    <None Include="shaders\text\BP_normal_mapping.frag" />
+    <None Include="shaders\text\BP_normal_mapping.vert" />
+    <None Include="shaders\text\BP_parallax_mapping.frag" />
+    <None Include="shaders\text\BP_parallax_mapping.vert" />
+    <None Include="shaders\text\deform.vert" />
+    <None Include="shaders\text\fullcolor.frag" />
+    <None Include="shaders\text\glow.frag" />
+    <None Include="shaders\text\illumination_models.frag" />
+    <None Include="shaders\text\illumination_models.vert" />
+    <None Include="shaders\text\illumination_models_tx.frag" />
+    <None Include="shaders\text\illumination_models_tx.vert" />
+    <None Include="shaders\text\mvp.vert" />
+    <None Include="shaders\text\noise.frag" />
+    <None Include="shaders\text\normals.frag" />
+    <None Include="shaders\text\random_patterns.frag" />
+    <None Include="shaders\text\uvs.frag" />
     <None Include="shaders\types.glsl" />
-    <None Include="shaders\uvs.frag" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

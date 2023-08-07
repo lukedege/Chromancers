@@ -36,7 +36,7 @@ namespace utils::graphics::opengl
 		static size_t shader_sizeof() noexcept { return 0; }
 	};
 
-	class PointLight : Light
+	class PointLight : public Light
 	{
 		struct PointLight_shader
 		{
@@ -76,7 +76,7 @@ namespace utils::graphics::opengl
 		}
 	};
 
-	class DirectionalLight : Light
+	class DirectionalLight : public Light
 	{
 		struct DirectionalLight_shader
 		{
@@ -89,7 +89,7 @@ namespace utils::graphics::opengl
 		glm::vec3 direction;
 
 		DirectionalLight(const glm::vec3& direction, const glm::vec4& color = { 1.0f, 1.0f, 1.0f, 1.0f }, const float intensity = { 1.0f }) :
-			Light{ color, intensity }, direction{ direction } {}
+			Light{ color, intensity }, direction{ glm::normalize(direction) } {}
 
 		void setup(const Shader& shader, size_t index) override
 		{
@@ -115,7 +115,7 @@ namespace utils::graphics::opengl
 		}
 	};
 
-	class SpotLight : Light
+	class SpotLight : public Light
 	{
 		struct SpotLight_shader
 		{

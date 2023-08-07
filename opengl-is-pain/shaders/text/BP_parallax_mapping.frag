@@ -6,7 +6,8 @@ out vec4 colorFrag;
 in VS_OUT 
 {
 	// tangent space data
-	vec3 twPointLightPos[MAX_POINT_LIGHTS];
+	vec3 twPointLightDir[MAX_POINT_LIGHTS];
+	vec3 twDirLightDir  [MAX_DIR_LIGHTS];
 	vec3 twFragPos; // Local -> World -> Tangent position of frag N.B. THE FIRST LETTER SPECIFIES THE FINAL SPACE 
 	vec3 twCameraPos; 
 	vec3 tNormal;
@@ -17,8 +18,10 @@ in VS_OUT
 
 //Lights
 uniform uint nPointLights;
+uniform uint nDirLights;
 
-uniform PointLight pointLights[MAX_POINT_LIGHTS];
+uniform PointLight       pointLights      [MAX_POINT_LIGHTS];
+uniform DirectionalLight directionalLights[MAX_DIR_LIGHTS];
 
 // Textures
 uniform sampler2D diffuse_tex; // texture samplers
@@ -48,7 +51,7 @@ uniform float F0; // fresnel reflectance at normal incidence
 uniform float height_scale;
 
 // Current light position
-vec3 curr_twLightPos;
+vec3 curr_twLightDir;
 
 vec2 CheapParallaxMapping(vec2 texCoords, vec3 viewDir)
 { 
@@ -128,7 +131,7 @@ vec3 BlinnPhong()
 	N = normalize(N * 2.0 - 1.0);  // this normal is in tangent space
 	
 	// normalization of the per-fragment light incidence direction
-	vec3 L = normalize(curr_twLightPos - fs_in.twFragPos);
+	vec3 L = normalize(curr_twLightDir);
 	
 	// Lambert coefficient
 	float lambertian = max(dot(L,N), 0.0);
@@ -156,11 +159,23 @@ vec4 calculatePointLights()
 	vec4 color = vec4(0);
 	for(int i = 0; i < nPointLights; i++)
 	{
-		curr_twLightPos = fs_in.twPointLightPos[i];
-		color += vec4(BlinnPhong(), 1.0f);
-		color *= pointLights[i].color * pointLights[i].intensity;
+		curr_twLightDir = fs_in.twPointLightDir[i];
+		color += vec4(BlinnPhong(), 1.0f) * pointLights[i].color * pointLights[i].intensity;
 	}
-	//color.a = normalize(color.a);
+	//color = normalize(color);
+	return color;
+}
+
+vec4 calculateDirLights()
+{
+	vec4 color = vec4(0);
+	
+	for(int i = 0; i < nDirLights; i++)
+	{
+		curr_twLightDir = fs_in.twDirLightDir[i];
+		color += vec4(BlinnPhong(), 1.0f) * directionalLights[i].color * directionalLights[i].intensity;
+	}
+	//color = normalize(color);
 	return color;
 }
 
@@ -169,6 +184,7 @@ void main()
 	vec4 color = vec4(0);
 	
 	color += calculatePointLights();
+	color += calculateDirLights();
 	
 	colorFrag = color;
 }

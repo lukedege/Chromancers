@@ -117,10 +117,10 @@ int main()
 	// Shader setup
 	std::vector<const GLchar*> utils_shaders { "shaders/types.glsl", "shaders/constants.glsl" };
 
-	ugl::Shader norm_map_shader{ "shaders/BP_normal_mapping.vert", "shaders/BP_normal_mapping.frag", 4, 3, nullptr, utils_shaders};
+	ugl::Shader norm_map_shader{ "shaders/text/BP_normal_mapping.vert", "shaders/text/BP_normal_mapping.frag", 4, 3, nullptr, utils_shaders};
 	//ugl::Shader light_shader{ "shaders/normal_mapping.vert", "shaders/normal_mapping.frag", 4, 3, nullptr, utils_shaders};
-	ugl::Shader basic_shader{ "shaders/mvp.vert", "shaders/basic.frag", 4, 3 };
-	ugl::Shader parallax_map_shader{ "shaders/BP_parallax_mapping.vert", "shaders/BP_parallax_mapping.frag", 4, 3, nullptr, utils_shaders };
+	ugl::Shader basic_shader{ "shaders/text/mvp.vert", "shaders/text/basic.frag", 4, 3 };
+	ugl::Shader parallax_map_shader{ "shaders/text/BP_parallax_mapping.vert", "shaders/text/BP_parallax_mapping.frag", 4, 3, nullptr, utils_shaders };
 
 	// Camera setup
 	camera = ugl::Camera{ glm::vec3{0,0,5} };
@@ -150,8 +150,9 @@ int main()
 	//std::vector<float> shading_attrs_coeff{ kD, kS, kA, shininess, alpha, F0 };
 	
 	// Lights setup 
-	ugl::PointLight pl1{ glm::vec3{-20.f, 10.f, 10.f}, glm::vec4{1,0,1,1},1 };
-	ugl::PointLight pl2{ glm::vec3{ 20.f, 10.f, 10.f}, glm::vec4{1,1,1,1},1 };
+	ugl::PointLight pl1{ glm::vec3{-20.f, 10.f, 10.f}, glm::vec4{1,1,1,1}, 1 };
+	ugl::PointLight pl2{ glm::vec3{ 20.f, 10.f, 10.f}, glm::vec4{1,1,1,1}, 1 };
+	ugl::DirectionalLight dl1{glm::vec3{ 0, -1, -1 } , glm::vec4{1,1,1,1}, 1 };
 
 	std::vector<ugl::PointLight> point_lights;
 	point_lights.push_back(pl1); 
@@ -173,6 +174,12 @@ int main()
 	// Shader "constants" setup
 	set_light_attributes(norm_map_shader);
 	set_light_attributes(parallax_map_shader);
+	norm_map_shader.use();
+	norm_map_shader.setUint("nPointLights", point_lights.size());
+	norm_map_shader.setUint("nDirLights", 1);
+	parallax_map_shader.use();
+	parallax_map_shader.setUint("nPointLights", point_lights.size());
+	parallax_map_shader.setUint("nDirLights", 1);
 	float norm_map_repeat = 90.f, parallax_map_repeat = 3.f;
 
 	// Objects setup
@@ -226,7 +233,6 @@ int main()
 		norm_map_shader.setVec3("wCameraPos", camera.position());
 
 		// LIGHTING 
-		norm_map_shader.setUint("nPointLights", point_lights.size());
 		for (size_t i = 0; i < point_lights.size(); i++)
 		{
 			point_lights[i].setup(norm_map_shader, i);
@@ -251,11 +257,11 @@ int main()
 		parallax_map_shader.setMat4("projectionMatrix", projection);
 		parallax_map_shader.setVec3("wCameraPos", camera.position());
 
-		parallax_map_shader.setUint("nPointLights", point_lights.size());
 		for (size_t i = 0; i < point_lights.size(); i++)
 		{
 			point_lights[i].setup(parallax_map_shader, i);
 		}
+		dl1.setup(parallax_map_shader, 0);
 
 		parallax_map_shader.setFloat("height_scale", parallax_heightscale);
 		parallax_map_shader.setInt("diffuse_tex", redbricks_diffuse_tex.id);
@@ -311,12 +317,25 @@ int main()
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
-		ImGui::Begin("Coefficients and scales");
-		ImGui::Separator(); ImGui::Text("Normal");
-		ImGui::SliderFloat("Repeat tex##norm", &norm_map_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
-		ImGui::Separator(); ImGui::Text("Parallax");
-		ImGui::SliderFloat("Height Scale", &parallax_heightscale, 0, 0.5, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-		ImGui::SliderFloat("Repeat tex##prlx", &parallax_map_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
+		ImGui::Begin("Settings");
+
+		if (ImGui::CollapsingHeader("Coefficients and scales"))
+		{
+			ImGui::Separator(); ImGui::Text("Normal");
+			ImGui::SliderFloat("Repeat tex##norm", &norm_map_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::Separator(); ImGui::Text("Parallax");
+			ImGui::SliderFloat("Height Scale", &parallax_heightscale, 0, 0.5, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Repeat tex##prlx", &parallax_map_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
+		}
+		if (ImGui::CollapsingHeader("Lights"))
+		{
+			for (size_t i = 0; i < point_lights.size(); i++)
+			{
+				std::string light_label = "Intensity PL " + std::to_string(i);
+				ImGui::SliderFloat(light_label.c_str(), &point_lights[i].intensity, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+			}
+		}
+
 		ImGui::End();
 
 		// Renders the ImGUI elements

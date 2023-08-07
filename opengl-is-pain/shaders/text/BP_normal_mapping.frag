@@ -141,8 +141,7 @@ vec4 calculatePointLights()
 	{
 		curr_twLightPos = fs_in.twPointLightPos[i];
 		curr_vwLightPos = fs_in.vwPointLightPos[i];
-		color += vec4(use_normalmap ? BlinnPhongTangent() : BlinnPhongView(), 1.0f);
-		color *= pointLights[i].color * pointLights[i].intensity;
+		color += vec4(use_normalmap ? BlinnPhongTangent() : BlinnPhongView(), 1.0f) * pointLights[i].color * pointLights[i].intensity;
 	}
 	//color.a = normalize(color.a);
 	return color;
