@@ -36,49 +36,51 @@
 
 namespace ugl = utils::graphics::opengl;
 
-// callback function for keyboard events
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
-void mouse_pos_callback(GLFWwindow* window, double xPos, double yPos);
-void process_input();
-
-GLfloat lastX, lastY;
-bool firstMouse = true;
-bool keys[1024];
-bool capture_mouse = true;
-
-ugl::Camera camera;
-
-// parameters for time computation
-GLfloat deltaTime = 0.0f;
-GLfloat lastFrame = 0.0f;
-
-// rotation angle on Y axis
-GLfloat orientationY = 0.0f;
-// rotation speed on Y axis
-GLfloat spin_speed = 30.0f;
-// boolean to start/stop animated rotation on Y angle
-GLboolean spinning = GL_TRUE;
-
-// boolean to activate/deactivate wireframe rendering
-GLboolean wireframe = GL_FALSE;
-
-ugl::PointLight* currentLight;
-GLfloat mov_light_speed = 30.f;
-
 #define MAX_POINT_LIGHTS 3
 #define MAX_SPOT_LIGHTS  3
 #define MAX_DIR_LIGHTS   3
 #define MAX_LIGHTS MAX_POINT_LIGHTS+MAX_SPOT_LIGHTS+MAX_DIR_LIGHTS
 
-void set_matrices(ugl::Shader& shader);
+// helper functions
 void set_light_attributes(ugl::Shader& shader);
+
+// callback function for keyboard events
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
+void mouse_pos_callback(GLFWwindow* window, double xPos, double yPos);
+void process_pressed_keys();
+void process_toggled_keys();
+
+// input related parameters
+float lastX, lastY;
+bool firstMouse = true;
+bool keys[1024];
+bool capture_mouse = true;
+
+// global scene camera
+ugl::Camera camera;
+
+// parameters for time computation
+float deltaTime = 0.0f;
+float lastFrame = 0.0f;
+
+// rotation speed on Y axis
+float spin_speed = 30.0f;
+// boolean to start/stop animated rotation on Y angle
+bool spinning = true;
+
+// boolean to activate/deactivate wireframe rendering
+bool wireframe = false;
+
+// Lights
+ugl::PointLight* currentLight;
+float mov_light_speed = 30.f;
 
 // Scene material/lighting setup 
 glm::vec3 ambient{ 0.1f, 0.1f, 0.1f }, diffuse{ 1.0f, 1.0f, 1.0f }, specular{ 1.0f, 1.0f, 1.0f };
-GLfloat kD = 0.5f, kS = 0.4f, kA = 0.1f; // Generally we'd like a normalized sum of these coefficients Kd + Ks + Ka = 1
-GLfloat shininess = 25.f;
-GLfloat alpha = 0.2f;
-GLfloat F0 = 0.9f;
+float kD = 0.5f, kS = 0.4f, kA = 0.1f; // Generally we'd like a normalized sum of these coefficients Kd + Ks + Ka = 1
+float shininess = 25.f;
+float alpha = 0.2f;
+float F0 = 0.9f;
 
 /////////////////// MAIN function ///////////////////////
 int main()
@@ -170,7 +172,7 @@ int main()
 	//GLuint currentSubroutineIndex;
 	//currentSubroutineIndex = light_shader.getSubroutineIndex(GL_FRAGMENT_SHADER, "BlinnPhong");
 	//glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &currentSubroutineIndex);
-
+	
 	// Shader "constants" setup
 	set_light_attributes(norm_map_shader);
 	set_light_attributes(parallax_map_shader);
@@ -196,7 +198,7 @@ int main()
 	{
 		// we determine the time passed from the beginning
 		// and we calculate the time difference between current frame rendering and the previous one
-		GLfloat currentFrame = glfwGetTime();
+		float currentFrame = static_cast<float>(glfwGetTime());
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
@@ -207,23 +209,19 @@ int main()
 
 		// Check is an I/O event is happening
 		glfwPollEvents();
-		process_input();
+		process_toggled_keys();
+		process_pressed_keys();
 
 		// we "clear" the frame and z buffer
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		// if animated rotation is activated, than we increment the rotation angle using delta time and the rotation speed parameter
-		if (spinning)
-			orientationY += (deltaTime * spin_speed);
-
 		// get matrices from camera
 		view = camera.view_matrix();
 
-		// OBJECTS
 		ws = wdw.get_size();
 		glViewport(0, 0, ws.width, ws.height); // we render objects in full screen
 
-		// Plane
+		#pragma region plane
 		norm_map_shader.use();
 		wall_diffuse_tex.activate();
 		wall_normal_tex.activate();
@@ -244,9 +242,11 @@ int main()
 		norm_map_shader.setBool("use_normalmap", true);
 
 		plane.draw(norm_map_shader, view);
+		#pragma endregion plane
 
-		// cube
-		cube.transform.rotate(glm::vec3(0.0f, 30.0f * deltaTime, 0.0f));
+		#pragma region cube
+		if(spinning)
+			cube.transform.rotate(glm::vec3(0.0f, spin_speed * deltaTime, 0.0f));
 		
 		parallax_map_shader.use();
 		redbricks_diffuse_tex.activate();
@@ -270,7 +270,9 @@ int main()
 		parallax_map_shader.setFloat("repeat", parallax_map_repeat);
 
 		cube.draw(parallax_map_shader, view);
+		#pragma endregion cube
 
+		#pragma region map_draw
 		// MAP
 		glClear(GL_DEPTH_BUFFER_BIT); // clears depth information, thus everything rendered from now on will be on top https://stackoverflow.com/questions/5526704/how-do-i-keep-an-object-always-in-front-of-everything-else-in-opengl
 		glViewport(ws.width - 200, ws.height - 150, 200, 150); // we render now into the smaller map viewport
@@ -305,13 +307,9 @@ int main()
 		cursor.transform.set_rotation({ -90.0f, 0.0f, -camera.rotation().y - 90.f });
 
 		cursor.draw(basic_shader, topdown_view);
-		
-		// Reset all objects transforms
-		for (ugl::Entity<ugl::Model>* o : scene_objects)
-		{
-			//o->reset_transform();
-		}
+		#pragma endregion map_draw
 
+		#pragma region imgui_draw
 		// ImGUI window creation
 		ImGui_ImplOpenGL3_NewFrame();// Tell OpenGL a new Imgui frame is about to begin
 		ImGui_ImplGlfw_NewFrame();
@@ -341,7 +339,7 @@ int main()
 		// Renders the ImGUI elements
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-		view = camera.view_matrix();
+		#pragma endregion imgui_draw
 
 		// Swap buffers
 		glfwSwapBuffers(glfw_window);
@@ -385,32 +383,40 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GL_TRUE);
 
-	// if LAlt is pressed, capture the mouse cursor
-	if (key == GLFW_KEY_LEFT_ALT && action == GLFW_PRESS)
-		capture_mouse = !capture_mouse;
-
-	// if P is pressed, we start/stop the animated rotation of models
-	if (key == GLFW_KEY_P && action == GLFW_PRESS)
-		spinning = ~spinning;
-
-	// if L is pressed, we activate/deactivate wireframe rendering of models
-	if (key == GLFW_KEY_L && action == GLFW_PRESS)
-	{
-		wireframe = ~wireframe;
-		if (wireframe)
-			// Draw in wireframe
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		else
-			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	}
-
 	if (action == GLFW_PRESS)
 		keys[key] = true;
 	else if (action == GLFW_RELEASE)
 		keys[key] = false;
 }
 
-void process_input()
+// Process and release 
+void process_toggled_keys()
+{
+	if (keys[GLFW_KEY_LEFT_ALT])
+	{
+		capture_mouse = !capture_mouse;
+		keys[GLFW_KEY_LEFT_ALT] = false;
+	}
+	if (keys[GLFW_KEY_P])
+	{
+		spinning = !spinning;
+		keys[GLFW_KEY_P] = false;
+	}
+	if (keys[GLFW_KEY_L])
+	{
+		wireframe = !wireframe;
+		if (wireframe)
+			// Draw in wireframe
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		else
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+		keys[GLFW_KEY_L] = false;
+	}
+}
+
+// Process until user release
+void process_pressed_keys()
 {
 	if (keys[GLFW_KEY_W])
 		camera.ProcessKeyboard(ugl::Camera::Directions::FORWARD , deltaTime);
@@ -439,18 +445,19 @@ void process_input()
 
 void mouse_pos_callback(GLFWwindow* window, double x_pos, double y_pos)
 {
+	float x_posf = static_cast<float>(x_pos), y_posf = static_cast<float>(y_pos);
 	if (firstMouse)
 	{
-		lastX = x_pos;
-		lastY = y_pos;
+		lastX = x_posf;
+		lastY = y_posf;
 		firstMouse = false;
 	}
 
-	GLfloat x_offset = x_pos - lastX;
-	GLfloat y_offset = lastY - y_pos;
+	float x_offset = x_posf - lastX;
+	float y_offset = lastY - y_posf;
 
-	lastX = x_pos;
-	lastY = y_pos;
+	lastX = x_posf;
+	lastY = y_posf;
 
 	if(capture_mouse)
 		camera.ProcessMouseMovement(x_offset, y_offset);

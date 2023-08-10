@@ -36,6 +36,11 @@ public:
 			format = GL_RGB;
 		else if (channels == 4)
 			format = GL_RGBA;
+		else
+		{
+			std::cout << "Unrecognized format with: " << channels << " channels" << std::endl;
+			return;
+		}
 
 		glBindTexture(GL_TEXTURE_2D, id);
 		glTexImage2D(GL_TEXTURE_2D, 0, format, w, h, 0, format, GL_UNSIGNED_BYTE, image);

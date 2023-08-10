@@ -21,6 +21,9 @@ namespace utils::graphics::opengl
 
 	class Shader
 	{
+	private:
+		GLuint glMajorVersion;
+		GLuint glMinorVersion;
 	public:
 		GLuint program;
 
@@ -101,22 +104,22 @@ namespace utils::graphics::opengl
 		}
 
 #pragma region utility_uniform_functions
-		void setBool (const std::string& name, bool value)                            const { glUniform1i(glGetUniformLocation(program, name.c_str()), (int)value); }
-		void setInt  (const std::string& name, int value)                             const { glUniform1i(glGetUniformLocation(program, name.c_str()), value); }
-		void setUint (const std::string& name, unsigned int value)                    const { glUniform1ui(glGetUniformLocation(program, name.c_str()), value); }
-		void setFloat(const std::string& name, float value)                           const { glUniform1f(glGetUniformLocation(program, name.c_str()), value); }
+		void setInt  (const std::string& name, int value)                             const { glUniform1i (glGetUniformLocation(program, name.c_str()), static_cast<GLint>(value)); }
+		void setBool (const std::string& name, bool value)                            const { glUniform1i (glGetUniformLocation(program, name.c_str()), static_cast<GLint>(value)); }
+		void setUint (const std::string& name, unsigned int value)                    const { glUniform1ui(glGetUniformLocation(program, name.c_str()), static_cast<GLuint>(value)); }
+		void setFloat(const std::string& name, float value)                           const { glUniform1f (glGetUniformLocation(program, name.c_str()), static_cast<GLfloat>(value)); }
 
 		void setVec2 (const std::string& name, const GLfloat value[])                 const { glUniform2fv(glGetUniformLocation(program, name.c_str()), 1, &value[0]); }
 		void setVec2 (const std::string& name, const glm::vec2& value)                const { glUniform2fv(glGetUniformLocation(program, name.c_str()), 1, glm::value_ptr(value)); }
-		void setVec2 (const std::string& name, float x, float y)                      const { glUniform2f(glGetUniformLocation(program, name.c_str()), x, y); }
+		void setVec2 (const std::string& name, float x, float y)                      const { glUniform2f (glGetUniformLocation(program, name.c_str()), static_cast<GLfloat>(x), static_cast<GLfloat>(y)); }
 					 
 		void setVec3 (const std::string& name, const GLfloat value[])                 const { glUniform3fv(glGetUniformLocation(program, name.c_str()), 1, &value[0]); }
 		void setVec3 (const std::string& name, const glm::vec3& value)                const { glUniform3fv(glGetUniformLocation(program, name.c_str()), 1, glm::value_ptr(value)); }
-		void setVec3 (const std::string& name, float x, float y, float z)             const { glUniform3f(glGetUniformLocation(program, name.c_str()), x, y, z); }
+		void setVec3 (const std::string& name, float x, float y, float z)             const { glUniform3f (glGetUniformLocation(program, name.c_str()), static_cast<GLfloat>(x), static_cast<GLfloat>(y), static_cast<GLfloat>(z)); }
 					 
 		void setVec4 (const std::string& name, const GLfloat value[])                 const { glUniform4fv(glGetUniformLocation(program, name.c_str()), 1, &value[0]); }
 		void setVec4 (const std::string& name, const glm::vec4& value)                const { glUniform4fv(glGetUniformLocation(program, name.c_str()), 1, glm::value_ptr(value)); }
-		void setVec4 (const std::string& name, float x, float y, float z, float w)    const { glUniform4f(glGetUniformLocation(program, name.c_str()), x, y, z, w); }
+		void setVec4 (const std::string& name, float x, float y, float z, float w)    const { glUniform4f (glGetUniformLocation(program, name.c_str()), static_cast<GLfloat>(x), static_cast<GLfloat>(y), static_cast<GLfloat>(z), static_cast<GLfloat>(w)); }
 					 
 		void setMat2 (const std::string& name, const glm::mat2& mat)                  const { glUniformMatrix2fv(glGetUniformLocation(program, name.c_str()), 1, GL_FALSE, glm::value_ptr(mat)); }
 
@@ -125,79 +128,32 @@ namespace utils::graphics::opengl
 		void setMat4 (const std::string& name, const glm::mat4& mat)                  const { glUniformMatrix4fv(glGetUniformLocation(program, name.c_str()), 1, GL_FALSE, glm::value_ptr(mat)); }
 #pragma endregion 
 
-	private:
-		GLuint glMajorVersion;
-		GLuint glMinorVersion;
-
-		
-#pragma region spirv
-		void loadFromSpirV(const GLchar* vertPath, const GLchar* fragPath, const GLchar* geomPath, std::vector<const GLchar*> utilPaths = {})
+	private:	
+		void checkCompileErrors(GLuint shader, GLenum shaderType) const noexcept
 		{
-			//TODO from example code at https://www.khronos.org/opengl/wiki/SPIR-V
-			GLuint vertexShader, fragmentShader;
-
-			// Read our shaders into the appropriate buffers
-			std::vector<char> vertexSpirv = loadSourceSpirV(vertPath);// Get SPIR-V for vertex shader.
-			std::vector<char> fragmentSpirv = loadSourceSpirV(fragPath);// Get SPIR-V for fragment shader.
-
-			fragmentShader = compileShaderSpirv(fragmentSpirv, GL_FRAGMENT_SHADER);
-			vertexShader = compileShaderSpirv(vertexSpirv, GL_VERTEX_SHADER);
-			
-
-			// Vertex and fragment shaders are successfully compiled.
-			// Now time to link them together into a program.
-
-			// Attach our shaders to our program
-			glAttachShader(program, vertexShader);
-			glAttachShader(program, fragmentShader);
-
-			// Link our program
-			try {
-				glLinkProgram(program);
-				}
-			catch (std::exception e) { auto x = glGetError(); checkLinkingErrors(); std::cout << e.what(); }
-			checkLinkingErrors();
-
-			// Always detach shaders after a successful link.
-			glDetachShader(program, vertexShader); // delete or detach??
-			glDetachShader(program, fragmentShader);
-		}
-
-		std::vector<char> loadSourceSpirV(const GLchar* spirvPath)
-		{
-			std::ifstream shaderFile;
-			shaderFile.open(spirvPath, std::ios::binary | std::ios::ate);
-			if (shaderFile.is_open())
+			// Check for compile time errors TODO
+			GLint success; GLchar infoLog[512];
+			glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+			if (!success)
 			{
-				size_t size = shaderFile.tellg();
-				char* bin = new char[size];
-				shaderFile.seekg(0, std::ios::beg);
-				shaderFile.read(bin, size);
-				std::vector<char> ret{ bin, bin + size };
-				delete[] bin;
-				return ret;
+				glGetShaderInfoLog(shader, 512, NULL, infoLog);
+				std::string shader_type;
+				if (shaderType == GL_VERTEX_SHADER)        shader_type = "VERTEX";
+				else if (shaderType == GL_FRAGMENT_SHADER) shader_type = "FRAGMENT";
+				else if (shaderType == GL_GEOMETRY_SHADER) shader_type = "GEOMETRY";
+				std::cout << "ERROR::" << shader_type << " SHADER::COMPILATION_FAILED\n" << infoLog << std::endl;
 			}
-			return {};
 		}
 
-		GLuint compileShaderSpirv(const std::vector<char> shaderSpirv, GLenum shaderType)
+		void checkLinkingErrors() const noexcept
 		{
-			// Create an empty shader handle
-			GLuint shader = glCreateShader(shaderType);
-
-			// Apply the shader SPIR-V to the shader object.
-			glShaderBinary(1, &shader, GL_SHADER_BINARY_FORMAT_SPIR_V, shaderSpirv.data(), shaderSpirv.size());
-
-			// Specialize the shader.
-			//std::string entrypoint = "main"; // Get VS entry point name
-			glSpecializeShader(shader, "main", 0, nullptr, nullptr);
-
-			// Specialization is equivalent to compilation.
-			checkCompileErrors(shader, shaderType);
-
-			return shader;
+			GLint success; GLchar infoLog[512];
+			glGetProgramiv(program, GL_LINK_STATUS, &success);
+			if (!success) {
+				glGetProgramInfoLog(program, 512, NULL, infoLog);
+				std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
+			}
 		}
-#pragma endregion
 
 #pragma region text
 		void loadFromText(const GLchar* vertPath, const GLchar* fragPath, const GLchar* geomPath, std::vector<const GLchar*> utilPaths = {})
@@ -289,30 +245,73 @@ namespace utils::graphics::opengl
 		}
 #pragma endregion
 
-		void checkCompileErrors(GLuint shader, GLenum shaderType) const noexcept
+#pragma region spirv
+		void loadFromSpirV(const GLchar* vertPath, const GLchar* fragPath, const GLchar* geomPath, std::vector<const GLchar*> utilPaths = {})
 		{
-			// Check for compile time errors TODO
-			GLint success; GLchar infoLog[512];
-			glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-			if (!success)
-			{
-				glGetShaderInfoLog(shader, 512, NULL, infoLog);
-				std::string shader_type;
-				if (shaderType == GL_VERTEX_SHADER)        shader_type = "VERTEX";
-				else if (shaderType == GL_FRAGMENT_SHADER) shader_type = "FRAGMENT";
-				else if (shaderType == GL_GEOMETRY_SHADER) shader_type = "GEOMETRY";
-				std::cout << "ERROR::" << shader_type << " SHADER::COMPILATION_FAILED\n" << infoLog << std::endl;
+			//TODO from example code at https://www.khronos.org/opengl/wiki/SPIR-V
+			GLuint vertexShader, fragmentShader;
+
+			// Read our shaders into the appropriate buffers
+			std::vector<char> vertexSpirv = loadSourceSpirV(vertPath);// Get SPIR-V for vertex shader.
+			std::vector<char> fragmentSpirv = loadSourceSpirV(fragPath);// Get SPIR-V for fragment shader.
+
+			fragmentShader = compileShaderSpirv(fragmentSpirv, GL_FRAGMENT_SHADER);
+			vertexShader = compileShaderSpirv(vertexSpirv, GL_VERTEX_SHADER);
+
+
+			// Vertex and fragment shaders are successfully compiled.
+			// Now time to link them together into a program.
+
+			// Attach our shaders to our program
+			glAttachShader(program, vertexShader);
+			glAttachShader(program, fragmentShader);
+
+			// Link our program
+			try {
+				glLinkProgram(program);
 			}
+			catch (std::exception e) { auto x = glGetError(); checkLinkingErrors(); std::cout << e.what(); }
+			checkLinkingErrors();
+
+			// Always detach shaders after a successful link.
+			glDetachShader(program, vertexShader); // delete or detach??
+			glDetachShader(program, fragmentShader);
 		}
 
-		void checkLinkingErrors() const noexcept
+		std::vector<char> loadSourceSpirV(const GLchar* spirvPath)
 		{
-			GLint success; GLchar infoLog[512];
-			glGetProgramiv(program, GL_LINK_STATUS, &success);
-			if (!success) {
-				glGetProgramInfoLog(program, 512, NULL, infoLog);
-				std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
+			std::ifstream shaderFile;
+			shaderFile.open(spirvPath, std::ios::binary | std::ios::ate);
+			if (shaderFile.is_open())
+			{
+				size_t size = shaderFile.tellg();
+				char* bin = new char[size];
+				shaderFile.seekg(0, std::ios::beg);
+				shaderFile.read(bin, size);
+				std::vector<char> ret{ bin, bin + size };
+				delete[] bin;
+				return ret;
 			}
+			return {};
 		}
+
+		GLuint compileShaderSpirv(const std::vector<char> shaderSpirv, GLenum shaderType)
+		{
+			// Create an empty shader handle
+			GLuint shader = glCreateShader(shaderType);
+
+			// Apply the shader SPIR-V to the shader object.
+			glShaderBinary(1, &shader, GL_SHADER_BINARY_FORMAT_SPIR_V, shaderSpirv.data(), static_cast<GLsizei>(shaderSpirv.size()));
+
+			// Specialize the shader.
+			//std::string entrypoint = "main"; // Get VS entry point name
+			glSpecializeShader(shader, "main", 0, nullptr, nullptr);
+
+			// Specialization is equivalent to compilation.
+			checkCompileErrors(shader, shaderType);
+
+			return shader;
+		}
+#pragma endregion
 	};
 }
