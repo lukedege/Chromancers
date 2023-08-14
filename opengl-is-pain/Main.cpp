@@ -119,10 +119,9 @@ int main()
 	// Shader setup
 	std::vector<const GLchar*> utils_shaders { "shaders/types.glsl", "shaders/constants.glsl" };
 
-	ugl::Shader norm_map_shader{ "shaders/text/BP_normal_mapping.vert", "shaders/text/BP_normal_mapping.frag", 4, 3, nullptr, utils_shaders};
-	//ugl::Shader light_shader{ "shaders/normal_mapping.vert", "shaders/normal_mapping.frag", 4, 3, nullptr, utils_shaders};
-	ugl::Shader basic_shader{ "shaders/text/mvp.vert", "shaders/text/basic.frag", 4, 3 };
-	ugl::Shader parallax_map_shader{ "shaders/text/BP_parallax_mapping.vert", "shaders/text/BP_parallax_mapping.frag", 4, 3, nullptr, utils_shaders };
+	ugl::Shader floor_shader{ "shaders/text/scene/floor.vert", "shaders/text/scene/floor.frag", 4, 3, nullptr, utils_shaders};
+	ugl::Shader basic_shader{ "shaders/text/generic/mvp.vert", "shaders/text/generic/basic.frag", 4, 3 };
+	ugl::Shader parallax_map_shader{ "shaders/text/generic/BP_parallax_mapping.vert", "shaders/text/generic/BP_parallax_mapping.frag", 4, 3, nullptr, utils_shaders };
 
 	// Camera setup
 	camera = ugl::Camera{ glm::vec3{0,0,5} };
@@ -174,11 +173,11 @@ int main()
 	//glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &currentSubroutineIndex);
 	
 	// Shader "constants" setup
-	set_light_attributes(norm_map_shader);
+	set_light_attributes(floor_shader);
 	set_light_attributes(parallax_map_shader);
-	norm_map_shader.use();
-	norm_map_shader.setUint("nPointLights", point_lights.size());
-	norm_map_shader.setUint("nDirLights", 1);
+	floor_shader.use();
+	floor_shader.setUint("nPointLights", point_lights.size());
+	floor_shader.setUint("nDirLights", 1);
 	parallax_map_shader.use();
 	parallax_map_shader.setUint("nPointLights", point_lights.size());
 	parallax_map_shader.setUint("nDirLights", 1);
@@ -222,26 +221,25 @@ int main()
 		glViewport(0, 0, ws.width, ws.height); // we render objects in full screen
 
 		#pragma region plane
-		norm_map_shader.use();
+		floor_shader.use();
 		wall_diffuse_tex.activate();
 		wall_normal_tex.activate();
 		
-		norm_map_shader.setMat4("viewMatrix", view);
-		norm_map_shader.setMat4("projectionMatrix", projection);
-		norm_map_shader.setVec3("wCameraPos", camera.position());
+		floor_shader.setMat4("viewMatrix", view);
+		floor_shader.setMat4("projectionMatrix", projection);
+		floor_shader.setVec3("wCameraPos", camera.position());
 
 		// LIGHTING 
 		for (size_t i = 0; i < point_lights.size(); i++)
 		{
-			point_lights[i].setup(norm_map_shader, i);
+			point_lights[i].setup(floor_shader, i);
 		}
 
-		norm_map_shader.setInt("diffuse_tex", wall_diffuse_tex.id);
-		norm_map_shader.setInt("normal_tex", wall_normal_tex.id);
-		norm_map_shader.setFloat("repeat", norm_map_repeat);
-		norm_map_shader.setBool("use_normalmap", true);
+		floor_shader.setInt("diffuse_tex", wall_diffuse_tex.id);
+		floor_shader.setInt("normal_tex", wall_normal_tex.id);
+		floor_shader.setFloat("repeat", norm_map_repeat);
 
-		plane.draw(norm_map_shader, view);
+		plane.draw(floor_shader, view);
 		#pragma endregion plane
 
 		#pragma region cube
@@ -282,18 +280,18 @@ int main()
 		glm::mat4 topdown_view = glm::lookAt(new_cam_pos, camera.position(), camera.forward());
 		
 		// Redraw all scene objects from map pov
-		norm_map_shader.use();
-		norm_map_shader.setMat4("viewMatrix", topdown_view);
-		norm_map_shader.setVec3("wCameraPos", new_cam_pos);
+		floor_shader.use();
+		floor_shader.setMat4("viewMatrix", topdown_view);
+		floor_shader.setVec3("wCameraPos", new_cam_pos);
 
 		uv_tex.activate();
-		norm_map_shader.setInt("diffuse_tex", uv_tex.id);
-		norm_map_shader.setFloat("repeat", 2.f);
-		norm_map_shader.setBool("use_normalmap", false);
+		floor_shader.setInt("diffuse_tex", uv_tex.id);
+		floor_shader.setFloat("repeat", 2.f);
+		floor_shader.setBool("use_normalmap", false);
 
 		for (ugl::Entity<ugl::Model>* o : scene_objects)
 		{
-			o->draw(norm_map_shader, topdown_view);
+			o->draw(floor_shader, topdown_view);
 		}
 		
 		// Prepare cursor shader
@@ -347,7 +345,7 @@ int main()
 
 	// Cleanup
 	basic_shader.dispose();
-	norm_map_shader.dispose();
+	floor_shader.dispose();
 	parallax_map_shader.dispose();
 	
 	ImGui_ImplOpenGL3_Shutdown();

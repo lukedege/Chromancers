@@ -81,11 +81,11 @@ namespace utils::graphics::opengl
 			}
 			if (dir == Directions::UP   && !on_ground)
 			{
-				pos += up * vel;
+				pos += world_up * vel;
 			}
 			if (dir == Directions::DOWN && !on_ground)
 			{
-				pos -= up * vel;
+				pos -= world_up * vel;
 			}
 		}
 

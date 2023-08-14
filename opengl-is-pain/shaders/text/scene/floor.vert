@@ -9,8 +9,7 @@ layout (location = 4) in vec3 bitangent; // bitangent axis in tangent space (ort
 out VS_OUT 
 {
 	// tangent space data
-	vec3 twPointLightDir[MAX_POINT_LIGHTS];
-	vec3 twDirLightDir  [MAX_DIR_LIGHTS];
+	vec3 twPointLightPos[MAX_POINT_LIGHTS];
 	vec3 twFragPos; // Local -> World -> Tangent position of frag N.B. THE FIRST LETTER SPECIFIES THE FINAL SPACE 
 	vec3 twCameraPos; 
 	vec3 tNormal;
@@ -27,31 +26,15 @@ uniform mat3 normalMatrix; //this is the normal matrix multiplied by the viewpro
 
 //Lights
 uniform uint nPointLights;
-uniform uint nDirLights;
-
-uniform PointLight       pointLights      [MAX_POINT_LIGHTS];
-uniform DirectionalLight directionalLights[MAX_DIR_LIGHTS];
+uniform PointLight pointLights[MAX_POINT_LIGHTS];
 
 uniform vec3 wCameraPos;
 
-vec3 wFragPos; // World fragment position
 mat3 invTBN; // Inverse TangentBitangentNormal space transformation matrix
 
-void calculatePointLightTangentDir(uint plIndex)
+void calcPointLI(uint plIndex)
 {
-	vec3 curr_wPointLightDir = pointLights[plIndex].position - wFragPos; // Calculate light direction in world coordinates
-	vs_out.twPointLightDir[plIndex] = invTBN * curr_wPointLightDir; // Convert light direction to tangent coordinates
-	// the direction vector is intended as directed from the fragment towards the light
-
-	// Alternative method (convert all to tangent then calculate direction)
-	//vec3 curr_twPointLightPos = invTBN * pointLights[plIndex].position; // convert light position from world to tangent coordinates
-	//vs_out.twPointLightDir[plIndex] = curr_twPointLightPos - vs_out.twFragPos; // calculate light direction in tangent coordinates
-}
-
-void calculateDirLightTangentDir(uint plIndex)
-{
-	vs_out.twDirLightDir[plIndex] = invTBN * -directionalLights[plIndex].direction; // calculate light direction in tangent coordinates
-	// the direction vector is intended as directed from the fragment towards the light
+	vs_out.twPointLightPos[plIndex] = invTBN * pointLights[plIndex].position; // convert light position from world to tangent coordinates
 }
 
 void main()
@@ -59,26 +42,21 @@ void main()
 	mat3 worldNormalMatrix = transpose(inverse(mat3(modelMatrix)));
 	vec3 N = normalize(worldNormalMatrix * normal);
 	vec3 T = normalize(worldNormalMatrix * tangent);
-	vec3 B = normalize(worldNormalMatrix * bitangent);
     T = normalize(T - dot(T, N) * N);
-    vec3 reortho_B = cross(N, T);
-	if(dot(B, reortho_B) < 0) B = -reortho_B; // if they are opposite, adjust the ortho to match B facing and use the reorthogonalized value
+    vec3 B = cross(N, T);
 
 	// we calculate the inverse transform matrix to transform coords world space -> tangent space
 	// we prefer calcs in the vertex shader since it is called less, thus less expensive computationally over time
 	invTBN = transpose(mat3(T, B, N)); 
 
-	wFragPos = vec3(modelMatrix * vec4(position, 1));
-	vs_out.twFragPos = invTBN * wFragPos;
+	vec3 vN = normalize(normalMatrix * normal);
+	vs_out.twFragPos = invTBN * vec3(modelMatrix * vec4(position, 1));;
 	vs_out.interp_UV = UV;
 	vs_out.tNormal = N;
 	vs_out.twCameraPos = invTBN * wCameraPos;
 	
-	for(uint i = 0; i < nPointLights; i++)
-		calculatePointLightTangentDir(i);
-	
-	for(uint i = 0; i < nDirLights; i++)
-		calculateDirLightTangentDir(i);
+	for(int i = 0; i < nPointLights; i++)
+		calcPointLI(i);
 
 	// transformations are applied to each vertex
 	gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);

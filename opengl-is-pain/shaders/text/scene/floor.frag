@@ -11,11 +11,6 @@ in VS_OUT
 	vec3 twCameraPos; 
 	vec3 tNormal;
 
-	//view space data
-	vec3 vwPointLightPos[MAX_POINT_LIGHTS];
-	vec3 vwFragPos; // Local -> World -> View position of frag 
-	vec3 vNormal;
-
 	// the output variable for UV coordinates
 	vec2 interp_UV;
 } fs_in;
@@ -29,7 +24,6 @@ uniform PointLight pointLights[MAX_POINT_LIGHTS];
 uniform sampler2D diffuse_tex; // texture samplers
 uniform sampler2D normal_tex;
 
-uniform bool use_normalmap; // use normal map or not
 uniform float repeat; // texture repetitions
 
 // Material-light attributes
@@ -91,46 +85,15 @@ vec3 BlinnPhongTangent()
 		// We add diffusive and specular components to the final color
 		// N.B. ): in this implementation, the sum of the components can be different than 1
 		color += vec3( kD * lambertian * surfaceColor.xyz + kS * spec * specular);
-	}
-	return color;
-}
 
-vec3 BlinnPhongView()
-{
-	// we repeat the UVs and we sample the texture
-    vec2 repeated_UV = mod(fs_in.interp_UV * repeat, 1.0);
-    vec4 surfaceColor = texture(diffuse_tex, repeated_UV);
-
-	// ambient component can be calculated at the beginning
-	vec3 color = kA * ambient;
-	
-	// normalization of the per-fragment normal
-	vec3 N = normalize(fs_in.vNormal);
-	
-	// normalization of the per-fragment light incidence direction
-	vec3 L = normalize(curr_vwLightPos - fs_in.vwFragPos);
-	
-	// Lambert coefficient
-	float lambertian = max(dot(L,N), 0.0);
-	
-	// if the lambert coefficient is positive, then I can calculate the specular component
-	if(lambertian > 0.0)
-	{
-		// the view vector has been calculated in the vertex shader, already negated to have direction from the mesh to the camera
-		vec3 V = normalize( -fs_in.vwFragPos );
-		
-		// in the Blinn-Phong model we do not use the reflection vector, but the half vector
-		vec3 H = normalize(L + V);
-		
-		// we use H to calculate the specular component
-		float specAngle = max(dot(H, N), 0.0);
-		// shininess application to the specular component
-		float spec = pow(specAngle, shininess);
-		
-		// We add diffusive and specular components to the final color
-		// N.B. ): in this implementation, the sum of the components can be different than 1
-		color += vec3( kD * lambertian * surfaceColor.xyz + kS * spec * specular);
+		// fake shadow
+		float cam_frag_distance = distance(fs_in.twFragPos, fs_in.twCameraPos) + 0.01f;
+		float threshold = 1.f;
+		if(cam_frag_distance < threshold) color *= (cam_frag_distance / threshold);
 	}
+
+	//if(fs_in.interp_UV.x > 0.3 && fs_in.interp_UV.x < 0.5) color *= 0;
+
 	return color;
 }
 
@@ -140,8 +103,7 @@ vec4 calculatePointLights()
 	for(int i = 0; i < nPointLights; i++)
 	{
 		curr_twLightPos = fs_in.twPointLightPos[i];
-		curr_vwLightPos = fs_in.vwPointLightPos[i];
-		color += vec4(use_normalmap ? BlinnPhongTangent() : BlinnPhongView(), 1.0f) * pointLights[i].color * pointLights[i].intensity;
+		color += vec4(BlinnPhongTangent(), 1.0f) * pointLights[i].color * pointLights[i].intensity;
 	}
 	//color.a = normalize(color.a);
 	return color;
