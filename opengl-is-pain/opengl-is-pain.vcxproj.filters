@@ -43,6 +43,9 @@
     <Filter Include="Shaders\text\generic">
       <UniqueIdentifier>{3d9a3b77-4b74-40ad-b1c5-7b724c3feec7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Libraries\stb_image">
+      <UniqueIdentifier>{e3c8b4fe-75a7-436f-9484-3cbee2b2e75e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -52,9 +55,6 @@
       <Filter>Source Files\Libraries</Filter>
     </ClCompile>
     <ClCompile Include="quick_tests.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Main_spv.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Libraries\imgui-1.88\imgui.cpp">
@@ -74,6 +74,12 @@
     </ClCompile>
     <ClCompile Include="..\..\..\Libraries\imgui-1.88\backends\imgui_impl_glfw.cpp">
       <Filter>Source Files\Libraries\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="stb_image.cpp">
+      <Filter>Source Files\Libraries\stb_image</Filter>
+    </ClCompile>
+    <ClCompile Include="Main_spv.cpp">
+      <Filter>Source Files\old</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

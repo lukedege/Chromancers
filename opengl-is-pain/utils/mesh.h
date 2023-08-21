@@ -11,7 +11,7 @@
 
 namespace utils::graphics::opengl
 {
-
+	//unifica con model, funzione statica per caricare obj con più sottomesh
 	struct Vertex
 	{
 		glm::vec3 position; 

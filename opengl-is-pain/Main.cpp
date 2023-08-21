@@ -18,21 +18,17 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-
 // utils libraries
 #include "utils/shader.h"
 #include "utils/model.h "
 #include "utils/texture.h"
+#include "utils/material.h"
 
 #include "utils/scene/camera.h"
 #include "utils/scene/entity.h"
 #include "utils/scene/light.h "
 
 #include "utils/window.h"
-
-#include "utils/components/texture_component.h"
 
 namespace ugl = utils::graphics::opengl;
 
@@ -103,7 +99,7 @@ int main()
 	
 	GLFWwindow* glfw_window = wdw.get();
 	ugl::window::window_size ws = wdw.get_size();
-	float width = static_cast<float>(ws.width), height = static_cast<float>(ws.height);
+	float width = static_cast<float>(ws.width), height = static_cast<float>(ws.height);	
 	
 	// Callbacks linking with glfw
 	glfwSetKeyCallback(glfw_window, key_callback);
@@ -128,25 +124,6 @@ int main()
 	glm::mat4 view = camera.view_matrix();
 	glm::mat4 projection = camera.projection_matrix();
 
-	// Objects setup
-	ugl::Model plane_model{ "models/plane.obj" }, bunny_model{ "models/cube.obj" };
-	ugl::Entity<ugl::Model> plane{ plane_model }, cube{ bunny_model };
-	ugl::Mesh triangle_mesh
-	{
-		std::vector<ugl::Vertex>
-		{
-			ugl::Vertex{ glm::vec3{-0.5f, -0.5f, 0.0f} /* position */ },
-			ugl::Vertex{ glm::vec3{ 0.0f,  0.5f, 0.0f} /* position */ },
-			ugl::Vertex{ glm::vec3{ 0.5f, -0.5f, 0.0f} /* position */ }
-		},
-		std::vector<GLuint>{0, 2, 1}
-	};
-	ugl::Entity<ugl::Mesh> cursor{ triangle_mesh };
-	cursor.add_component<ugl::components::TextureComponent>("popo");
-
-	std::vector<ugl::Entity<ugl::Model>*> scene_objects;
-	scene_objects.push_back(&plane); scene_objects.push_back(&cube);
-
 	//std::vector<glm::vec3> shading_attrs_colors{ ambient, diffuse, specular };
 	//std::vector<float> shading_attrs_coeff{ kD, kS, kA, shininess, alpha, F0 };
 	
@@ -161,16 +138,39 @@ int main()
 	currentLight = &point_lights[0];
 
 	// Textures setup
-	Texture uv_tex{ "textures/UV_Grid_Sm.png" }, soil_tex { "textures/SoilCracked.png" };
-	Texture wall_diffuse_tex{ "textures/brickwall.jpg" }, wall_normal_tex{ "textures/brickwall_normal.jpg" };
-	Texture redbricks_diffuse_tex{ "textures/bricks2.jpg" }, 
+	ugl::Texture uv_tex{ "textures/UV_Grid_Sm.png" }, soil_tex { "textures/SoilCracked.png" };
+	ugl::Texture wall_diffuse_tex{ "textures/brickwall.jpg" }, wall_normal_tex{ "textures/brickwall_normal.jpg" };
+	ugl::Texture redbricks_diffuse_tex{ "textures/bricks2.jpg" }, 
 		redbricks_normal_tex{ "textures/bricks2_normal.jpg" },
 		redbricks_depth_tex{ "textures/bricks2_disp.jpg" };
+	//Texture redbricks_diffuse_tex{ "textures/bricks_cool/Brick_Wall_012_COLOR.jpg" },
+	//	redbricks_normal_tex{ "textures/bricks_cool/Brick_Wall_012_NORM.jpg" },
+	//	redbricks_depth_tex{ "textures/bricks_cool/Brick_Wall_012_DISP_inv.png" };
 	float parallax_heightscale = 0.05f;
 
-	//GLuint currentSubroutineIndex;
-	//currentSubroutineIndex = light_shader.getSubroutineIndex(GL_FRAGMENT_SHADER, "BlinnPhong");
-	//glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &currentSubroutineIndex);
+	// Materials
+	ugl::Material redbricks_mat { &parallax_map_shader, &redbricks_diffuse_tex, &redbricks_normal_tex, &redbricks_depth_tex };
+	ugl::Material floor_mat { &floor_shader, &wall_diffuse_tex, &wall_normal_tex, &redbricks_depth_tex };
+	ugl::Material basic_mat { &basic_shader };
+
+	// Objects setup
+	ugl::Model plane_model{ "models/plane.obj" },
+		cube_model{ "models/cube.obj" }, bunny_model{ "models/bunny.obj" };
+	ugl::Entity<ugl::Model> plane{ plane_model, floor_mat }, cube{ cube_model, redbricks_mat };
+	ugl::Mesh triangle_mesh
+	{
+		std::vector<ugl::Vertex>
+		{
+			ugl::Vertex{ glm::vec3{-0.5f, -0.5f, 0.0f} /* position */ },
+			ugl::Vertex{ glm::vec3{ 0.0f, 0.5f, 0.0f} /* position */ },
+			ugl::Vertex{ glm::vec3{ 0.5f, -0.5f, 0.0f} /* position */ }
+		},
+			std::vector<GLuint>{0, 2, 1}
+	};
+	ugl::Entity<ugl::Mesh> cursor{ triangle_mesh, basic_mat };
+
+	std::vector<ugl::Entity<ugl::Model>*> scene_objects;
+	scene_objects.push_back(&plane); scene_objects.push_back(&cube);
 	
 	// Shader "constants" setup
 	set_light_attributes(floor_shader);
@@ -221,13 +221,9 @@ int main()
 		glViewport(0, 0, ws.width, ws.height); // we render objects in full screen
 
 		#pragma region plane
-		floor_shader.use();
-		wall_diffuse_tex.activate();
-		wall_normal_tex.activate();
-		
-		floor_shader.setMat4("viewMatrix", view);
-		floor_shader.setMat4("projectionMatrix", projection);
-		floor_shader.setVec3("wCameraPos", camera.position());
+		floor_mat.use();
+		floor_mat.shader->setMat4("projectionMatrix", projection);
+		floor_mat.shader->setVec3("wCameraPos", camera.position());
 
 		// LIGHTING 
 		for (size_t i = 0; i < point_lights.size(); i++)
@@ -235,25 +231,18 @@ int main()
 			point_lights[i].setup(floor_shader, i);
 		}
 
-		floor_shader.setInt("diffuse_tex", wall_diffuse_tex.id);
-		floor_shader.setInt("normal_tex", wall_normal_tex.id);
-		floor_shader.setFloat("repeat", norm_map_repeat);
+		floor_mat.shader->setFloat("repeat", norm_map_repeat);
 
-		plane.draw(floor_shader, view);
+		plane.draw(view);
 		#pragma endregion plane
 
 		#pragma region cube
 		if(spinning)
 			cube.transform.rotate(glm::vec3(0.0f, spin_speed * deltaTime, 0.0f));
 		
-		parallax_map_shader.use();
-		redbricks_diffuse_tex.activate();
-		redbricks_normal_tex.activate();
-		redbricks_depth_tex.activate();
-
-		parallax_map_shader.setMat4("viewMatrix", view);
-		parallax_map_shader.setMat4("projectionMatrix", projection);
-		parallax_map_shader.setVec3("wCameraPos", camera.position());
+		redbricks_mat.use();
+		redbricks_mat.shader->setMat4("projectionMatrix", projection);
+		redbricks_mat.shader->setVec3("wCameraPos", camera.position());
 
 		for (size_t i = 0; i < point_lights.size(); i++)
 		{
@@ -261,13 +250,10 @@ int main()
 		}
 		dl1.setup(parallax_map_shader, 0);
 
-		parallax_map_shader.setFloat("height_scale", parallax_heightscale);
-		parallax_map_shader.setInt("diffuse_tex", redbricks_diffuse_tex.id);
-		parallax_map_shader.setInt("normal_tex", redbricks_normal_tex.id);
-		parallax_map_shader.setInt("depth_tex", redbricks_depth_tex.id);
-		parallax_map_shader.setFloat("repeat", parallax_map_repeat);
+		redbricks_mat.shader->setFloat("height_scale", parallax_heightscale);
+		redbricks_mat.shader->setFloat("repeat", parallax_map_repeat);
 
-		cube.draw(parallax_map_shader, view);
+		cube.draw(view);
 		#pragma endregion cube
 
 		#pragma region map_draw
@@ -280,18 +266,12 @@ int main()
 		glm::mat4 topdown_view = glm::lookAt(new_cam_pos, camera.position(), camera.forward());
 		
 		// Redraw all scene objects from map pov
-		floor_shader.use();
-		floor_shader.setMat4("viewMatrix", topdown_view);
-		floor_shader.setVec3("wCameraPos", new_cam_pos);
-
-		uv_tex.activate();
-		floor_shader.setInt("diffuse_tex", uv_tex.id);
-		floor_shader.setFloat("repeat", 2.f);
-		floor_shader.setBool("use_normalmap", false);
-
 		for (ugl::Entity<ugl::Model>* o : scene_objects)
 		{
-			o->draw(floor_shader, topdown_view);
+			o->material->shader->use(); // TODO make this better when u change stuff about camera
+			o->material->shader->setVec3("wCameraPos", new_cam_pos);
+			o->draw(topdown_view);
+			
 		}
 		
 		// Prepare cursor shader
@@ -304,7 +284,7 @@ int main()
 		//cursor.transform.rotate(camera.rotation().y + 90.f, { 0.0f, 0.0f, -1.0f });
 		cursor.transform.set_rotation({ -90.0f, 0.0f, -camera.rotation().y - 90.f });
 
-		cursor.draw(basic_shader, topdown_view);
+		cursor.draw(topdown_view);
 		#pragma endregion map_draw
 
 		#pragma region imgui_draw

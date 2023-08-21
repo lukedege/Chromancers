@@ -112,10 +112,11 @@ vec3 BlinnPhong()
 	// view direction
 	vec3 V = normalize( fs_in.twCameraPos - fs_in.twFragPos );
 
-    vec2 displaced_texCoords = ParallaxMapping(repeated_UV,  V);   
+    vec2 displaced_texCoords = CheapParallaxMapping(repeated_UV,  V);   
 	    
 	float max_height = 1.0f; float min_height = 0.0f;
-    //if(displaced_texCoords.x > max_height || displaced_texCoords.y > max_height || displaced_texCoords.x < min_height || displaced_texCoords.y < min_height)
+
+	//if(displaced_texCoords.x > max_height || displaced_texCoords.y > max_height || displaced_texCoords.x < min_height || displaced_texCoords.y < min_height)
     //	discard;
 
 	// we repeat the UVs and we sample the texture

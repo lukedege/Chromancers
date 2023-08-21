@@ -24,11 +24,13 @@ namespace utils::graphics::opengl
 	private:
 		GLuint glMajorVersion;
 		GLuint glMinorVersion;
+		std::string vertPath, fragPath;
 	public:
 		GLuint program;
 
 		Shader(const GLchar* vertPath, const GLchar* fragPath, GLuint glMajor, GLuint glMinor, const GLchar* geomPath = 0, std::vector<const GLchar*> utilPaths = {}) :
-			program{ glCreateProgram() }, glMajorVersion{ glMajor }, glMinorVersion{ glMinor }
+			program{ glCreateProgram() }, glMajorVersion{ glMajor }, glMinorVersion{ glMinor },
+			vertPath{ vertPath }, fragPath{ fragPath }
 		{
 			loadFromText(vertPath, fragPath, geomPath, utilPaths);
 		}
