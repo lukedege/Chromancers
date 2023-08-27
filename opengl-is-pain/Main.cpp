@@ -1,5 +1,6 @@
 // std libraries
 #include <string>
+#include <functional>
 
 // GL libraries
 #ifdef _WIN32
@@ -81,6 +82,7 @@ float F0 = 0.9f;
 /////////////////// MAIN function ///////////////////////
 int main()
 {
+	// Window creation
 	ugl::window wdw
 	{
 		ugl::window::window_create_info
@@ -92,7 +94,7 @@ int main()
 			{ 720     }, //.window_height
 			{ 1280    }, //.viewport_width
 			{ 720     }, //.viewport_height
-			{ false   }, //.resizable
+			{ true    }, //.resizable
 			{ true    }, //.debug_gl
 		}
 	};
@@ -112,6 +114,24 @@ int main()
 	ImGui_ImplGlfw_InitForOpenGL(glfw_window, true);
 	ImGui_ImplOpenGL3_Init("#version 430");
 	
+	// Camera setup
+	camera = ugl::Camera{ glm::vec3{0,0,5} };
+	glm::mat4 view = camera.view_matrix();
+	glm::mat4 projection = camera.projection_matrix();
+
+	// Lights setup 
+	ugl::PointLight pl1{ glm::vec3{-20.f, 10.f, 10.f}, glm::vec4{1, 1, 1, 1}, 1 };
+	ugl::PointLight pl2{ glm::vec3{ 20.f, 10.f, 10.f}, glm::vec4{1, 1, 1, 1}, 1 };
+	ugl::DirectionalLight dl1{glm::vec3{ 0, -1, -1 }, glm::vec4{1, 1, 1, 1}, 1 };
+
+	std::vector<ugl::PointLight> point_lights;
+	point_lights.push_back(pl1); point_lights.push_back(pl2);
+
+	std::vector<ugl::DirectionalLight> dir_lights;
+	dir_lights.push_back(dl1);
+
+	currentLight = &point_lights[0];
+
 	// Shader setup
 	std::vector<const GLchar*> utils_shaders { "shaders/types.glsl", "shaders/constants.glsl" };
 
@@ -119,23 +139,8 @@ int main()
 	ugl::Shader basic_shader{ "shaders/text/generic/mvp.vert", "shaders/text/generic/basic.frag", 4, 3 };
 	ugl::Shader parallax_map_shader{ "shaders/text/generic/BP_parallax_mapping.vert", "shaders/text/generic/BP_parallax_mapping.frag", 4, 3, nullptr, utils_shaders };
 
-	// Camera setup
-	camera = ugl::Camera{ glm::vec3{0,0,5} };
-	glm::mat4 view = camera.view_matrix();
-	glm::mat4 projection = camera.projection_matrix();
-
-	//std::vector<glm::vec3> shading_attrs_colors{ ambient, diffuse, specular };
-	//std::vector<float> shading_attrs_coeff{ kD, kS, kA, shininess, alpha, F0 };
-	
-	// Lights setup 
-	ugl::PointLight pl1{ glm::vec3{-20.f, 10.f, 10.f}, glm::vec4{1,1,1,1}, 1 };
-	ugl::PointLight pl2{ glm::vec3{ 20.f, 10.f, 10.f}, glm::vec4{1,1,1,1}, 1 };
-	ugl::DirectionalLight dl1{glm::vec3{ 0, -1, -1 } , glm::vec4{1,1,1,1}, 1 };
-
-	std::vector<ugl::PointLight> point_lights;
-	point_lights.push_back(pl1); 
-	point_lights.push_back(pl2);
-	currentLight = &point_lights[0];
+	std::vector <std::reference_wrapper<ugl::Shader>> lit_shaders;
+	lit_shaders.push_back(floor_shader); lit_shaders.push_back(parallax_map_shader);
 
 	// Textures setup
 	ugl::Texture uv_tex{ "textures/UV_Grid_Sm.png" }, soil_tex { "textures/SoilCracked.png" };
@@ -143,28 +148,25 @@ int main()
 	ugl::Texture redbricks_diffuse_tex{ "textures/bricks2.jpg" }, 
 		redbricks_normal_tex{ "textures/bricks2_normal.jpg" },
 		redbricks_depth_tex{ "textures/bricks2_disp.jpg" };
-	//Texture redbricks_diffuse_tex{ "textures/bricks_cool/Brick_Wall_012_COLOR.jpg" },
-	//	redbricks_normal_tex{ "textures/bricks_cool/Brick_Wall_012_NORM.jpg" },
-	//	redbricks_depth_tex{ "textures/bricks_cool/Brick_Wall_012_DISP_inv.png" };
-	float parallax_heightscale = 0.05f;
-
+	
 	// Materials
 	ugl::Material redbricks_mat { parallax_map_shader, &redbricks_diffuse_tex, &redbricks_normal_tex, &redbricks_depth_tex };
 	ugl::Material floor_mat { floor_shader, &wall_diffuse_tex, &wall_normal_tex, &redbricks_depth_tex };
 	ugl::Material basic_mat { basic_shader };
 
 	// Objects setup
-	ugl::Model plane_model{ "models/plane.obj" },
-		cube_model{ "models/cube.obj" }, bunny_model{ "models/bunny.obj" };
+	ugl::Model plane_model{ "models/plane.obj" }, cube_model{ "models/cube.obj" };
 	ugl::Entity plane{ plane_model, floor_mat }, cube{ cube_model, redbricks_mat };
+
 	ugl::Model triangle_mesh
 	{
-		ugl::Mesh{
+		ugl::Mesh
+		{
 			std::vector<ugl::Vertex>
 			{
 				ugl::Vertex{ glm::vec3{-0.5f, -0.5f, 0.0f} /* position */ },
-					ugl::Vertex{ glm::vec3{ 0.0f, 0.5f, 0.0f} /* position */ },
-					ugl::Vertex{ glm::vec3{ 0.5f, -0.5f, 0.0f} /* position */ }
+				ugl::Vertex{ glm::vec3{ 0.0f,  0.5f, 0.0f} /* position */ },
+				ugl::Vertex{ glm::vec3{ 0.5f, -0.5f, 0.0f} /* position */ }
 			},
 				std::vector<GLuint>{0, 2, 1}
 		}
@@ -175,17 +177,18 @@ int main()
 	scene_objects.push_back(&plane); scene_objects.push_back(&cube);
 	
 	// Shader "constants" setup
-	set_light_attributes(floor_shader);
-	set_light_attributes(parallax_map_shader);
-	floor_shader.use();
-	floor_shader.setUint("nPointLights", point_lights.size());
-	floor_shader.setUint("nDirLights", 1);
-	parallax_map_shader.use();
-	parallax_map_shader.setUint("nPointLights", point_lights.size());
-	parallax_map_shader.setUint("nDirLights", 1);
+	for (ugl::Shader& lit_shader : lit_shaders)
+	{
+		set_light_attributes(lit_shader);
+		lit_shader.bind();
+		lit_shader.setUint("nPointLights", point_lights.size());
+		lit_shader.setUint("nDirLights", dir_lights.size());
+	}
+	
 	float norm_map_repeat = 90.f, parallax_map_repeat = 3.f;
+	float parallax_heightscale = 0.05f;
 
-	// Objects setup
+	// Entities setup in scene
 	plane.transform.set_position(glm::vec3(0.0f, -1.0f, 0.0f));
 	plane.transform.set_size(glm::vec3(10.0f, 1.0f, 10.0f));
 
@@ -213,27 +216,38 @@ int main()
 		process_toggled_keys();
 		process_pressed_keys();
 
-		// we "clear" the frame and z buffer
+		// Clear the frame and z buffer
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		// get matrices from camera
+		// Get matrices from camera
 		view = camera.view_matrix();
 
+		// Render objects with a window-wide viewport
 		ws = wdw.get_size();
-		glViewport(0, 0, ws.width, ws.height); // we render objects in full screen
+		glViewport(0, 0, ws.width, ws.height); 
 
+		// Update lighting for lit shaders
+		for (ugl::Shader& lit_shader : lit_shaders)
+		{
+			lit_shader.bind();
+			for (size_t i = 0; i < point_lights.size(); i++)
+			{
+				point_lights[i].setup(lit_shader, i);
+			}
+			for (size_t i = 0; i < dir_lights.size(); i++)
+			{
+				dir_lights[i].setup(lit_shader, i);
+			}
+		}
+
+		// TODO move these into the overridden update method of a child of entity (e.g. Plane : Entity) or an "update" lambda within entity's scope (similar to command lists)
 		#pragma region plane
-		floor_mat.use();
+		floor_mat.bind();
 		floor_mat.shader->setMat4("projectionMatrix", projection);
 		floor_mat.shader->setVec3("wCameraPos", camera.position());
 
-		// LIGHTING 
-		for (size_t i = 0; i < point_lights.size(); i++)
-		{
-			point_lights[i].setup(floor_shader, i);
-		}
-
 		floor_mat.shader->setFloat("repeat", norm_map_repeat);
+		floor_mat.shader->setFloat("height_scale", 0);
 
 		plane.draw(view);
 		#pragma endregion plane
@@ -242,20 +256,15 @@ int main()
 		if(spinning)
 			cube.transform.rotate(glm::vec3(0.0f, spin_speed * deltaTime, 0.0f));
 		
-		redbricks_mat.use();
+		redbricks_mat.bind();
 		redbricks_mat.shader->setMat4("projectionMatrix", projection);
 		redbricks_mat.shader->setVec3("wCameraPos", camera.position());
 
-		for (size_t i = 0; i < point_lights.size(); i++)
-		{
-			point_lights[i].setup(parallax_map_shader, i);
-		}
-		dl1.setup(parallax_map_shader, 0);
-
-		redbricks_mat.shader->setFloat("height_scale", parallax_heightscale);
 		redbricks_mat.shader->setFloat("repeat", parallax_map_repeat);
+		redbricks_mat.shader->setFloat("height_scale", parallax_heightscale);
 
 		cube.draw(view);
+
 		#pragma endregion cube
 
 		#pragma region map_draw
@@ -270,14 +279,14 @@ int main()
 		// Redraw all scene objects from map pov
 		for (ugl::Entity* o : scene_objects)
 		{
-			o->material->shader->use(); // TODO make this better when u change stuff about camera
+			o->material->shader->bind(); // TODO make this better when u change stuff about camera, like calling their personal "update" method or lambda
 			o->material->shader->setVec3("wCameraPos", new_cam_pos);
 			o->draw(topdown_view);
 		}
 		
 		// Prepare cursor shader
 		glClear(GL_DEPTH_BUFFER_BIT);
-		basic_shader.use();
+		basic_shader.bind();
 		basic_shader.setMat4("viewMatrix", topdown_view);
 		basic_shader.setMat4("projectionMatrix", projection);
 
@@ -342,7 +351,7 @@ int main()
 
 void set_light_attributes(ugl::Shader& shader)
 {
-	shader.use();
+	shader.bind();
 	shader.setVec3("ambient", ambient);
 	shader.setVec3("diffuse", diffuse);
 	shader.setVec3("specular", specular);

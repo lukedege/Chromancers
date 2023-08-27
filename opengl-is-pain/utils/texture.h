@@ -64,10 +64,15 @@ namespace utils::graphics::opengl
 			stbi_image_free(image);
 		}
 
-		void activate()
+		void bind()
 		{
 			glActiveTexture(GL_TEXTURE0 + id); // this should be correct as of: https://stackoverflow.com/questions/8866904/differences-and-relationship-between-glactivetexture-and-glbindtexture
 			glBindTexture(GL_TEXTURE_2D, id);
+		}
+
+		void unbind()
+		{
+			glBindTexture(GL_TEXTURE_2D, 0);
 		}
 
 		// extensible when needed, for now is enough

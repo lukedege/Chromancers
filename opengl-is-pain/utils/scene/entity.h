@@ -21,6 +21,7 @@ namespace utils::graphics::opengl
 	// Object in scene
 	class Entity
 	{
+	protected:
 		// TODO when physics done -> size_t bullet_id
 		Model* model; // can be either Model or Mesh TODO maybe unify model and mesh
 		
@@ -30,15 +31,22 @@ namespace utils::graphics::opengl
 
 		Entity(Model& drawable, Material& material) : model{ &drawable }, material{ &material } {}
 
+		// TODO To be overridden by children classes
+		//void update()
+		//{
+		//
+		//}
+
 		void draw(const glm::mat4& view_matrix) const noexcept
 		{
-			material->use();
+			material->bind();
 
 			material->shader->setMat4("viewMatrix", view_matrix);
 			material->shader->setMat4("modelMatrix", transform.world_matrix());
 			material->shader->setMat3("normalMatrix", compute_normal(view_matrix));
 
 			model->draw();
+			material->unbind();
 		}
 
 		//void draw(GLuint ubo_obj_matrices, const glm::mat4& view_matrix)

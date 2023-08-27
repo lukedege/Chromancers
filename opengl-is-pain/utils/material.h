@@ -24,27 +24,33 @@ namespace utils::graphics::opengl
 
 		}
 
-		void use()
+		void bind()
 		{
-			shader->use();
+			shader->bind();
 			
 			if (diffuse_map)
 			{
-				diffuse_map->activate();
+				diffuse_map->bind();
 				shader->setInt("diffuse_tex", diffuse_map->id);
 			}
 
 			if (normal_map)
 			{
-				normal_map->activate();
+				normal_map->bind();
 				shader->setInt("normal_tex", normal_map->id);
 			}
 			
 			if (displacement_map)
 			{
-				displacement_map->activate();
+				displacement_map->bind();
 				shader->setInt("depth_tex", displacement_map->id); // TODO choose a single f*ing name for displacement textures (displacement? depth? height???? choose ONE)
 			}
 		}
+
+		void unbind()
+		{
+			// TODO
+		}
+
 	};
 }

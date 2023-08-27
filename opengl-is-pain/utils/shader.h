@@ -44,7 +44,8 @@ namespace utils::graphics::opengl
 		// this is necessary since we dont want to delete the program involuntarily after a move (which would call the destructor)
 		void dispose() const noexcept { glDeleteProgram(program); }
 
-		void use() const noexcept { glUseProgram(program); }
+		void bind()   const noexcept { glUseProgram(program); }
+		void unbind() const noexcept { glUseProgram(0); }
 
 		std::vector<std::string> findSubroutines(GLenum shaderType)
 		{
@@ -106,28 +107,38 @@ namespace utils::graphics::opengl
 		}
 
 #pragma region utility_uniform_functions
-		void setInt  (const std::string& name, int value)                             const { glUniform1i (glGetUniformLocation(program, name.c_str()), static_cast<GLint>(value)); }
-		void setBool (const std::string& name, bool value)                            const { glUniform1i (glGetUniformLocation(program, name.c_str()), static_cast<GLint>(value)); }
-		void setUint (const std::string& name, unsigned int value)                    const { glUniform1ui(glGetUniformLocation(program, name.c_str()), static_cast<GLuint>(value)); }
-		void setFloat(const std::string& name, float value)                           const { glUniform1f (glGetUniformLocation(program, name.c_str()), static_cast<GLfloat>(value)); }
+		GLint getUniformLocation(const std::string& name) const
+		{
+			GLint location = glGetUniformLocation(program, name.c_str());
+			if (location == -1)
+			{
+				std::cout << "Warning: uniform '" << name << "' of program compiled from path '" << vertPath << "' doesn't exist!" << std::endl;
+			}
+			return location;
+		}
 
-		void setVec2 (const std::string& name, const GLfloat value[])                 const { glUniform2fv(glGetUniformLocation(program, name.c_str()), 1, &value[0]); }
-		void setVec2 (const std::string& name, const glm::vec2& value)                const { glUniform2fv(glGetUniformLocation(program, name.c_str()), 1, glm::value_ptr(value)); }
-		void setVec2 (const std::string& name, float x, float y)                      const { glUniform2f (glGetUniformLocation(program, name.c_str()), static_cast<GLfloat>(x), static_cast<GLfloat>(y)); }
-					 
-		void setVec3 (const std::string& name, const GLfloat value[])                 const { glUniform3fv(glGetUniformLocation(program, name.c_str()), 1, &value[0]); }
-		void setVec3 (const std::string& name, const glm::vec3& value)                const { glUniform3fv(glGetUniformLocation(program, name.c_str()), 1, glm::value_ptr(value)); }
-		void setVec3 (const std::string& name, float x, float y, float z)             const { glUniform3f (glGetUniformLocation(program, name.c_str()), static_cast<GLfloat>(x), static_cast<GLfloat>(y), static_cast<GLfloat>(z)); }
-					 
-		void setVec4 (const std::string& name, const GLfloat value[])                 const { glUniform4fv(glGetUniformLocation(program, name.c_str()), 1, &value[0]); }
-		void setVec4 (const std::string& name, const glm::vec4& value)                const { glUniform4fv(glGetUniformLocation(program, name.c_str()), 1, glm::value_ptr(value)); }
-		void setVec4 (const std::string& name, float x, float y, float z, float w)    const { glUniform4f (glGetUniformLocation(program, name.c_str()), static_cast<GLfloat>(x), static_cast<GLfloat>(y), static_cast<GLfloat>(z), static_cast<GLfloat>(w)); }
-					 
-		void setMat2 (const std::string& name, const glm::mat2& mat)                  const { glUniformMatrix2fv(glGetUniformLocation(program, name.c_str()), 1, GL_FALSE, glm::value_ptr(mat)); }
+		void setInt  (const std::string& name, int value)                             const { glUniform1i (getUniformLocation(name), static_cast<GLint>(value)); }
+		void setBool (const std::string& name, bool value)                            const { glUniform1i (getUniformLocation(name), static_cast<GLint>(value)); }
+		void setUint (const std::string& name, unsigned int value)                    const { glUniform1ui(getUniformLocation(name), static_cast<GLuint>(value)); }
+		void setFloat(const std::string& name, float value)                           const { glUniform1f (getUniformLocation(name), static_cast<GLfloat>(value)); }
 
-		void setMat3 (const std::string& name, const glm::mat3& mat)                  const { glUniformMatrix3fv(glGetUniformLocation(program, name.c_str()), 1, GL_FALSE, glm::value_ptr(mat)); }
+		void setVec2 (const std::string& name, const GLfloat value[])                 const { glUniform2fv(getUniformLocation(name), 1, &value[0]); }
+		void setVec2 (const std::string& name, const glm::vec2& value)                const { glUniform2fv(getUniformLocation(name), 1, glm::value_ptr(value)); }
+		void setVec2 (const std::string& name, float x, float y)                      const { glUniform2f (getUniformLocation(name), static_cast<GLfloat>(x), static_cast<GLfloat>(y)); }
 					 
-		void setMat4 (const std::string& name, const glm::mat4& mat)                  const { glUniformMatrix4fv(glGetUniformLocation(program, name.c_str()), 1, GL_FALSE, glm::value_ptr(mat)); }
+		void setVec3 (const std::string& name, const GLfloat value[])                 const { glUniform3fv(getUniformLocation(name), 1, &value[0]); }
+		void setVec3 (const std::string& name, const glm::vec3& value)                const { glUniform3fv(getUniformLocation(name), 1, glm::value_ptr(value)); }
+		void setVec3 (const std::string& name, float x, float y, float z)             const { glUniform3f (getUniformLocation(name), static_cast<GLfloat>(x), static_cast<GLfloat>(y), static_cast<GLfloat>(z)); }
+					 
+		void setVec4 (const std::string& name, const GLfloat value[])                 const { glUniform4fv(getUniformLocation(name), 1, &value[0]); }
+		void setVec4 (const std::string& name, const glm::vec4& value)                const { glUniform4fv(getUniformLocation(name), 1, glm::value_ptr(value)); }
+		void setVec4 (const std::string& name, float x, float y, float z, float w)    const { glUniform4f (getUniformLocation(name), static_cast<GLfloat>(x), static_cast<GLfloat>(y), static_cast<GLfloat>(z), static_cast<GLfloat>(w)); }
+					 
+		void setMat2 (const std::string& name, const glm::mat2& mat)                  const { glUniformMatrix2fv(getUniformLocation(name), 1, GL_FALSE, glm::value_ptr(mat)); }
+
+		void setMat3 (const std::string& name, const glm::mat3& mat)                  const { glUniformMatrix3fv(getUniformLocation(name), 1, GL_FALSE, glm::value_ptr(mat)); }
+					 
+		void setMat4 (const std::string& name, const glm::mat4& mat)                  const { glUniformMatrix4fv(getUniformLocation(name), 1, GL_FALSE, glm::value_ptr(mat)); }
 #pragma endregion 
 
 	private:	
