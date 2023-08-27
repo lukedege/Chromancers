@@ -36,8 +36,20 @@ namespace utils::graphics::opengl
 		Model(Model&& move) = default;
 		Model& operator=(Model&& move) noexcept = default;
 
+		// Create model from file
 		Model(const std::string& path) : meshes{ std::move(loadModel(path)) }
 		{}
+
+		// Create model with an inital existing mesh
+		Model(Mesh& mesh) : meshes {}
+		{
+			meshes.push_back(std::move(mesh));
+		}
+
+		Model(Mesh&& mesh) : meshes {}
+		{
+			meshes.push_back(std::move(mesh));
+		}
 
 		void draw() const
 		{

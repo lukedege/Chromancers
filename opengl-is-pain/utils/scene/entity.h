@@ -19,19 +19,16 @@
 namespace utils::graphics::opengl
 {
 	// Object in scene
-	template <is_drawable drawable_T>
 	class Entity
 	{
 		// TODO when physics done -> size_t bullet_id
-		// mesh
-		drawable_T drawable; // can be either Model or Mesh
+		Model* model; // can be either Model or Mesh TODO maybe unify model and mesh
 		
 	public:
-		Entity(drawable_T&  drawable, Material& material) : drawable{ std::move(drawable) }, material{ &material } {}
-		Entity(drawable_T&& drawable, Material& material) : drawable{ std::move(drawable) }, material{ &material } {}
-
 		Transform transform;
 		Material* material;
+
+		Entity(Model& drawable, Material& material) : model{ &drawable }, material{ &material } {}
 
 		void draw(const glm::mat4& view_matrix) const noexcept
 		{
@@ -41,7 +38,7 @@ namespace utils::graphics::opengl
 			material->shader->setMat4("modelMatrix", transform.world_matrix());
 			material->shader->setMat3("normalMatrix", compute_normal(view_matrix));
 
-			drawable.draw();
+			model->draw();
 		}
 
 		//void draw(GLuint ubo_obj_matrices, const glm::mat4& view_matrix)

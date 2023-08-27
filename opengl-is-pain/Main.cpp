@@ -149,27 +149,29 @@ int main()
 	float parallax_heightscale = 0.05f;
 
 	// Materials
-	ugl::Material redbricks_mat { &parallax_map_shader, &redbricks_diffuse_tex, &redbricks_normal_tex, &redbricks_depth_tex };
-	ugl::Material floor_mat { &floor_shader, &wall_diffuse_tex, &wall_normal_tex, &redbricks_depth_tex };
-	ugl::Material basic_mat { &basic_shader };
+	ugl::Material redbricks_mat { parallax_map_shader, &redbricks_diffuse_tex, &redbricks_normal_tex, &redbricks_depth_tex };
+	ugl::Material floor_mat { floor_shader, &wall_diffuse_tex, &wall_normal_tex, &redbricks_depth_tex };
+	ugl::Material basic_mat { basic_shader };
 
 	// Objects setup
 	ugl::Model plane_model{ "models/plane.obj" },
 		cube_model{ "models/cube.obj" }, bunny_model{ "models/bunny.obj" };
-	ugl::Entity<ugl::Model> plane{ plane_model, floor_mat }, cube{ cube_model, redbricks_mat };
-	ugl::Mesh triangle_mesh
+	ugl::Entity plane{ plane_model, floor_mat }, cube{ cube_model, redbricks_mat };
+	ugl::Model triangle_mesh
 	{
-		std::vector<ugl::Vertex>
-		{
-			ugl::Vertex{ glm::vec3{-0.5f, -0.5f, 0.0f} /* position */ },
-			ugl::Vertex{ glm::vec3{ 0.0f, 0.5f, 0.0f} /* position */ },
-			ugl::Vertex{ glm::vec3{ 0.5f, -0.5f, 0.0f} /* position */ }
-		},
-			std::vector<GLuint>{0, 2, 1}
+		ugl::Mesh{
+			std::vector<ugl::Vertex>
+			{
+				ugl::Vertex{ glm::vec3{-0.5f, -0.5f, 0.0f} /* position */ },
+					ugl::Vertex{ glm::vec3{ 0.0f, 0.5f, 0.0f} /* position */ },
+					ugl::Vertex{ glm::vec3{ 0.5f, -0.5f, 0.0f} /* position */ }
+			},
+				std::vector<GLuint>{0, 2, 1}
+		}
 	};
-	ugl::Entity<ugl::Mesh> cursor{ triangle_mesh, basic_mat };
+	ugl::Entity cursor{ triangle_mesh, basic_mat };
 
-	std::vector<ugl::Entity<ugl::Model>*> scene_objects;
+	std::vector<ugl::Entity*> scene_objects;
 	scene_objects.push_back(&plane); scene_objects.push_back(&cube);
 	
 	// Shader "constants" setup
@@ -266,12 +268,11 @@ int main()
 		glm::mat4 topdown_view = glm::lookAt(new_cam_pos, camera.position(), camera.forward());
 		
 		// Redraw all scene objects from map pov
-		for (ugl::Entity<ugl::Model>* o : scene_objects)
+		for (ugl::Entity* o : scene_objects)
 		{
 			o->material->shader->use(); // TODO make this better when u change stuff about camera
 			o->material->shader->setVec3("wCameraPos", new_cam_pos);
 			o->draw(topdown_view);
-			
 		}
 		
 		// Prepare cursor shader

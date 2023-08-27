@@ -15,8 +15,8 @@ namespace utils::graphics::opengl
 		Texture* normal_map;
 		Texture* displacement_map;
 
-		Material(Shader* shader, Texture* diffuse = nullptr, Texture* normal = nullptr, Texture* disp = nullptr) :
-			shader          { shader  },
+		Material(Shader& shader, Texture* diffuse = nullptr, Texture* normal = nullptr, Texture* disp = nullptr) :
+			shader          { &shader },
 			diffuse_map     { diffuse },
 			normal_map      { normal  },
 			displacement_map{ disp    }
