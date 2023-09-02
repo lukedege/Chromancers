@@ -160,13 +160,15 @@
     <ClCompile Include="stb_image.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="utils\components\texture_component.h" />
+    <ClInclude Include="entities\cube.h" />
+    <ClInclude Include="entities\floor.h" />
     <ClInclude Include="utils\interfaces.h" />
     <ClInclude Include="utils\mesh.h" />
     <ClInclude Include="utils\model.h" />
     <ClInclude Include="utils\scene\camera.h" />
     <ClInclude Include="utils\scene\entity.h" />
     <ClInclude Include="utils\scene\light.h" />
+    <ClInclude Include="utils\scene\scene.h" />
     <ClInclude Include="utils\scene\transform.h" />
     <ClInclude Include="utils\shader.h" />
     <ClInclude Include="utils\texture.h" />

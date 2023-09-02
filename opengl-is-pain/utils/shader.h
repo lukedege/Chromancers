@@ -110,10 +110,12 @@ namespace utils::graphics::opengl
 		GLint getUniformLocation(const std::string& name) const
 		{
 			GLint location = glGetUniformLocation(program, name.c_str());
+			#ifdef DEBUG_UNIFORM
 			if (location == -1)
 			{
 				std::cout << "Warning: uniform '" << name << "' of program compiled from path '" << vertPath << "' doesn't exist!" << std::endl;
 			}
+			#endif
 			return location;
 		}
 

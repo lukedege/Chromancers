@@ -28,12 +28,6 @@
     <Filter Include="Source Files\Libraries\imgui">
       <UniqueIdentifier>{d85dde33-c73b-4f1a-ae25-e072ea9203cf}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\components">
-      <UniqueIdentifier>{d57ebf08-91e9-4b74-9e60-5b31b8c88269}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\scene">
-      <UniqueIdentifier>{34e2fd4a-248c-4f43-b37d-917ca88dfc0d}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Shaders\text">
       <UniqueIdentifier>{503c538c-2705-497a-9deb-016b2ed940a9}</UniqueIdentifier>
     </Filter>
@@ -45,6 +39,15 @@
     </Filter>
     <Filter Include="Source Files\Libraries\stb_image">
       <UniqueIdentifier>{e3c8b4fe-75a7-436f-9484-3cbee2b2e75e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\utils">
+      <UniqueIdentifier>{345ca657-24f9-4b76-9980-6a687ac5678c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\utils\scene">
+      <UniqueIdentifier>{34e2fd4a-248c-4f43-b37d-917ca88dfc0d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\entities">
+      <UniqueIdentifier>{b9040ea0-50f0-425a-907c-1ed55834d0c9}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -83,41 +86,47 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="utils\mesh.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="utils\model.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="utils\shader.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="utils\window.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="utils\utils.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="utils\interfaces.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="utils\texture.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="utils\components\texture_component.h">
-      <Filter>Header Files\components</Filter>
-    </ClInclude>
     <ClInclude Include="utils\scene\camera.h">
-      <Filter>Header Files\scene</Filter>
+      <Filter>Header Files\utils\scene</Filter>
     </ClInclude>
     <ClInclude Include="utils\scene\entity.h">
-      <Filter>Header Files\scene</Filter>
+      <Filter>Header Files\utils\scene</Filter>
     </ClInclude>
     <ClInclude Include="utils\scene\light.h">
-      <Filter>Header Files\scene</Filter>
+      <Filter>Header Files\utils\scene</Filter>
     </ClInclude>
     <ClInclude Include="utils\scene\transform.h">
-      <Filter>Header Files\scene</Filter>
+      <Filter>Header Files\utils\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\interfaces.h">
+      <Filter>Header Files\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\mesh.h">
+      <Filter>Header Files\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\model.h">
+      <Filter>Header Files\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\shader.h">
+      <Filter>Header Files\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\texture.h">
+      <Filter>Header Files\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\utils.h">
+      <Filter>Header Files\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\window.h">
+      <Filter>Header Files\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="entities\floor.h">
+      <Filter>Header Files\entities</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\scene\scene.h">
+      <Filter>Header Files\utils\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="entities\cube.h">
+      <Filter>Header Files\entities</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

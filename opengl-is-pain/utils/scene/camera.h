@@ -26,7 +26,11 @@ namespace utils::graphics::opengl
 		glm::vec3 world_front, world_up;
 
 		// matrix related
-		float fov, aspect_ratio, near_plane, far_plane;
+		float fov{ 45.f }, aspect_ratio{ 16.f / 9.f }, near_plane{ 0.1f }, far_plane { 100.f };
+
+		// matrices
+		glm::mat4 view_matrix;
+		glm::mat4 proj_matrix { glm::perspective(fov, aspect_ratio, near_plane, far_plane) };
 
 	public:
 		enum Directions
@@ -87,6 +91,7 @@ namespace utils::graphics::opengl
 			{
 				pos -= world_up * vel;
 			}
+			view_matrix = glm::lookAt(pos, pos + front, up);
 		}
 
 		void ProcessMouseMovement(float x_offset, float y_offset, bool pitch_constraint = true)
@@ -108,14 +113,14 @@ namespace utils::graphics::opengl
 			on_ground = !on_ground;
 		}
 
-		glm::mat4 view_matrix()
+		glm::mat4 viewMatrix()
 		{
-			return glm::lookAt(pos, pos + front, up);
+			return view_matrix;
 		}
 
-		glm::mat4 projection_matrix()
+		glm::mat4 projectionMatrix()
 		{
-			return glm::perspective(45.0f, 16.f / 9.f, 0.1f, 100.0f);
+			return proj_matrix;
 		}
 
 		glm::vec3 position()
@@ -131,6 +136,17 @@ namespace utils::graphics::opengl
 		glm::vec3 forward()
 		{
 			return front;
+		}
+
+		void lookAt(const glm::vec3& position)
+		{
+			view_matrix = glm::lookAt(pos, position, front);
+		}
+
+		void set_position(const glm::vec3& position)
+		{
+			pos = position;
+			view_matrix = glm::lookAt(pos, pos + front, up);
 		}
 
 	private:
@@ -150,6 +166,8 @@ namespace utils::graphics::opengl
 
 			right = glm::normalize(glm::cross(front, world_up));
 			up    = glm::normalize(glm::cross(right, front));
+
+			view_matrix = glm::lookAt(pos, pos + front, up);
 		}
 	};
 }

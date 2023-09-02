@@ -15,6 +15,12 @@ namespace utils::graphics::opengl
 		Texture* normal_map;
 		Texture* displacement_map;
 
+		glm::vec3 ambient{ 0.1f, 0.1f, 0.1f }, diffuse{ 1.0f, 1.0f, 1.0f }, specular{ 1.0f, 1.0f, 1.0f };
+		float kD = 0.5f, kS = 0.4f, kA = 0.1f; // Generally we'd like a normalized sum of these coefficients Kd + Ks + Ka = 1
+		float shininess = 25.f;
+		float alpha = 0.2f;
+		float F0 = 0.9f;
+
 		Material(Shader& shader, Texture* diffuse = nullptr, Texture* normal = nullptr, Texture* disp = nullptr) :
 			shader          { &shader },
 			diffuse_map     { diffuse },
@@ -27,6 +33,17 @@ namespace utils::graphics::opengl
 		void bind()
 		{
 			shader->bind();
+
+			shader->setVec3("ambient", ambient);
+			shader->setVec3("diffuse", diffuse);
+			shader->setVec3("specular", specular);
+
+			shader->setFloat("kA", kA);
+			shader->setFloat("kD", kD);
+			shader->setFloat("kS", kS);
+
+			shader->setFloat("shininess", shininess);
+			shader->setFloat("alpha", alpha);
 			
 			if (diffuse_map)
 			{

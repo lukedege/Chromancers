@@ -13,6 +13,7 @@
 #include "../model.h"
 #include "../shader.h"
 #include "../material.h"
+#include "../scene/scene.h"
 
 #include "transform.h"
 
@@ -23,30 +24,36 @@ namespace utils::graphics::opengl
 	{
 	protected:
 		// TODO when physics done -> size_t bullet_id
-		Model* model; // can be either Model or Mesh TODO maybe unify model and mesh
-		
+		Model* model; 
+		SceneData* current_scene; // an entity can concurrently exist in only one scene at a time
+
 	public:
 		Transform transform;
 		Material* material;
 
-		Entity(Model& drawable, Material& material) : model{ &drawable }, material{ &material } {}
+		Entity(Model& drawable, Material& material, SceneData* current_scene = nullptr) : model{ &drawable }, material{ &material }, current_scene{ current_scene } {}
 
-		// TODO To be overridden by children classes
-		//void update()
-		//{
-		//
-		//}
-
-		void draw(const glm::mat4& view_matrix) const noexcept
+		void draw() const noexcept
 		{
+			prepare_draw();
+
 			material->bind();
 
+			glm::mat4 view_matrix = current_scene->current_camera->viewMatrix();
 			material->shader->setMat4("viewMatrix", view_matrix);
 			material->shader->setMat4("modelMatrix", transform.world_matrix());
 			material->shader->setMat3("normalMatrix", compute_normal(view_matrix));
 
 			model->draw();
 			material->unbind();
+		}
+
+		// TODO To be overridden by children classes
+		virtual void update(float delta_time) noexcept {}
+
+		void set_scene(SceneData& scene_data)
+		{
+			current_scene = &scene_data;
 		}
 
 		//void draw(GLuint ubo_obj_matrices, const glm::mat4& view_matrix)
@@ -61,6 +68,9 @@ namespace utils::graphics::opengl
 		//
 		//	drawable.draw();
 		//}
+
+	protected:
+		virtual void prepare_draw() const noexcept {}
 
 	private:
 		glm::mat3 compute_normal(glm::mat4 view_matrix) const noexcept { return glm::inverseTranspose(glm::mat3(view_matrix * transform.world_matrix())); }
