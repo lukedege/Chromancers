@@ -31,6 +31,7 @@
 #include "utils/model.h "
 #include "utils/texture.h"
 #include "utils/material.h"
+#include "utils/physics.h"
 
 #include "utils/scene/light.h "
 #include "utils/scene/camera.h"
@@ -44,9 +45,6 @@
 #include "entities/cube.h"
 
 namespace ugl = utils::graphics::opengl;
-
-// helper functions
-void set_light_attributes(ugl::Shader& shader);
 
 // callback function for keyboard events
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
@@ -149,11 +147,11 @@ int main()
 
 	ugl::Shader floor_shader{ "shaders/text/scene/floor.vert", "shaders/text/scene/floor.frag", 4, 3, nullptr, utils_shaders};
 	ugl::Shader basic_shader{ "shaders/text/generic/mvp.vert", "shaders/text/generic/basic.frag", 4, 3 };
-	ugl::Shader parallax_map_shader{ "shaders/text/generic/BP_parallax_mapping.vert", "shaders/text/generic/BP_parallax_mapping.frag", 4, 3, nullptr, utils_shaders };
+	ugl::Shader cube_shader{ "shaders/text/scene/cube.vert", "shaders/text/scene/cube.frag", 4, 3, nullptr, utils_shaders };
 
 	std::vector <std::reference_wrapper<ugl::Shader>> lit_shaders, all_shaders;
-	lit_shaders.push_back(floor_shader); lit_shaders.push_back(parallax_map_shader);
-	all_shaders.push_back(floor_shader); all_shaders.push_back(parallax_map_shader), all_shaders.push_back(basic_shader);
+	lit_shaders.push_back(floor_shader); lit_shaders.push_back(cube_shader);
+	all_shaders.push_back(floor_shader); all_shaders.push_back(cube_shader), all_shaders.push_back(basic_shader);
 
 	// Textures setup
 	ugl::Texture uv_tex{ "textures/UV_Grid_Sm.png" }, soil_tex { "textures/SoilCracked.png" };
@@ -163,7 +161,7 @@ int main()
 		redbricks_depth_tex{ "textures/bricks2_disp.jpg" };
 	
 	// Materials
-	ugl::Material redbricks_mat { parallax_map_shader, &redbricks_diffuse_tex, &redbricks_normal_tex, &redbricks_depth_tex };
+	ugl::Material redbricks_mat { cube_shader, &redbricks_diffuse_tex, &redbricks_normal_tex, &redbricks_depth_tex };
 	ugl::Material floor_mat { floor_shader, &wall_diffuse_tex, &wall_normal_tex, &redbricks_depth_tex };
 	ugl::Material basic_mat { basic_shader };
 
@@ -233,6 +231,7 @@ int main()
 		glfwPollEvents();
 		process_toggled_keys();
 		process_pressed_keys();
+		
 
 		// Clear the frame and z buffer
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -261,6 +260,7 @@ int main()
 		floor_plane.update(deltaTime);
 		floor_plane.draw();
 
+		cube.spinning = spinning;
 		cube.update(deltaTime);
 		cube.draw();
 
@@ -329,7 +329,7 @@ int main()
 	// Cleanup
 	basic_shader.dispose();
 	floor_shader.dispose();
-	parallax_map_shader.dispose();
+	cube_shader.dispose();
 	
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();

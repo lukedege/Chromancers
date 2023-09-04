@@ -72,14 +72,14 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>..\..\..\Libraries\imgui-1.88;..\..\..\Libraries\imgui-1.88\backends;..\..\..\Libraries\glfw\include;..\..\..\Libraries\glm;..\..\..\Libraries\glad;..\..\..\Libraries\assimp\include;..\..\..\Libraries\stb_image;$(VC_IncludePath)</IncludePath>
-    <LibraryPath>..\..\..\Libraries\glfw\lib-vc2022;..\..\..\Libraries\assimp\build\lib\Debug;..\..\..\Libraries\various;$(LibraryPath)</LibraryPath>
+    <IncludePath>..\..\..\Libraries\bullet\include;..\..\..\Libraries\imgui-1.88;..\..\..\Libraries\imgui-1.88\backends;..\..\..\Libraries\glfw\include;..\..\..\Libraries\glm;..\..\..\Libraries\glad;..\..\..\Libraries\assimp\include;..\..\..\Libraries\stb_image;$(VC_IncludePath)</IncludePath>
+    <LibraryPath>..\..\..\Libraries\bullet\lib;..\..\..\Libraries\glfw\lib-vc2022;..\..\..\Libraries\assimp\build\lib\Debug;..\..\..\Libraries\various;$(LibraryPath)</LibraryPath>
     <SourcePath>..\..\..\Libraries\glad;$(SourcePath)</SourcePath>
     <ReferencePath>$(ReferencePath)</ReferencePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>..\..\..\Libraries\imgui-1.88;..\..\..\Libraries\imgui-1.88\backends;..\..\..\Libraries\glfw\include;..\..\..\Libraries\glm;..\..\..\Libraries\glad;..\..\..\Libraries\assimp\include;..\..\..\Libraries\stb_image;$(VC_IncludePath)</IncludePath>
-    <LibraryPath>..\..\..\Libraries\glfw\lib-vc2022;..\..\..\Libraries\assimp\build\lib\MinSizeRel;..\..\..\Libraries\various;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <IncludePath>..\..\..\Libraries\bullet\include;..\..\..\Libraries\imgui-1.88;..\..\..\Libraries\imgui-1.88\backends;..\..\..\Libraries\glfw\include;..\..\..\Libraries\glm;..\..\..\Libraries\glad;..\..\..\Libraries\assimp\include;..\..\..\Libraries\stb_image;$(VC_IncludePath)</IncludePath>
+    <LibraryPath>..\..\..\Libraries\bullet\lib;..\..\..\Libraries\glfw\lib-vc2022;..\..\..\Libraries\assimp\build\lib\MinSizeRel;..\..\..\Libraries\various;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
     <SourcePath>..\..\..\Libraries\glad;$(VC_SourcePath);</SourcePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -165,6 +165,7 @@
     <ClInclude Include="utils\interfaces.h" />
     <ClInclude Include="utils\mesh.h" />
     <ClInclude Include="utils\model.h" />
+    <ClInclude Include="utils\physics.h" />
     <ClInclude Include="utils\scene\camera.h" />
     <ClInclude Include="utils\scene\entity.h" />
     <ClInclude Include="utils\scene\light.h" />
