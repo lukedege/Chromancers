@@ -35,9 +35,9 @@ public:
 		material->unbind();
 	}
 
-	void update(float delta_time) noexcept
+	void child_update(float delta_time) noexcept
 	{
-		if (spinning)
+		if (spinning && is_kinematic)
 			transform.rotate(glm::vec3(0.0f, spin_speed * delta_time, 0.0f));
 	}
 };

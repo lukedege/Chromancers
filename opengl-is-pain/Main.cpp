@@ -69,7 +69,7 @@ float lastFrame = 0.0f;
 // rotation speed on Y axis
 float spin_speed = 30.0f;
 // boolean to start/stop animated rotation on Y angle
-bool spinning = true;
+bool spinning = false;
 
 // boolean to activate/deactivate wireframe rendering
 bool wireframe = false;
@@ -84,6 +84,9 @@ float kD = 0.5f, kS = 0.4f, kA = 0.1f; // Generally we'd like a normalized sum o
 float shininess = 25.f;
 float alpha = 0.2f;
 float F0 = 0.9f;
+
+// Physics related vars
+float maxSecPerFrame = 1.0f / 60.0f;
 
 /////////////////// MAIN function ///////////////////////
 int main()
@@ -206,12 +209,18 @@ int main()
 
 	// Entities setup in scene
 	floor_plane.transform.set_position(glm::vec3(0.0f, -1.0f, 0.0f));
-	floor_plane.transform.set_size(glm::vec3(10.0f, 1.0f, 10.0f));
+	floor_plane.transform.set_size(glm::vec3(10.0f, 0.1f, 10.0f));
 
-	cube.transform.set_position(glm::vec3(0.0f, 0.0f, 0.0f));
+	cube.transform.set_position(glm::vec3(0.0f, 2.0f, 0.0f));
 	cube.transform.set_size(glm::vec3(1.f));	// It's a bit too big for our scene, so scale it down
 
 	cursor.transform.set_size(glm::vec3(3.0f));
+
+	// Physics setup
+	ugl::Physics physics_engine;
+	floor_plane.attach_rigidbody(physics_engine.createRigidBody(ugl::BOX, floor_plane.transform.position(), floor_plane.transform.size(), floor_plane.transform.orientation(), 0.f, 0.1f, 0.1f));
+	cube.attach_rigidbody(physics_engine.createRigidBody(ugl::BOX, cube.transform.position(), cube.transform.size(), cube.transform.orientation(), 1.f, 0.1f, 0.1f));
+	//cube.rigid_body->applyCentralForce(btVector3{ 0.f, 1.f, 0.f });
 
 	// Rendering loop: this code is executed at each frame
 	while (wdw.is_open())
@@ -256,6 +265,9 @@ int main()
 				dir_lights[i].setup(lit_shader, i);
 			}
 		}
+
+		// Update physics simulation
+		physics_engine.dynamicsWorld->stepSimulation((deltaTime < maxSecPerFrame ? deltaTime : maxSecPerFrame), 10);
 
 		floor_plane.update(deltaTime);
 		floor_plane.draw();
@@ -330,6 +342,7 @@ int main()
 	basic_shader.dispose();
 	floor_shader.dispose();
 	cube_shader.dispose();
+	physics_engine.Clear();
 	
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();

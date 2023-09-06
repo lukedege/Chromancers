@@ -5,6 +5,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
 
 namespace utils::graphics::opengl
 {
@@ -25,7 +26,18 @@ namespace utils::graphics::opengl
 		inline glm::vec3 orientation() const noexcept { return _orientation; }
 		inline glm::vec3 size       () const noexcept { return _size;        }
 
-		void set(const std::optional<glm::vec3> pos, const std::optional<glm::vec3> orient, const std::optional<glm::vec3> size)
+		void set(const glm::mat4 matrix) noexcept
+		{
+			glm::quat rotation;
+			glm::vec3 skew;
+			glm::vec4 perspective;
+			glm::decompose(matrix, _size, rotation, _position, skew, perspective);
+			_orientation = glm::eulerAngles(rotation);
+
+			update_world_matrix();
+		}
+
+		void set(const std::optional<glm::vec3> pos, const std::optional<glm::vec3> orient, const std::optional<glm::vec3> size) noexcept
 		{
 			_position = pos.value_or(_position);
 			_orientation = orient.value_or(_orientation);

@@ -33,7 +33,7 @@ public:
 		material->unbind();
 	}
 
-	void update(float delta_time) noexcept
+	void child_update(float delta_time) noexcept
 	{
 		
 	}
