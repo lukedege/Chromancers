@@ -127,7 +127,7 @@
       <AdditionalManifestDependencies>
       </AdditionalManifestDependencies>
       <AdditionalDependencies>glfw3_mt.lib;assimp-vc143-mtd.lib;zlib.lib;BulletDynamics_Debug.lib;BulletCollision_Debug.lib;LinearMath_Debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <ShowProgress>LinkVerbose</ShowProgress>
+      <ShowProgress>NotSet</ShowProgress>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

@@ -16,7 +16,7 @@ public:
 	float spin_speed = 30.f;
 	bool spinning = true;
 
-	Cube(Model& drawable, Material& material, SceneData* current_scene = nullptr) :
+	Cube(Model& drawable, Material& material, SceneData& current_scene) :
 		Entity{ drawable, material, current_scene }
 	{}
 

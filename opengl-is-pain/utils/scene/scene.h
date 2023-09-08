@@ -3,6 +3,7 @@
 #include <vector>
 #include "camera.h"
 #include "light.h"
+#include "../physics.h"
 
 namespace utils::graphics::opengl
 {
@@ -10,6 +11,7 @@ namespace utils::graphics::opengl
 	{
 		Camera* current_camera;
 		std::vector<Light*> lights;
+		Physics* physics_engine;
 	};
 
 	//class Scene

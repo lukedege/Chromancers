@@ -12,9 +12,9 @@ namespace utils::graphics::opengl
 	class Transform
 	{
 		//Local space information
-		glm::vec3 _position = { 0.0f, 0.0f, 0.0f };
-		glm::vec3 _orientation = { 0.0f, 0.0f, 0.0f }; // euler angles for now
-		glm::vec3 _size = { 1.0f, 1.0f, 1.0f };
+		glm::vec3 _position { 0.0f, 0.0f, 0.0f };
+		glm::vec3 _orientation { 0.0f, 0.0f, 0.0f }; // euler angles for now
+		glm::vec3 _size { 1.0f, 1.0f, 1.0f };
 
 		// Local -> World matrix
 		glm::mat4 _world_matrix{1.0f}; 
@@ -57,6 +57,11 @@ namespace utils::graphics::opengl
 		glm::mat4 world_matrix() const noexcept
 		{	
 			return _world_matrix;
+		}
+
+		void getOpenGLMatrix(GLfloat* matrix)
+		{
+			// TODO
 		}
 
 	private:

@@ -46,6 +46,23 @@
 
 namespace ugl = utils::graphics::opengl;
 
+// window
+ugl::window wdw
+{
+	ugl::window::window_create_info
+	{
+		{ "Lighting test" }, //.title
+		{ 4 }, //.gl_version_major
+		{ 6 }, //.gl_version_minor
+		{ 1280 }, //.window_width
+		{ 720 }, //.window_height
+		{ 1280 }, //.viewport_width
+		{ 720 }, //.viewport_height
+		{ true }, //.resizable
+		{ true }, //.debug_gl
+	}
+};
+
 // callback function for keyboard events
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
 void mouse_pos_callback(GLFWwindow* window, double xPos, double yPos);
@@ -53,7 +70,7 @@ void process_pressed_keys();
 void process_toggled_keys();
 
 // input related parameters
-float lastX, lastY;
+float cursor_x, cursor_y;
 bool firstMouse = true;
 bool keys[1024];
 bool capture_mouse = true;
@@ -85,29 +102,16 @@ float shininess = 25.f;
 float alpha = 0.2f;
 float F0 = 0.9f;
 
-// Physics related vars
+// Physics
+ugl::Physics physics_engine;
 float maxSecPerFrame = 1.0f / 60.0f;
+
+// Temporary 
+Entity* sphere;
 
 /////////////////// MAIN function ///////////////////////
 int main()
 {
-	// Window creation
-	ugl::window wdw
-	{
-		ugl::window::window_create_info
-		{
-			{ "Lighting test" }, //.title
-			{ 4       }, //.gl_version_major
-			{ 6       }, //.gl_version_minor
-			{ 1280    }, //.window_width
-			{ 720     }, //.window_height
-			{ 1280    }, //.viewport_width
-			{ 720     }, //.viewport_height
-			{ true    }, //.resizable
-			{ true    }, //.debug_gl
-		}
-	};
-	
 	GLFWwindow* glfw_window = wdw.get();
 	ugl::window::window_size ws = wdw.get_size();
 	float width = static_cast<float>(ws.width), height = static_cast<float>(ws.height);	
@@ -144,6 +148,7 @@ int main()
 	// Scene setup
 	ugl::SceneData scene_data;
 	scene_data.current_camera = &main_camera;
+	scene_data.physics_engine = &physics_engine;
 
 	// Shader setup
 	std::vector<const GLchar*> utils_shaders { "shaders/types.glsl", "shaders/constants.glsl" };
@@ -169,9 +174,11 @@ int main()
 	ugl::Material basic_mat { basic_shader };
 
 	// Objects setup
-	ugl::Model plane_model{ "models/plane.obj" }, cube_model{ "models/cube.obj" };
-	Cube cube{ cube_model, redbricks_mat, &scene_data };
-	Floor floor_plane{ plane_model, floor_mat, &scene_data, 90.f };
+	ugl::Model plane_model{ "models/plane.obj" }, cube_model{ "models/cube.obj" }, sphere_model{ "models/sphere.obj" };
+	Cube cube{ cube_model, redbricks_mat, scene_data };
+	Floor floor_plane{ plane_model, floor_mat, scene_data, 90.f };
+	ugl::Entity sph { sphere_model, basic_mat, scene_data };
+	sphere = &sph;
 
 	ugl::Model triangle_mesh
 	{
@@ -186,7 +193,7 @@ int main()
 				std::vector<GLuint>{0, 2, 1}
 		}
 	};
-	ugl::Entity cursor{ triangle_mesh, basic_mat, &scene_data };
+	ugl::Entity cursor{ triangle_mesh, basic_mat, scene_data };
 
 	std::vector<ugl::Entity*> scene_objects;
 	scene_objects.push_back(&floor_plane); scene_objects.push_back(&cube);
@@ -217,10 +224,9 @@ int main()
 	cursor.transform.set_size(glm::vec3(3.0f));
 
 	// Physics setup
-	ugl::Physics physics_engine;
-	floor_plane.attach_rigidbody(physics_engine.createRigidBody(ugl::BOX, floor_plane.transform.position(), floor_plane.transform.size(), floor_plane.transform.orientation(), 0.f, 0.1f, 0.1f));
-	cube.attach_rigidbody(physics_engine.createRigidBody(ugl::BOX, cube.transform.position(), cube.transform.size(), cube.transform.orientation(), 1.f, 0.1f, 0.1f));
-	//cube.rigid_body->applyCentralForce(btVector3{ 0.f, 1.f, 0.f });
+	floor_plane.add_rigidbody(ugl::Physics::RigidBodyCreateInfo{ ugl::Physics::ColliderShape::BOX, 0.f, 0.1f, 0.1f});
+	cube.add_rigidbody(ugl::Physics::RigidBodyCreateInfo{ ugl::Physics::ColliderShape::BOX, 1.f, 0.1f, 0.1f});
+	sph.add_rigidbody(ugl::Physics::RigidBodyCreateInfo{ ugl::Physics::ColliderShape::SPHERE, 1.f, 0.1f, 0.1f});
 
 	// Rendering loop: this code is executed at each frame
 	while (wdw.is_open())
@@ -275,6 +281,9 @@ int main()
 		cube.spinning = spinning;
 		cube.update(deltaTime);
 		cube.draw();
+
+		sph.update(deltaTime);
+		sph.draw();
 
 		#pragma region map_draw
 		// MAP
@@ -392,6 +401,39 @@ void process_toggled_keys()
 
 		keys[GLFW_KEY_L] = false;
 	}
+	if (keys[GLFW_KEY_COMMA])
+	{
+		// TODO spawn balls
+		// we create a Rigid Body with mass = 1
+		btTransform tr;
+		sphere->transform.set_position(main_camera.position());
+		// TODO move sphere rigid body too to camera pos (or despawn and create new ones)
+		glm::vec4 shoot;
+		glm::mat4 unproject;
+		ugl::window::window_size ws = wdw.get_size();
+		float shootInitialSpeed = 3.f;
+		btVector3 impulse;
+		
+		// we must retro-project the coordinates of the mouse pointer, in order to have a point in world coordinate to be used to determine a vector from the camera (= direction and orientation of the bullet)
+		// we convert the cursor position (taken from the mouse callback) from Viewport Coordinates to Normalized Device Coordinate (= [-1,1] in both coordinates)
+		shoot.x = (cursor_x / ws.width) * 2.0f - 1.0f;
+		shoot.y = -(cursor_y / ws.height) * 2.0f + 1.0f; // Viewport Y coordinates are from top-left corner to the bottom
+		// we need a 3D point, so we set a minimum value to the depth with respect to camera position
+		shoot.z = 1.0f;
+		// w = 1.0 because we are using homogeneous coordinates
+		shoot.w = 1.0f;
+		
+		// we determine the inverse matrix for the projection and view transformations
+		unproject = glm::inverse(main_camera.projectionMatrix() * main_camera.viewMatrix());
+		
+		// we convert the position of the cursor from NDC to world coordinates, and we multiply the vector by the initial speed
+		shoot = glm::normalize(unproject * shoot) * shootInitialSpeed;
+		
+		// we apply the impulse and shoot the bullet in the scene
+		// N.B.) the graphical aspect of the bullet is treated in the rendering loop
+		impulse = btVector3(shoot.x, shoot.y, shoot.z);
+		sphere->rigid_body->applyCentralImpulse(impulse);
+	}
 }
 
 // Process until user release
@@ -427,16 +469,16 @@ void mouse_pos_callback(GLFWwindow* window, double x_pos, double y_pos)
 	float x_posf = static_cast<float>(x_pos), y_posf = static_cast<float>(y_pos);
 	if (firstMouse)
 	{
-		lastX = x_posf;
-		lastY = y_posf;
+		cursor_x = x_posf;
+		cursor_y = y_posf;
 		firstMouse = false;
 	}
 
-	float x_offset = x_posf - lastX;
-	float y_offset = lastY - y_posf;
+	float x_offset = x_posf - cursor_x;
+	float y_offset = cursor_y - y_posf;
 
-	lastX = x_posf;
-	lastY = y_posf;
+	cursor_x = x_posf;
+	cursor_y = y_posf;
 
 	if(capture_mouse)
 		main_camera.ProcessMouseMovement(x_offset, y_offset);

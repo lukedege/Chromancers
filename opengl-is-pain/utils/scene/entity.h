@@ -33,7 +33,14 @@ namespace utils::graphics::opengl
 		Material* material;
 		btRigidBody* rigid_body;
 
-		Entity(Model& drawable, Material& material, SceneData* current_scene = nullptr) : model{ &drawable }, material{ &material }, current_scene{ current_scene } {}
+		Entity(Model& drawable, Material& material, SceneData& scene) :
+			model{ &drawable }, material{ &material }, current_scene{ &scene }
+		{}
+
+		Entity(Model& drawable, Material& material, SceneData& scene, Physics::RigidBodyCreateInfo& rb_info) : 
+			model{ &drawable }, material{ &material }, current_scene{ &scene },
+			rigid_body { scene.physics_engine->createRigidBody(transform.position(), transform.size(), transform.orientation(), rb_info)}
+		{}
 
 		void draw() const noexcept
 		{
@@ -64,15 +71,14 @@ namespace utils::graphics::opengl
 		}
 
 		// Physics related
-
-		void attach_rigidbody(btRigidBody* new_rigid_body)
+		void add_rigidbody(Physics::RigidBodyCreateInfo rb_cinfo)
 		{
-			if(new_rigid_body)
-				rigid_body = new_rigid_body;
+			rigid_body = current_scene->physics_engine->createRigidBody(transform.position(), transform.size(), transform.orientation(), rb_cinfo);
 		}
 
-		void detach_rigidbody()
+		void remove_rigidbody()
 		{
+			current_scene->physics_engine->deleteRigidBody(rigid_body);
 			rigid_body = nullptr;
 		}
 

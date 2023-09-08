@@ -7,14 +7,20 @@
 
 namespace utils::graphics::opengl
 {
-
-    //enum to identify the 2 considered Collision Shapes
-    enum collider_shape{ BOX, SPHERE };
-
     ///////////////////  Physics class ///////////////////////
     class Physics
     {
     public:
+        //enum to identify the 2 considered Collision Shapes
+        enum ColliderShape { BOX, SPHERE };
+
+        struct RigidBodyCreateInfo
+        {
+            ColliderShape type{ ColliderShape::BOX };
+            float mass{ 1.0f };
+            float friction{ 0.1f };
+            float restitution{ 0.1f };
+        };
 
         btDiscreteDynamicsWorld* dynamicsWorld; // the main physical simulation class
         btAlignedObjectArray<btCollisionShape*> collisionShapes; // a vector for all the Collision Shapes of the scene
@@ -53,10 +59,9 @@ namespace utils::graphics::opengl
         //////////////////////////////////////////
         // Method for the creation of a rigid body, based on a Box or Sphere Collision Shape
         // The Collision Shape is a reference solid that approximates the shape of the actual object of the scene. The Physical simulation is applied to these solids, and the rotations and positions of these solids are used on the real models.
-        btRigidBody* createRigidBody(collider_shape type, glm::vec3 pos, glm::vec3 size, glm::vec3 rot, float m, float friction , float restitution)
+        btRigidBody* createRigidBody(glm::vec3 pos, glm::vec3 size, glm::vec3 rot, RigidBodyCreateInfo rb_info)
         {
-
-            btCollisionShape* cShape = NULL;
+            btCollisionShape* collision_shape = NULL;
 
             // we convert the glm vector to a Bullet vector
             btVector3 position = btVector3(pos.x,pos.y,pos.z);
@@ -66,19 +71,19 @@ namespace utils::graphics::opengl
             rotation.setEuler(rot.x,rot.y,rot.z);
 
             // Box Collision shape
-            if (type == BOX)
+            if (rb_info.type == BOX)
             {
                 // we convert the glm vector to a Bullet vector
                 btVector3 dim = btVector3(size.x,size.y,size.z);
                 // BoxShape
-                cShape = new btBoxShape(dim);
+                collision_shape = new btBoxShape(dim);
             }
             // Sphere Collision Shape (in this case we consider only the first component)
-            else if (type == SPHERE)
-                cShape = new btSphereShape(size.x);
+            else if (rb_info.type == SPHERE)
+                collision_shape = new btSphereShape(size.x);
 
             // we add this Collision Shape to the vector
-            this->collisionShapes.push_back(cShape);
+            this->collisionShapes.push_back(collision_shape);
 
             // We set the initial transformations
             btTransform objTransform;
@@ -88,29 +93,29 @@ namespace utils::graphics::opengl
             objTransform.setOrigin(position);
 
             // if objects has mass = 0 -> then it is static (it does not move and it is not subject to forces)
-            btScalar mass = m;
+            btScalar mass = rb_info.mass;
             bool isDynamic = (mass != 0.0f);
 
             // if it is dynamic (mass > 0) then we calculates local inertia
             btVector3 localInertia(0.0f,0.0f,0.0f);
             if (isDynamic)
-                cShape->calculateLocalInertia(mass,localInertia);
+                collision_shape->calculateLocalInertia(mass,localInertia);
 
             // we initialize the Motion State of the object on the basis of the transformations
             // using the Motion State, the physical simulation will calculate the positions and rotations of the rigid body
             btDefaultMotionState* motionState = new btDefaultMotionState(objTransform);
 
             // we set the data structure for the rigid body
-            btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,motionState,cShape,localInertia);
+            btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,motionState,collision_shape,localInertia);
             // we set friction and restitution
-            rbInfo.m_friction = friction;
-            rbInfo.m_restitution = restitution;
+            rbInfo.m_friction = rb_info.friction;
+            rbInfo.m_restitution = rb_info.restitution;
 
             // if the Collision Shape is a sphere
-            if (type == SPHERE){
+            if (rb_info.type == SPHERE){
                 // the sphere touches the plane on the plane on a single point, and thus the friction between sphere and the plane does not work -> the sphere does not stop
                 // to avoid the problem, we apply the rolling friction together with an angular damping (which applies a resistence during the rolling movement), in order to make the sphere to stop after a while
-                rbInfo.m_angularDamping =0.3f;
+                rbInfo.m_angularDamping = 0.3f;
                 rbInfo.m_rollingFriction = 0.3f;
             }
 
@@ -123,6 +128,18 @@ namespace utils::graphics::opengl
             // the function returns a pointer to the created rigid body
             // in a standard simulation (e.g., only objects falling), it is not needed to have a reference to a single rigid body, but in some cases (e.g., the application of an impulse), it is needed.
             return body;
+        }
+
+        void deleteRigidBody(btRigidBody* body)
+        {
+            // as of https://github.com/bulletphysics/bullet3/blob/master/examples/CommonInterfaces/CommonRigidBodyBase.h
+            if (body)
+            {
+                dynamicsWorld->removeRigidBody(body);
+                btMotionState* ms = body->getMotionState();
+                delete body;
+                delete ms;
+            }
         }
 
         //////////////////////////////////////////
