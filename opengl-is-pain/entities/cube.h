@@ -18,7 +18,8 @@ public:
 
 	Cube(Model& drawable, Material& material, SceneData& current_scene) :
 		Entity{ drawable, material, current_scene }
-	{}
+	{
+	}
 
 	void prepare_draw() const noexcept
 	{

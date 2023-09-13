@@ -17,7 +17,8 @@ public:
 	Floor(Model& drawable, Material& material, SceneData& current_scene, float norm_map_repeat = 80.f) :
 		Entity{ drawable, material, current_scene },
 		norm_map_repeat{ norm_map_repeat } 
-	{}
+	{
+	}
 	
 	void prepare_draw() const noexcept
 	{

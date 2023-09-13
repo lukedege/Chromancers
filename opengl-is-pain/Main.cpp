@@ -105,6 +105,7 @@ float F0 = 0.9f;
 // Physics
 ugl::Physics physics_engine;
 float maxSecPerFrame = 1.0f / 60.0f;
+float fixed_deltaTime;
 
 // Temporary 
 Entity* sphere;
@@ -224,9 +225,9 @@ int main()
 	cursor.transform.set_size(glm::vec3(3.0f));
 
 	// Physics setup
-	floor_plane.add_rigidbody(ugl::Physics::RigidBodyCreateInfo{ ugl::Physics::ColliderShape::BOX, 0.f, 0.1f, 0.1f});
+	floor_plane.add_rigidbody(ugl::Physics::RigidBodyCreateInfo{ ugl::Physics::ColliderShape::BOX, 0.f, 0.1f, 0.5f});
 	cube.add_rigidbody(ugl::Physics::RigidBodyCreateInfo{ ugl::Physics::ColliderShape::BOX, 1.f, 0.1f, 0.1f});
-	sph.add_rigidbody(ugl::Physics::RigidBodyCreateInfo{ ugl::Physics::ColliderShape::SPHERE, 1.f, 0.1f, 0.1f});
+	sph.add_rigidbody(ugl::Physics::RigidBodyCreateInfo{ ugl::Physics::ColliderShape::SPHERE, 1.f, 0.1f, 1.0f});
 
 	// Rendering loop: this code is executed at each frame
 	while (wdw.is_open())
@@ -235,6 +236,7 @@ int main()
 		// and we calculate the time difference between current frame rendering and the previous one
 		float currentFrame = static_cast<float>(glfwGetTime());
 		deltaTime = currentFrame - lastFrame;
+		fixed_deltaTime = deltaTime < maxSecPerFrame ? deltaTime : maxSecPerFrame;
 		lastFrame = currentFrame;
 
 		if (capture_mouse)
@@ -273,16 +275,16 @@ int main()
 		}
 
 		// Update physics simulation
-		physics_engine.dynamicsWorld->stepSimulation((deltaTime < maxSecPerFrame ? deltaTime : maxSecPerFrame), 10);
+		physics_engine.dynamicsWorld->stepSimulation(fixed_deltaTime, 10);
 
-		floor_plane.update(deltaTime);
+		floor_plane.update(fixed_deltaTime);
 		floor_plane.draw();
 
 		cube.spinning = spinning;
-		cube.update(deltaTime);
+		cube.update(fixed_deltaTime);
 		cube.draw();
 
-		sph.update(deltaTime);
+		sph.update(fixed_deltaTime);
 		sph.draw();
 
 		#pragma region map_draw
@@ -405,13 +407,13 @@ void process_toggled_keys()
 	{
 		// TODO spawn balls
 		// we create a Rigid Body with mass = 1
-		btTransform tr;
-		sphere->transform.set_position(main_camera.position());
+		sphere->teleport_at(main_camera.position());
+
 		// TODO move sphere rigid body too to camera pos (or despawn and create new ones)
 		glm::vec4 shoot;
 		glm::mat4 unproject;
 		ugl::window::window_size ws = wdw.get_size();
-		float shootInitialSpeed = 3.f;
+		float shootInitialSpeed = 14.f;
 		btVector3 impulse;
 		
 		// we must retro-project the coordinates of the mouse pointer, in order to have a point in world coordinate to be used to determine a vector from the camera (= direction and orientation of the bullet)
@@ -433,6 +435,8 @@ void process_toggled_keys()
 		// N.B.) the graphical aspect of the bullet is treated in the rendering loop
 		impulse = btVector3(shoot.x, shoot.y, shoot.z);
 		sphere->rigid_body->applyCentralImpulse(impulse);
+
+		keys[GLFW_KEY_COMMA] = false;
 	}
 }
 

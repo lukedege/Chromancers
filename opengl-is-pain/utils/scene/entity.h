@@ -70,6 +70,30 @@ namespace utils::graphics::opengl
 			current_scene = &scene_data;
 		}
 
+		void teleport_at(const glm::vec3 new_position)
+		{
+			transform.set_position(new_position);
+
+			if (rigid_body)
+			{
+				// Copying old transform and changing the position
+				btTransform old_physics_transform = rigid_body->getWorldTransform();
+				btVector3 new_pos{ new_position.x, new_position.y, new_position.z };
+				old_physics_transform.setOrigin(new_pos);
+
+				// Updating physics transforms
+				rigid_body->setWorldTransform(old_physics_transform);
+				rigid_body->getMotionState()->setWorldTransform(old_physics_transform);
+
+				// Resetting forces and velocities
+				rigid_body->setLinearVelocity(btVector3{ 0,0,0 });
+				rigid_body->setAngularVelocity(btVector3{ 0,0,0 });
+				rigid_body->clearForces();
+
+				rigid_body->activate();
+			}
+		}
+
 		// Physics related
 		void add_rigidbody(Physics::RigidBodyCreateInfo rb_cinfo)
 		{
