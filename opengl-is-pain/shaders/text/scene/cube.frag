@@ -26,9 +26,9 @@ uniform DirectionalLight directionalLights[MAX_DIR_LIGHTS];
 // Textures
 uniform sampler2D diffuse_tex; // texture samplers
 uniform sampler2D normal_tex;
-uniform sampler2D depth_tex;
+uniform sampler2D displacement_tex;
 
-uniform float repeat; // texture repetitions
+uniform float uv_repeat; // texture repetitions
 
 // Material-light attributes
 uniform vec3 ambient ;
@@ -48,7 +48,7 @@ uniform float alpha; // rugosity - 0 : smooth, 1: rough
 uniform float F0; // fresnel reflectance at normal incidence
 
 // uniform for parallax map
-uniform float height_scale;
+uniform float parallax_heightscale;
 
 // Current light position
 vec3 curr_twLightDir;
@@ -56,9 +56,9 @@ vec3 curr_twLightDir;
 vec2 CheapParallaxMapping(vec2 texCoords, vec3 viewDir)
 { 
 	// Sample the heightmap
-    float height = texture(depth_tex, texCoords).r; 
+    float height = texture(displacement_tex, texCoords).r; 
 	// Calculate vector towards approximate height
-	vec2 p = viewDir.xy * (height * height_scale);
+	vec2 p = viewDir.xy * (height * parallax_heightscale);
 	// Return displacement
     return texCoords - p; 
 }
@@ -74,19 +74,19 @@ vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
     // depth of current layer
     float currentLayerDepth = 0.0;
     // the amount to shift the texture coordinates per layer (from vector P)
-    vec2 P = viewDir.xy / viewDir.z * height_scale; 
+    vec2 P = viewDir.xy / viewDir.z * parallax_heightscale; 
     vec2 deltaTexCoords = P / numLayers;
   
     // get initial values
     vec2  currentTexCoords     = texCoords;
-    float currentDepthMapValue = texture(depth_tex, currentTexCoords).r;
+    float currentDepthMapValue = texture(displacement_tex, currentTexCoords).r;
       
     while(currentLayerDepth < currentDepthMapValue)
     {
         // shift texture coordinates along direction of P
         currentTexCoords -= deltaTexCoords;
         // get depthmap value at current texture coordinates
-        currentDepthMapValue = texture(depth_tex, currentTexCoords).r;  
+        currentDepthMapValue = texture(displacement_tex, currentTexCoords).r;  
         // get depth of next layer
         currentLayerDepth += layerDepth;  
     }
@@ -96,7 +96,7 @@ vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
 
     // get depth after and before collision for linear interpolation
     float afterDepth  = currentDepthMapValue - currentLayerDepth;
-    float beforeDepth = texture(depth_tex, prevTexCoords).r - currentLayerDepth + layerDepth;
+    float beforeDepth = texture(displacement_tex, prevTexCoords).r - currentLayerDepth + layerDepth;
  
     // interpolation of texture coordinates
     float weight = afterDepth / (afterDepth - beforeDepth);
@@ -107,7 +107,7 @@ vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
 
 vec3 BlinnPhong()
 {
-	vec2 repeated_UV = mod(fs_in.interp_UV * repeat, 1.0);
+	vec2 repeated_UV = mod(fs_in.interp_UV * uv_repeat, 1.0);
 
 	// view direction
 	vec3 V = normalize( fs_in.twCameraPos - fs_in.twFragPos );

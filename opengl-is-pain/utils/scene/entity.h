@@ -49,6 +49,7 @@ namespace utils::graphics::opengl
 			material->bind();
 
 			glm::mat4 view_matrix = current_scene->current_camera->viewMatrix();
+			material->shader->setVec3("wCameraPos", current_scene->current_camera->position());
 			material->shader->setMat4("viewMatrix", view_matrix);
 			material->shader->setMat4("modelMatrix", transform.world_matrix());
 			material->shader->setMat3("normalMatrix", compute_normal(view_matrix));

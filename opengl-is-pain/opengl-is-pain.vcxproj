@@ -165,6 +165,7 @@
     <ClInclude Include="entities\cube.h" />
     <ClInclude Include="entities\floor.h" />
     <ClInclude Include="utils\interfaces.h" />
+    <ClInclude Include="utils\material.h" />
     <ClInclude Include="utils\mesh.h" />
     <ClInclude Include="utils\model.h" />
     <ClInclude Include="utils\physics.h" />
@@ -200,6 +201,8 @@
     <None Include="shaders\text\generic\normals.frag" />
     <None Include="shaders\text\generic\random_patterns.frag" />
     <None Include="shaders\text\generic\uvs.frag" />
+    <None Include="shaders\text\scene\cube.frag" />
+    <None Include="shaders\text\scene\cube.vert" />
     <None Include="shaders\text\scene\floor.frag" />
     <None Include="shaders\text\scene\floor.vert" />
     <None Include="shaders\types.glsl" />

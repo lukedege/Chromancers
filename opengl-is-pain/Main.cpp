@@ -105,10 +105,14 @@ float F0 = 0.9f;
 // Physics
 ugl::Physics physics_engine;
 float maxSecPerFrame = 1.0f / 60.0f;
-float fixed_deltaTime;
+float capped_deltaTime;
 
 // Temporary 
 Entity* sphere;
+
+// TODOs
+// - Spawn multiple spheres with rigidbodies
+// - Make a "Physics_entity" class which is the same as entity but involves a rigidbody as default
 
 /////////////////// MAIN function ///////////////////////
 int main()
@@ -163,15 +167,20 @@ int main()
 	all_shaders.push_back(floor_shader); all_shaders.push_back(cube_shader), all_shaders.push_back(basic_shader);
 
 	// Textures setup
-	ugl::Texture uv_tex{ "textures/UV_Grid_Sm.png" }, soil_tex { "textures/SoilCracked.png" };
 	ugl::Texture wall_diffuse_tex{ "textures/brickwall.jpg" }, wall_normal_tex{ "textures/brickwall_normal.jpg" };
 	ugl::Texture redbricks_diffuse_tex{ "textures/bricks2.jpg" }, 
 		redbricks_normal_tex{ "textures/bricks2_normal.jpg" },
 		redbricks_depth_tex{ "textures/bricks2_disp.jpg" };
 	
 	// Materials
-	ugl::Material redbricks_mat { cube_shader, &redbricks_diffuse_tex, &redbricks_normal_tex, &redbricks_depth_tex };
-	ugl::Material floor_mat { floor_shader, &wall_diffuse_tex, &wall_normal_tex, &redbricks_depth_tex };
+	ugl::Material redbricks_mat { cube_shader }; 
+	redbricks_mat.diffuse_map = &redbricks_diffuse_tex; redbricks_mat.normal_map = &redbricks_normal_tex; redbricks_mat.displacement_map = &redbricks_depth_tex;
+	redbricks_mat.uv_repeat = 3.f; redbricks_mat.parallax_heightscale = 0.05f;
+
+	ugl::Material floor_mat { floor_shader };
+	floor_mat.diffuse_map = &wall_diffuse_tex; floor_mat.normal_map = &wall_normal_tex;
+	floor_mat.uv_repeat = 80.f;
+
 	ugl::Material basic_mat { basic_shader };
 
 	// Objects setup
@@ -204,6 +213,7 @@ int main()
 	{
 		shader.bind();
 		shader.setMat4("projectionMatrix", projection);
+		shader.setVec3("wCameraPos", main_camera.position());
 	}
 	for (ugl::Shader& lit_shader : lit_shaders)
 	{
@@ -219,15 +229,15 @@ int main()
 	floor_plane.transform.set_position(glm::vec3(0.0f, -1.0f, 0.0f));
 	floor_plane.transform.set_size(glm::vec3(10.0f, 0.1f, 10.0f));
 
-	cube.transform.set_position(glm::vec3(0.0f, 2.0f, 0.0f));
+	cube.transform.set_position(glm::vec3(0.0f, 3.0f, 0.0f));
 	cube.transform.set_size(glm::vec3(1.f));	// It's a bit too big for our scene, so scale it down
 
 	cursor.transform.set_size(glm::vec3(3.0f));
 
 	// Physics setup
-	floor_plane.add_rigidbody(ugl::Physics::RigidBodyCreateInfo{ ugl::Physics::ColliderShape::BOX, 0.f, 0.1f, 0.5f});
+	floor_plane.add_rigidbody(ugl::Physics::RigidBodyCreateInfo{ ugl::Physics::ColliderShape::BOX, 0.f, 3.0f, 0.5f});
 	cube.add_rigidbody(ugl::Physics::RigidBodyCreateInfo{ ugl::Physics::ColliderShape::BOX, 1.f, 0.1f, 0.1f});
-	sph.add_rigidbody(ugl::Physics::RigidBodyCreateInfo{ ugl::Physics::ColliderShape::SPHERE, 1.f, 0.1f, 1.0f});
+	sph.add_rigidbody(ugl::Physics::RigidBodyCreateInfo{ ugl::Physics::ColliderShape::SPHERE, 1.f, 1.0f, 1.0f});
 
 	// Rendering loop: this code is executed at each frame
 	while (wdw.is_open())
@@ -236,7 +246,7 @@ int main()
 		// and we calculate the time difference between current frame rendering and the previous one
 		float currentFrame = static_cast<float>(glfwGetTime());
 		deltaTime = currentFrame - lastFrame;
-		fixed_deltaTime = deltaTime < maxSecPerFrame ? deltaTime : maxSecPerFrame;
+		capped_deltaTime = deltaTime < maxSecPerFrame ? deltaTime : maxSecPerFrame;
 		lastFrame = currentFrame;
 
 		if (capture_mouse)
@@ -248,7 +258,6 @@ int main()
 		glfwPollEvents();
 		process_toggled_keys();
 		process_pressed_keys();
-		
 
 		// Clear the frame and z buffer
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -259,6 +268,13 @@ int main()
 		// Render objects with a window-wide viewport
 		ws = wdw.get_size();
 		glViewport(0, 0, ws.width, ws.height); 
+
+		// TODO Update commons for all shaders (better in a common loop or done in entity like now?)
+		//for (ugl::Shader& shader : all_shaders)
+		//{
+		//	shader.bind();
+		//	shader.setVec3("wCameraPos", main_camera.position());
+		//}
 
 		// Update lighting for lit shaders
 		for (ugl::Shader& lit_shader : lit_shaders)
@@ -275,18 +291,18 @@ int main()
 		}
 
 		// Update physics simulation
-		physics_engine.dynamicsWorld->stepSimulation(fixed_deltaTime, 10);
+		physics_engine.dynamicsWorld->stepSimulation(capped_deltaTime, 10);
 
-		floor_plane.update(fixed_deltaTime);
+		floor_plane.update(capped_deltaTime);
 		floor_plane.draw();
 
 		cube.spinning = spinning;
-		cube.update(fixed_deltaTime);
+		cube.update(capped_deltaTime);
 		cube.draw();
 
-		sph.update(fixed_deltaTime);
+		sph.update(capped_deltaTime);
 		sph.draw();
-
+		
 		#pragma region map_draw
 		// MAP
 		glClear(GL_DEPTH_BUFFER_BIT); // clears depth information, thus everything rendered from now on will be on top https://stackoverflow.com/questions/5526704/how-do-i-keep-an-object-always-in-front-of-everything-else-in-opengl
@@ -312,7 +328,7 @@ int main()
 		cursor.update(deltaTime);
 		cursor.draw();
 		#pragma endregion map_draw
-
+		
 		#pragma region imgui_draw
 		// ImGUI window creation
 		ImGui_ImplOpenGL3_NewFrame();// Tell OpenGL a new Imgui frame is about to begin
@@ -324,10 +340,10 @@ int main()
 		if (ImGui::CollapsingHeader("Coefficients and scales"))
 		{
 			ImGui::Separator(); ImGui::Text("Normal");
-			ImGui::SliderFloat("Repeat tex##norm", &floor_plane.norm_map_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Repeat tex##norm", &floor_plane.material->uv_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::Separator(); ImGui::Text("Parallax");
-			ImGui::SliderFloat("Height Scale", &cube.parallax_heightscale, 0, 0.5, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Repeat tex##prlx", &cube.parallax_map_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Height Scale", &cube.material->parallax_heightscale, 0, 0.5, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Repeat tex##prlx", &cube.material->uv_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
 		}
 		if (ImGui::CollapsingHeader("Lights"))
 		{
@@ -403,40 +419,16 @@ void process_toggled_keys()
 
 		keys[GLFW_KEY_L] = false;
 	}
-	if (keys[GLFW_KEY_COMMA])
+	if (keys[GLFW_KEY_X])
 	{
-		// TODO spawn balls
-		// we create a Rigid Body with mass = 1
 		sphere->teleport_at(main_camera.position());
 
-		// TODO move sphere rigid body too to camera pos (or despawn and create new ones)
-		glm::vec4 shoot;
-		glm::mat4 unproject;
-		ugl::window::window_size ws = wdw.get_size();
-		float shootInitialSpeed = 14.f;
-		btVector3 impulse;
-		
-		// we must retro-project the coordinates of the mouse pointer, in order to have a point in world coordinate to be used to determine a vector from the camera (= direction and orientation of the bullet)
-		// we convert the cursor position (taken from the mouse callback) from Viewport Coordinates to Normalized Device Coordinate (= [-1,1] in both coordinates)
-		shoot.x = (cursor_x / ws.width) * 2.0f - 1.0f;
-		shoot.y = -(cursor_y / ws.height) * 2.0f + 1.0f; // Viewport Y coordinates are from top-left corner to the bottom
-		// we need a 3D point, so we set a minimum value to the depth with respect to camera position
-		shoot.z = 1.0f;
-		// w = 1.0 because we are using homogeneous coordinates
-		shoot.w = 1.0f;
-		
-		// we determine the inverse matrix for the projection and view transformations
-		unproject = glm::inverse(main_camera.projectionMatrix() * main_camera.viewMatrix());
-		
-		// we convert the position of the cursor from NDC to world coordinates, and we multiply the vector by the initial speed
-		shoot = glm::normalize(unproject * shoot) * shootInitialSpeed;
-		
-		// we apply the impulse and shoot the bullet in the scene
-		// N.B.) the graphical aspect of the bullet is treated in the rendering loop
-		impulse = btVector3(shoot.x, shoot.y, shoot.z);
+		float shootInitialSpeed = 20.f;
+		glm::vec3 shoot_dir = main_camera.forward() * shootInitialSpeed;
+		btVector3 impulse = btVector3(shoot_dir.x, shoot_dir.y, shoot_dir.z);
 		sphere->rigid_body->applyCentralImpulse(impulse);
-
-		keys[GLFW_KEY_COMMA] = false;
+		
+		keys[GLFW_KEY_X] = false;
 	}
 }
 

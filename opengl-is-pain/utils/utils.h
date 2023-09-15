@@ -1,5 +1,19 @@
 #pragma once
 #include <string>
+#include <iostream>
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_inverse.hpp>
+
+namespace utils::io
+{
+	template<typename ...Args>
+	void log(Args && ...args)
+	{
+		(std::cout << ... << args);
+		std::cout << std::endl;
+	}
+}
 
 namespace utils::strings
 {
@@ -49,6 +63,29 @@ namespace utils::strings
 
 namespace utils::graphics::opengl
 {
+	inline glm::vec4 unproject(float screen_x, float screen_y, float screen_width, float screen_height, glm::mat4 view, glm::mat4 proj)
+	{
+		glm::vec4 ret;
+		glm::mat4 unproject_mat;
+
+		// we must retro-project the coordinates of the mouse pointer, in order to have a point in world coordinate to be used to determine a vector from the camera (= direction and orientation of the bullet)
+		// we convert the cursor position (taken from the mouse callback) from Viewport Coordinates to Normalized Device Coordinate (= [-1,1] in both coordinates)
+		ret.x = (screen_x / screen_width) * 2.0f - 1.0f;
+		ret.y = -(screen_y / screen_height) * 2.0f + 1.0f; // Viewport Y coordinates are from top-left corner to the bottom
+		// we need a 3D point, so we set a minimum value to the depth with respect to camera position
+		ret.z = 1.0f;
+		// w = 1.0 because we are using homogeneous coordinates
+		ret.w = 1.0f;
+
+		// we determine the inverse matrix for the projection and view transformations
+		unproject_mat = glm::inverse(proj * view);
+
+		// we convert the position of the cursor from NDC to world coordinates, and we multiply the vector by the initial speed
+		ret = glm::normalize(unproject_mat * ret);
+
+		return ret;
+	}
+
 	inline void setup_buffer_object(GLuint& buffer_object, GLenum target, int bind_index, void* data, size_t alloc_size)
 	{
 		glGenBuffers(1, &buffer_object);

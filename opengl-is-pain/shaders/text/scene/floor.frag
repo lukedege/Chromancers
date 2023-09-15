@@ -24,7 +24,7 @@ uniform PointLight pointLights[MAX_POINT_LIGHTS];
 uniform sampler2D diffuse_tex; // texture samplers
 uniform sampler2D normal_tex;
 
-uniform float repeat; // texture repetitions
+uniform float uv_repeat; // texture repetitions
 
 // Material-light attributes
 uniform vec3 ambient ;
@@ -50,7 +50,7 @@ vec3 curr_vwLightPos;
 vec3 BlinnPhongTangent()
 {
 	// we repeat the UVs and we sample the texture
-    vec2 repeated_UV = mod(fs_in.interp_UV * repeat, 1.0);
+    vec2 repeated_UV = mod(fs_in.interp_UV * uv_repeat, 1.0);
     vec4 surfaceColor = texture(diffuse_tex, repeated_UV);
 
 	// ambient component can be calculated at the beginning

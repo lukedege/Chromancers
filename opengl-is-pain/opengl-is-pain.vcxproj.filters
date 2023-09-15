@@ -131,6 +131,9 @@
     <ClInclude Include="utils\physics.h">
       <Filter>Header Files\utils</Filter>
     </ClInclude>
+    <ClInclude Include="utils\material.h">
+      <Filter>Header Files\utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\constants.glsl">
@@ -204,6 +207,12 @@
     </None>
     <None Include="shaders\text\generic\uvs.frag">
       <Filter>Shaders\text\generic</Filter>
+    </None>
+    <None Include="shaders\text\scene\cube.frag">
+      <Filter>Shaders\text\scene</Filter>
+    </None>
+    <None Include="shaders\text\scene\cube.vert">
+      <Filter>Shaders\text\scene</Filter>
     </None>
   </ItemGroup>
 </Project>

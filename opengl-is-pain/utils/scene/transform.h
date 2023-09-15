@@ -12,12 +12,12 @@ namespace utils::graphics::opengl
 	class Transform
 	{
 		//Local space information
-		glm::vec3 _position { 0.0f, 0.0f, 0.0f };
+		glm::vec3 _position    { 0.0f, 0.0f, 0.0f };
 		glm::vec3 _orientation { 0.0f, 0.0f, 0.0f }; // euler angles for now
-		glm::vec3 _size { 1.0f, 1.0f, 1.0f };
+		glm::vec3 _size        { 1.0f, 1.0f, 1.0f };
 
 		// Local -> World matrix
-		glm::mat4 _world_matrix{1.0f}; 
+		glm::mat4 _world_matrix { 1.0f }; // TODO TEMPORARILY PUBLIC 
 
 		bool dirty = false; // Use when space info is updated to recalculate matrix
 
@@ -26,7 +26,7 @@ namespace utils::graphics::opengl
 		inline glm::vec3 orientation() const noexcept { return _orientation; }
 		inline glm::vec3 size       () const noexcept { return _size;        }
 
-		void set(const glm::mat4 matrix) noexcept
+		void set(const glm::mat4& matrix) noexcept
 		{
 			glm::quat rotation;
 			glm::vec3 skew;
@@ -34,34 +34,20 @@ namespace utils::graphics::opengl
 			glm::decompose(matrix, _size, rotation, _position, skew, perspective);
 			_orientation = glm::eulerAngles(rotation);
 
-			update_world_matrix();
+			_world_matrix = matrix;
 		}
 
-		void set(const std::optional<glm::vec3> pos, const std::optional<glm::vec3> orient, const std::optional<glm::vec3> size) noexcept
-		{
-			_position = pos.value_or(_position);
-			_orientation = orient.value_or(_orientation);
-			_size = size.value_or(_size);
-			
-			update_world_matrix();
-		}
+		void set_position(const glm::vec3& new_position   ) { if(new_position != _position)       { _position = new_position;       update_world_matrix();} }
+		void set_rotation(const glm::vec3& new_orientation) { if(new_orientation != _orientation) { _orientation = new_orientation; update_world_matrix();} }
+		void set_size    (const glm::vec3& new_size       ) { if(new_size != _size)               { _size = new_size;               update_world_matrix();} }
 
-		void set_position(const glm::vec3 new_position   ) { if(new_position != _position)       { _position = new_position;       update_world_matrix();} }
-		void set_rotation(const glm::vec3 new_orientation) { if(new_orientation != _orientation) { _orientation = new_orientation; update_world_matrix();} }
-		void set_size    (const glm::vec3 new_size       ) { if(new_size != _size)               { _size = new_size;               update_world_matrix();} }
-
-		void translate(const glm::vec3 translation) { _position += translation; update_world_matrix(); }
-		void rotate   (const glm::vec3 rotation   ) { _orientation += rotation; update_world_matrix(); }
-		void scale    (const glm::vec3 scale      ) { _size *= scale;           update_world_matrix(); }
+		void translate(const glm::vec3& translation) { _position += translation; update_world_matrix(); }
+		void rotate   (const glm::vec3& rotation   ) { _orientation += rotation; update_world_matrix(); }
+		void scale    (const glm::vec3& scale      ) { _size *= scale;           update_world_matrix(); }
 
 		glm::mat4 world_matrix() const noexcept
 		{	
 			return _world_matrix;
-		}
-
-		void getOpenGLMatrix(GLfloat* matrix)
-		{
-			// TODO
 		}
 
 	private:
