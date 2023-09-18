@@ -354,13 +354,25 @@ int main()
 		{
 			for (size_t i = 0; i < point_lights.size(); i++)
 			{
-				std::string light_label = "Intensity PL " + std::to_string(i);
-				ImGui::SliderFloat(light_label.c_str(), &point_lights[i].intensity, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::PushID(&point_lights+i);
+				std::string light_label = "Point light n." + std::to_string(i);
+				ImGui::Separator(); ImGui::Text(light_label.c_str());
+				
+				ImGui::SliderFloat("Intensity", &point_lights[i].intensity, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::ColorEdit4("Color", glm::value_ptr(point_lights[i].color));
+
+				ImGui::PopID();
 			}
 			for (size_t i = 0; i < dir_lights.size(); i++)
 			{
-				std::string light_label = "Intensity DL " + std::to_string(i);
-				ImGui::SliderFloat(light_label.c_str(), &dir_lights[i].intensity, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::PushID(&dir_lights+i);
+				std::string light_label = "Directional light n." + std::to_string(i);
+				ImGui::Separator(); ImGui::Text(light_label.c_str());
+
+				ImGui::SliderFloat("Intensity", &dir_lights[i].intensity, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::ColorEdit4("Color", glm::value_ptr(dir_lights[i].color));
+
+				ImGui::PopID();
 			}
 		}
 
