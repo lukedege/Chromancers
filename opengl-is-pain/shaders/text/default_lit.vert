@@ -13,7 +13,7 @@ out VS_OUT
 	vec3 twDirLightDir  [MAX_DIR_LIGHTS];
 	vec3 twFragPos; // Local -> World -> Tangent position of frag N.B. THE FIRST LETTER SPECIFIES THE FINAL SPACE 
 	vec3 twCameraPos; 
-	vec3 tNormal;
+	vec3 twNormal;
 
 	// the output variable for UV coordinates
 	vec2 interp_UV;
@@ -23,7 +23,6 @@ uniform mat4 modelMatrix;
 uniform mat4 viewMatrix;
 uniform mat4 projectionMatrix;
 uniform mat3 normalMatrix; //this is the normal matrix multiplied by the viewprojection by scene object
-// we dont need this now as we get our normals from the normal map
 
 //Lights
 uniform uint nPointLights;
@@ -76,11 +75,11 @@ void main()
 	invTBN = transpose(mat3(T, B, N)); 
 
 	wFragPos = vec3(modelMatrix * vec4(position, 1));
-	vs_out.twFragPos = invTBN * wFragPos;
-	vs_out.twCameraPos = invTBN * wCameraPos;
-	vs_out.tNormal = N;
 
-    vs_out.interp_UV = UV;
+	vs_out.twFragPos = invTBN * wFragPos;
+	vs_out.interp_UV = UV;
+	vs_out.twNormal = normalize(invTBN * N);
+	vs_out.twCameraPos = invTBN * wCameraPos;
 	
 	for(uint i = 0; i < nPointLights; i++)
 		calculatePointLightTangentDir(i);

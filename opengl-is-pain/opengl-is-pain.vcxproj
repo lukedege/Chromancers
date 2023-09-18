@@ -183,6 +183,8 @@
     <None Include="shaders\constants.glsl" />
     <None Include="shaders\spv\buny_lights.frag" />
     <None Include="shaders\spv\buny_lights.vert" />
+    <None Include="shaders\text\default_lit.frag" />
+    <None Include="shaders\text\default_lit.vert" />
     <None Include="shaders\text\generic\basic.frag" />
     <None Include="shaders\text\generic\basic.vert" />
     <None Include="shaders\text\generic\BP_normal_mapping.frag" />

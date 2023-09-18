@@ -64,6 +64,7 @@ namespace utils::graphics::opengl
 			stbi_image_free(image);
 		}
 
+		// Bind to OpenGL context
 		void bind()
 		{
 			glActiveTexture(GL_TEXTURE0 + id); // this should be correct as of: https://stackoverflow.com/questions/8866904/differences-and-relationship-between-glactivetexture-and-glbindtexture
@@ -72,6 +73,7 @@ namespace utils::graphics::opengl
 
 		void unbind()
 		{
+			glActiveTexture(GL_TEXTURE0 + id);
 			glBindTexture(GL_TEXTURE_2D, 0);
 		}
 

@@ -158,13 +158,12 @@ int main()
 	// Shader setup
 	std::vector<const GLchar*> utils_shaders { "shaders/types.glsl", "shaders/constants.glsl" };
 
-	ugl::Shader floor_shader{ "shaders/text/scene/floor.vert", "shaders/text/scene/floor.frag", 4, 3, nullptr, utils_shaders};
 	ugl::Shader basic_shader{ "shaders/text/generic/mvp.vert", "shaders/text/generic/basic.frag", 4, 3 };
-	ugl::Shader cube_shader{ "shaders/text/scene/cube.vert", "shaders/text/scene/cube.frag", 4, 3, nullptr, utils_shaders };
+	ugl::Shader default_lit{ "shaders/text/default_lit.vert", "shaders/text/default_lit.frag", 4, 3, nullptr, utils_shaders };
 
 	std::vector <std::reference_wrapper<ugl::Shader>> lit_shaders, all_shaders;
-	lit_shaders.push_back(floor_shader); lit_shaders.push_back(cube_shader);
-	all_shaders.push_back(floor_shader); all_shaders.push_back(cube_shader), all_shaders.push_back(basic_shader);
+	lit_shaders.push_back(default_lit);
+	all_shaders.push_back(basic_shader); all_shaders.push_back(default_lit);
 
 	// Textures setup
 	ugl::Texture wall_diffuse_tex{ "textures/brickwall.jpg" }, wall_normal_tex{ "textures/brickwall_normal.jpg" };
@@ -173,13 +172,15 @@ int main()
 		redbricks_depth_tex{ "textures/bricks2_disp.jpg" };
 	
 	// Materials
-	ugl::Material redbricks_mat { cube_shader }; 
+	ugl::Material redbricks_mat { default_lit };
 	redbricks_mat.diffuse_map = &redbricks_diffuse_tex; redbricks_mat.normal_map = &redbricks_normal_tex; redbricks_mat.displacement_map = &redbricks_depth_tex;
 	redbricks_mat.uv_repeat = 3.f; redbricks_mat.parallax_heightscale = 0.05f;
 
-	ugl::Material floor_mat { floor_shader };
+	ugl::Material floor_mat { default_lit };
 	floor_mat.diffuse_map = &wall_diffuse_tex; floor_mat.normal_map = &wall_normal_tex;
 	floor_mat.uv_repeat = 80.f;
+
+	ugl::Material sph_mat { default_lit };
 
 	ugl::Material basic_mat { basic_shader };
 
@@ -187,7 +188,7 @@ int main()
 	ugl::Model plane_model{ "models/plane.obj" }, cube_model{ "models/cube.obj" }, sphere_model{ "models/sphere.obj" };
 	Cube cube{ cube_model, redbricks_mat, scene_data };
 	Floor floor_plane{ plane_model, floor_mat, scene_data, 90.f };
-	ugl::Entity sph { sphere_model, basic_mat, scene_data };
+	ugl::Entity sph { sphere_model, sph_mat, scene_data };
 	sphere = &sph;
 
 	ugl::Model triangle_mesh
@@ -352,6 +353,11 @@ int main()
 				std::string light_label = "Intensity PL " + std::to_string(i);
 				ImGui::SliderFloat(light_label.c_str(), &point_lights[i].intensity, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 			}
+			for (size_t i = 0; i < dir_lights.size(); i++)
+			{
+				std::string light_label = "Intensity DL " + std::to_string(i);
+				ImGui::SliderFloat(light_label.c_str(), &dir_lights[i].intensity, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+			}
 		}
 
 		ImGui::End();
@@ -366,9 +372,10 @@ int main()
 	}
 
 	// Cleanup
-	basic_shader.dispose();
-	floor_shader.dispose();
-	cube_shader.dispose();
+	for (ugl::Shader& shader : all_shaders)
+	{
+		shader.dispose();
+	}
 	physics_engine.Clear();
 	
 	ImGui_ImplOpenGL3_Shutdown();
@@ -430,6 +437,11 @@ void process_toggled_keys()
 		
 		keys[GLFW_KEY_X] = false;
 	}
+	if (keys[GLFW_KEY_SPACE])
+	{
+		main_camera.toggle_fly();
+		keys[GLFW_KEY_SPACE] = false;
+	}
 }
 
 // Process until user release
@@ -447,8 +459,6 @@ void process_pressed_keys()
 		main_camera.ProcessKeyboard(ugl::Camera::Directions::DOWN, deltaTime);
 	if (keys[GLFW_KEY_E])
 		main_camera.ProcessKeyboard(ugl::Camera::Directions::UP, deltaTime);
-	if (keys[GLFW_KEY_SPACE])
-		main_camera.toggle_fly();
 
 	if (keys[GLFW_KEY_LEFT])
 		currentLight->position.x -= mov_light_speed * deltaTime;

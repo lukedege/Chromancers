@@ -214,5 +214,11 @@
     <None Include="shaders\text\scene\cube.vert">
       <Filter>Shaders\text\scene</Filter>
     </None>
+    <None Include="shaders\text\default_lit.frag">
+      <Filter>Shaders\text</Filter>
+    </None>
+    <None Include="shaders\text\default_lit.vert">
+      <Filter>Shaders\text</Filter>
+    </None>
   </ItemGroup>
 </Project>

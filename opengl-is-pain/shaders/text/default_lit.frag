@@ -10,7 +10,7 @@ in VS_OUT
 	vec3 twDirLightDir  [MAX_DIR_LIGHTS];
 	vec3 twFragPos; // Local -> World -> Tangent position of frag N.B. THE FIRST LETTER SPECIFIES THE FINAL SPACE 
 	vec3 twCameraPos; 
-	vec3 tNormal;
+	vec3 twNormal;
 
 	// the output variable for UV coordinates
 	vec2 interp_UV;
@@ -28,12 +28,16 @@ uniform sampler2D diffuse_tex; // texture samplers
 uniform sampler2D normal_tex;
 uniform sampler2D displacement_tex;
 
-uniform float repeat; // texture repetitions
+uniform int sample_diffuse_map      = 0;
+uniform int sample_normal_map       = 0;
+uniform int sample_displacement_map = 0;
+
+uniform float uv_repeat = 1; // texture repetitions
 
 // Material-light attributes
-uniform vec3 ambient ;
-uniform vec3 diffuse ; // we dont need this with diffuse textures
-uniform vec3 specular;
+uniform vec4 ambient_color ;
+uniform vec4 diffuse_color ;
+uniform vec4 specular_color;
 
 // Ambient, diffuse, specular coefficients
 uniform float kA;
@@ -48,7 +52,7 @@ uniform float alpha; // rugosity - 0 : smooth, 1: rough
 uniform float F0; // fresnel reflectance at normal incidence
 
 // uniform for parallax map
-uniform float height_scale;
+uniform float parallax_heightscale;
 
 // Current light position
 vec3 curr_twLightDir;
@@ -58,7 +62,7 @@ vec2 CheapParallaxMapping(vec2 texCoords, vec3 viewDir)
 	// Sample the heightmap
     float height = texture(displacement_tex, texCoords).r; 
 	// Calculate vector towards approximate height
-	vec2 p = viewDir.xy * (height * height_scale);
+	vec2 p = viewDir.xy * (height * parallax_heightscale);
 	// Return displacement
     return texCoords - p; 
 }
@@ -74,7 +78,7 @@ vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
     // depth of current layer
     float currentLayerDepth = 0.0;
     // the amount to shift the texture coordinates per layer (from vector P)
-    vec2 P = viewDir.xy / viewDir.z * height_scale; 
+    vec2 P = viewDir.xy / viewDir.z * parallax_heightscale; 
     vec2 deltaTexCoords = P / numLayers;
   
     // get initial values
@@ -105,31 +109,48 @@ vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
     return finalTexCoords;
 }
 
+vec2 calculateTexCoords(vec2 texCoords, vec3 viewDir)
+{
+	//Repeated UV coords
+	vec2 computedTexCoords = mod(texCoords * uv_repeat, 1.0);
+
+	// branchless condition to avoid divergence
+	computedTexCoords = ((1 - sample_displacement_map) * computedTexCoords) + // no displacement map
+	                    ((sample_displacement_map)     * CheapParallaxMapping(computedTexCoords,  viewDir));  // use displacement map
+	
+	return computedTexCoords;
+}
+
+vec4 calculateSurfaceColor(vec2 texCoords)
+{
+	// branchless condition to avoid divergence
+	vec4 surface_color = ((1 - sample_diffuse_map) * diffuse_color) + // use albedo (diffuse color)
+	                     ((sample_diffuse_map)     * texture(diffuse_tex, texCoords)); // use diffuse map
+
+	return surface_color;
+}
+
+vec3 calculateNormal(vec2 texCoords)
+{
+	// branchless condition to avoid divergence
+	vec3 normal = ((1 - sample_normal_map) * normalize(fs_in.twNormal)) + // use vertex normal
+	              ((sample_normal_map)     * normalize(texture(normal_tex, texCoords).rgb * 2.0 - 1.0)); // use normal map
+
+	return normal;
+}
+
 vec3 BlinnPhong()
 {
-	vec2 repeated_UV = mod(fs_in.interp_UV * repeat, 1.0);
+	// ambient component 
+	vec3 ambient_component = kA * ambient_color.rgb;
 
 	// view direction
 	vec3 V = normalize( fs_in.twCameraPos - fs_in.twFragPos );
 
-    vec2 displaced_texCoords = CheapParallaxMapping(repeated_UV,  V);   
-	    
-	float max_height = 1.0f; float min_height = 0.0f;
+    vec2 final_texCoords = calculateTexCoords(fs_in.interp_UV, V);
 
-	//if(displaced_texCoords.x > max_height || displaced_texCoords.y > max_height || displaced_texCoords.x < min_height || displaced_texCoords.y < min_height)
-    //	discard;
-
-	// we repeat the UVs and we sample the texture
-    vec4 surfaceColor = texture(diffuse_tex, displaced_texCoords);
-
-	// ambient component can be calculated at the beginning
-	vec3 color = kA * ambient;
-	
-	// obtain normal from normal map in range [0,1]
-	vec3 N = texture(normal_tex, displaced_texCoords).rgb;
-	
-	// transform normal vector to range [-1,1]
-	N = normalize(N * 2.0 - 1.0);  // this normal is in tangent space
+	// obtain normal 
+	vec3 N = calculateNormal(final_texCoords);
 	
 	// normalization of the per-fragment light incidence direction
 	vec3 L = normalize(curr_twLightDir);
@@ -137,22 +158,31 @@ vec3 BlinnPhong()
 	// Lambert coefficient
 	float lambertian = max(dot(L,N), 0.0);
 	
-	// if the lambert coefficient is positive, then I can calculate the specular component
+	vec3 final_color = ambient_component;
+
+	// if the lambert coefficient is positive, then we calculate the specular component
 	if(lambertian > 0.0)
 	{
+		// calculate surface color
+		vec4 surface_color = calculateSurfaceColor(final_texCoords);
+
+		// calculate diffuse component
+		vec3 diffuse_component = kD * lambertian * surface_color.rgb;
+
 		// in the Blinn-Phong model we do not use the reflection vector, but the half vector
 		vec3 H = normalize(L + V);
-		
 		// we use H to calculate the specular component
 		float specAngle = max(dot(H, N), 0.0);
 		// shininess application to the specular component
 		float spec = pow(specAngle, shininess);
+
+		vec3 specular_component = kS * spec * specular_color.rgb;
 		
 		// We add diffusive and specular components to the final color
 		// N.B. ): in this implementation, the sum of the components can be different than 1
-		color += vec3( kD * lambertian * surfaceColor.xyz + kS * spec * specular);
+		final_color += diffuse_component + specular_component;
 	}
-	return color;
+	return final_color;
 }
 
 vec4 calculatePointLights()
