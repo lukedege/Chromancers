@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -164,6 +164,7 @@
   <ItemGroup>
     <ClInclude Include="entities\cube.h" />
     <ClInclude Include="entities\floor.h" />
+    <ClInclude Include="utils\input.h" />
     <ClInclude Include="utils\interfaces.h" />
     <ClInclude Include="utils\material.h" />
     <ClInclude Include="utils\mesh.h" />

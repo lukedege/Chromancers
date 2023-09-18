@@ -32,6 +32,7 @@
 #include "utils/texture.h"
 #include "utils/material.h"
 #include "utils/physics.h"
+#include "utils/input.h"
 
 #include "utils/scene/light.h "
 #include "utils/scene/camera.h"
@@ -66,13 +67,11 @@ ugl::window wdw
 // callback function for keyboard events
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
 void mouse_pos_callback(GLFWwindow* window, double xPos, double yPos);
-void process_pressed_keys();
-void process_toggled_keys();
+void setup_input_keys();
 
 // input related parameters
 float cursor_x, cursor_y;
 bool firstMouse = true;
-bool keys[1024];
 bool capture_mouse = true;
 
 // global scene camera
@@ -110,6 +109,7 @@ float capped_deltaTime;
 // Temporary 
 Entity* sphere;
 
+
 // TODOs
 // - Spawn multiple spheres with rigidbodies
 // - Make a "Physics_entity" class which is the same as entity but involves a rigidbody as default
@@ -124,6 +124,9 @@ int main()
 	// Callbacks linking with glfw
 	glfwSetKeyCallback(glfw_window, key_callback);
 	glfwSetCursorPosCallback(glfw_window, mouse_pos_callback);
+	
+	// Setup keys
+	setup_input_keys();
 
 	// Imgui setup
 	IMGUI_CHECKVERSION();
@@ -257,8 +260,9 @@ int main()
 
 		// Check is an I/O event is happening
 		glfwPollEvents();
-		process_toggled_keys();
-		process_pressed_keys();
+		//process_toggled_keys();
+		//process_pressed_keys();
+		Input::instance().process_pressed_keys();
 
 		// Clear the frame and z buffer
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -392,82 +396,63 @@ int main()
 // INPUT
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
-	// if ESC is pressed, we close the application
-	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-		glfwSetWindowShouldClose(window, GL_TRUE);
-
 	if (action == GLFW_PRESS)
-		keys[key] = true;
+	{
+		Input::instance().press_key(key);
+	}
 	else if (action == GLFW_RELEASE)
-		keys[key] = false;
-}
-
-// Process and release 
-void process_toggled_keys()
-{
-	if (keys[GLFW_KEY_LEFT_ALT])
 	{
-		capture_mouse = !capture_mouse;
-		keys[GLFW_KEY_LEFT_ALT] = false;
-	}
-	if (keys[GLFW_KEY_P])
-	{
-		spinning = !spinning;
-		keys[GLFW_KEY_P] = false;
-	}
-	if (keys[GLFW_KEY_L])
-	{
-		wireframe = !wireframe;
-		if (wireframe)
-			// Draw in wireframe
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		else
-			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-		keys[GLFW_KEY_L] = false;
-	}
-	if (keys[GLFW_KEY_X])
-	{
-		sphere->teleport_at(main_camera.position());
-
-		float shootInitialSpeed = 20.f;
-		glm::vec3 shoot_dir = main_camera.forward() * shootInitialSpeed;
-		btVector3 impulse = btVector3(shoot_dir.x, shoot_dir.y, shoot_dir.z);
-		sphere->rigid_body->applyCentralImpulse(impulse);
-		
-		keys[GLFW_KEY_X] = false;
-	}
-	if (keys[GLFW_KEY_SPACE])
-	{
-		main_camera.toggle_fly();
-		keys[GLFW_KEY_SPACE] = false;
+		Input::instance().release_key(key);
 	}
 }
 
-// Process until user release
-void process_pressed_keys()
+void setup_input_keys()
 {
-	if (keys[GLFW_KEY_W])
-		main_camera.ProcessKeyboard(ugl::Camera::Directions::FORWARD , deltaTime);
-	if (keys[GLFW_KEY_S])
-		main_camera.ProcessKeyboard(ugl::Camera::Directions::BACKWARD, deltaTime);
-	if (keys[GLFW_KEY_A])
-		main_camera.ProcessKeyboard(ugl::Camera::Directions::LEFT    , deltaTime);
-	if (keys[GLFW_KEY_D])
-		main_camera.ProcessKeyboard(ugl::Camera::Directions::RIGHT   , deltaTime);
-	if (keys[GLFW_KEY_Q])
-		main_camera.ProcessKeyboard(ugl::Camera::Directions::DOWN, deltaTime);
-	if (keys[GLFW_KEY_E])
-		main_camera.ProcessKeyboard(ugl::Camera::Directions::UP, deltaTime);
+	// Pressed input
+	Input::instance().add_onPressed_callback(GLFW_KEY_H, [&]() { std::cout << "h pressed\n"; }); // TEMP
+	Input::instance().add_onRelease_callback(GLFW_KEY_H, [&]() { std::cout << "h released\n"; }); // TEMP
+	Input::instance().add_onPressed_callback(GLFW_KEY_W, [&]() { main_camera.ProcessKeyboard(ugl::Camera::Directions::FORWARD, deltaTime); });
+	Input::instance().add_onPressed_callback(GLFW_KEY_S, [&]() { main_camera.ProcessKeyboard(ugl::Camera::Directions::BACKWARD, deltaTime); });
+	Input::instance().add_onPressed_callback(GLFW_KEY_A, [&]() { main_camera.ProcessKeyboard(ugl::Camera::Directions::LEFT, deltaTime); });
+	Input::instance().add_onPressed_callback(GLFW_KEY_D, [&]() { main_camera.ProcessKeyboard(ugl::Camera::Directions::RIGHT, deltaTime); });
+	Input::instance().add_onPressed_callback(GLFW_KEY_Q, [&]() { main_camera.ProcessKeyboard(ugl::Camera::Directions::DOWN, deltaTime); });
+	Input::instance().add_onPressed_callback(GLFW_KEY_E, [&]() { main_camera.ProcessKeyboard(ugl::Camera::Directions::UP, deltaTime); });
 
-	if (keys[GLFW_KEY_LEFT])
-		currentLight->position.x -= mov_light_speed * deltaTime;
-	if (keys[GLFW_KEY_RIGHT])
-		currentLight->position.x += mov_light_speed * deltaTime;
-	if (keys[GLFW_KEY_UP])
-		currentLight->position.z -= mov_light_speed * deltaTime;
-	if (keys[GLFW_KEY_DOWN])
-		currentLight->position.z += mov_light_speed * deltaTime;
+	Input::instance().add_onPressed_callback(GLFW_KEY_LEFT , [&]() { currentLight->position.x -= mov_light_speed * deltaTime; });
+	Input::instance().add_onPressed_callback(GLFW_KEY_RIGHT, [&]() { currentLight->position.x += mov_light_speed * deltaTime; });
+	Input::instance().add_onPressed_callback(GLFW_KEY_UP   , [&]() { currentLight->position.z -= mov_light_speed * deltaTime; });
+	Input::instance().add_onPressed_callback(GLFW_KEY_DOWN , [&]() { currentLight->position.z += mov_light_speed * deltaTime; });
+
+	Input::instance().add_onPressed_callback(GLFW_KEY_F, [&]()
+		{
+			ugl::window::window_size ws = wdw.get_size();
+			glm::vec4 wCursorPosition = ugl::unproject(cursor_x, cursor_y, ws.width, ws.height, main_camera.viewMatrix(), main_camera.projectionMatrix());
+
+			// TODO modify stuff based on cursor position
+		});
+
+	// Toggled input
+	Input::instance().add_onRelease_callback(GLFW_KEY_ESCAPE, [&]() { wdw.close(); });
+	Input::instance().add_onRelease_callback(GLFW_KEY_LEFT_ALT, [&]() { capture_mouse = !capture_mouse; });
+	Input::instance().add_onRelease_callback(GLFW_KEY_SPACE   , [&]() { main_camera.toggle_fly(); });
+	Input::instance().add_onRelease_callback(GLFW_KEY_P, [&]() { spinning = !spinning; });
+	Input::instance().add_onRelease_callback(GLFW_KEY_L, [&]() 
+		{ 
+			wireframe = !wireframe; 
+			if (wireframe)
+				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);// Draw in wireframe
+			else
+				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);// Fill in fragments
+		});
+	Input::instance().add_onRelease_callback(GLFW_KEY_X, [&]()
+		{
+			sphere->teleport_at(main_camera.position());
+
+			float shootInitialSpeed = 20.f;
+			glm::vec3 shoot_dir = main_camera.forward() * shootInitialSpeed;
+			btVector3 impulse = btVector3(shoot_dir.x, shoot_dir.y, shoot_dir.z);
+			sphere->rigid_body->applyCentralImpulse(impulse);
+		});
 }
 
 void mouse_pos_callback(GLFWwindow* window, double x_pos, double y_pos)
