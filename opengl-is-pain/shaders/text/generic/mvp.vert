@@ -4,9 +4,9 @@ layout (location = 0) in vec3 pos;
 
 out gl_PerVertex { vec4 gl_Position; };
 
-uniform mat4 modelMatrix;
-uniform mat4 viewMatrix;
-uniform mat4 projectionMatrix;
+uniform mat4 modelMatrix      = mat4(1);
+uniform mat4 viewMatrix       = mat4(1);
+uniform mat4 projectionMatrix = mat4(1);
 
 void main()
 {

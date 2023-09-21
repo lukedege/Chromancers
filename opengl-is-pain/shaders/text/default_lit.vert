@@ -19,10 +19,10 @@ out VS_OUT
 	vec2 interp_UV;
 } vs_out;
 
-uniform mat4 modelMatrix;
-uniform mat4 viewMatrix;
-uniform mat4 projectionMatrix;
-uniform mat3 normalMatrix; //this is the normal matrix multiplied by the viewprojection by scene object
+uniform mat4 modelMatrix      = mat4(1);
+uniform mat4 viewMatrix       = mat4(1);
+uniform mat4 projectionMatrix = mat4(1);
+uniform mat3 normalMatrix     = mat3(1); //this is the normal matrix multiplied by the viewprojection by scene object
 
 //Lights
 uniform uint nPointLights;
@@ -33,7 +33,7 @@ uniform PointLight       pointLights      [MAX_POINT_LIGHTS];
 uniform DirectionalLight directionalLights[MAX_DIR_LIGHTS];
 uniform SpotLight        spotLights       [MAX_SPOT_LIGHTS];
 
-uniform vec3 wCameraPos;
+uniform vec3 wCameraPos = vec3(0);
 
 vec3 wFragPos; // World fragment position
 mat3 invTBN; // Inverse TangentBitangentNormal space transformation matrix

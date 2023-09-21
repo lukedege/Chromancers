@@ -79,6 +79,21 @@ namespace utils::graphics::opengl
 			glBindVertexArray(0);
 		}
 
+		// Creates and returns a simple triangle mesh
+		static Mesh simple_triangle_mesh()
+		{
+			return Mesh
+			{
+				std::vector<Vertex>
+				{
+					Vertex{ glm::vec3{-0.5f, -0.5f, 0.0f} /* position */ },
+					Vertex{ glm::vec3{ 0.0f,  0.5f, 0.0f} /* position */ },
+					Vertex{ glm::vec3{ 0.5f, -0.5f, 0.0f} /* position */ }
+				},
+					std::vector<GLuint>{0, 2, 1}
+			};
+		}
+
 	private:
 		GLuint VBO, EBO;
 

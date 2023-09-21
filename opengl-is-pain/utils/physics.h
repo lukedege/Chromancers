@@ -1,14 +1,102 @@
 #pragma once
 
+#include <glad.h>
+
 #include <glm/common.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 #include <bullet/btBulletDynamicsCommon.h>
+#include <bullet/LinearMath/btIDebugDraw.h>
 
-namespace utils::graphics::opengl
+#include "utils.h"
+#include "shader.h"
+#include "scene/camera.h"
+
+namespace utils::physics
 {
-    ///////////////////  Physics class ///////////////////////
-    class Physics
+    // Debug drawer for Physics engine
+    class GLDebugDrawer : public btIDebugDraw
+    {
+        int m_debugMode;
+        graphics::opengl::Camera* camera;
+        graphics::opengl::Shader* shader;
+
+    public:
+        GLDebugDrawer(graphics::opengl::Camera& camera, graphics::opengl::Shader& shader) :
+            m_debugMode(0),
+            camera(&camera),
+            shader(&shader)
+        {}
+
+        virtual void   drawLine(const btVector3& from, const btVector3& to, const btVector3& color)
+        {
+            GLfloat vertices[6];
+            vertices[0] = from.x(); vertices[3] = to.x();
+            vertices[1] = from.y(); vertices[4] = to.y();
+            vertices[2] = from.z(); vertices[5] = to.z();
+
+            glm::vec3 colors = { 1, 0, 0 };
+            GLuint indices[] = { 0,1 };
+
+            GLuint vao, vbo, ebo;
+
+            glGenVertexArrays(1, &vao);
+            glGenBuffers(1, &vbo);
+            glGenBuffers(1, &ebo);
+
+            glBindVertexArray(vao);
+
+            //UPLOADING VERTEX
+            glBindBuffer(GL_ARRAY_BUFFER, vbo);
+            glBufferData(GL_ARRAY_BUFFER,
+                sizeof(GLfloat) * 6, vertices, GL_STATIC_DRAW);
+            //UPLOADING INDEXES
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                sizeof(GLuint) * 2,
+                indices,
+                GL_STATIC_DRAW);
+            glEnableVertexAttribArray(0);
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
+                sizeof(GLfloat) * 3, (GLvoid*)0);
+            glBindVertexArray(0);
+
+
+            //use program
+            shader->bind();
+            shader->setVec3("colorIn", colors);
+            shader->setMat4("projectionMatrix", camera->projectionMatrix());
+            shader->setMat4("viewMatrix", camera->viewMatrix());
+
+            //use geometry
+            glBindVertexArray(vao);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+            glDrawElements(GL_LINES, 2, GL_UNSIGNED_INT, 0);
+            glBindVertexArray(0);
+
+            //delete buffers
+            glDeleteVertexArrays(1, &vao);
+            glDeleteBuffers(1, &vbo);
+            glDeleteBuffers(1, &ebo);
+        }
+
+        virtual void   drawSphere(const btVector3& p, btScalar radius, const btVector3& color) {}
+
+        virtual void   drawTriangle(const btVector3& a, const btVector3& b, const btVector3& c, const btVector3& color, btScalar alpha) {}
+
+        virtual void   drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& color) {}
+
+        virtual void   reportErrorWarning(const char* warningString) { io::log(warningString); }
+
+        virtual void   draw3dText(const btVector3& location, const char* textString) {}
+
+        virtual void   setDebugMode(int debugMode) { m_debugMode = debugMode; }
+
+        virtual int    getDebugMode() const { return m_debugMode; }
+
+    };
+
+    class PhysicsEngine
     {
     public:
         //enum to identify the 2 considered Collision Shapes
@@ -33,27 +121,34 @@ namespace utils::graphics::opengl
         //////////////////////////////////////////
         // constructor
         // we set all the classes needed for the physical simulation
-        Physics()
+        PhysicsEngine()
         {
             // Collision configuration, to be used by the collision detection class
             // collision configuration contains default setup for memory, collision setup. Advanced users can create their own configuration.
-            this->collisionConfiguration = new btDefaultCollisionConfiguration();
+            collisionConfiguration = new btDefaultCollisionConfiguration();
 
             // default collision dispatcher (=collision detection method). For parallel processing you can use a diffent dispatcher (see Extras/BulletMultiThreaded)
-            this->dispatcher = new btCollisionDispatcher(this->collisionConfiguration);
+            dispatcher = new btCollisionDispatcher(collisionConfiguration);
 
             // btDbvtBroadphase is a good general purpose broadphase. You can also try out btAxis3Sweep.
-            this->overlappingPairCache = new btDbvtBroadphase();
+            overlappingPairCache = new btDbvtBroadphase();
 
             // we set a ODE solver, which considers forces, constraints, collisions etc., to calculate positions and rotations of the rigid bodies.
             // the default constraint solver. For parallel processing you can use a different solver (see Extras/BulletMultiThreaded)
-            this->solver = new btSequentialImpulseConstraintSolver();
+            solver = new btSequentialImpulseConstraintSolver();
 
             //  DynamicsWorld is the main class for the physical simulation
-            this->dynamicsWorld = new btDiscreteDynamicsWorld(this->dispatcher,this->overlappingPairCache,this->solver,this->collisionConfiguration);
+            dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
 
             // we set the gravity force
-            this->dynamicsWorld->setGravity(btVector3(0.0f,-9.82f,0.0f));
+            dynamicsWorld->setGravity(btVector3(0.0f, -9.82f, 0.0f));
+
+            debugDrawer = nullptr;
+        }
+
+        ~PhysicsEngine()
+        {
+            clear();
         }
 
         //////////////////////////////////////////
@@ -64,23 +159,26 @@ namespace utils::graphics::opengl
             btCollisionShape* collision_shape = NULL;
 
             // we convert the glm vector to a Bullet vector
-            btVector3 position = btVector3(pos.x,pos.y,pos.z);
+            btVector3 position = btVector3(pos.x, pos.y, pos.z);
 
             // we set a quaternion from the Euler angles passed as parameters
             btQuaternion rotation;
-            rotation.setEuler(rot.x,rot.y,rot.z);
+            
+            rotation.setEuler(rot.y, rot.x, rot.z);
 
             // Box Collision shape
             if (rb_info.type == BOX)
             {
                 // we convert the glm vector to a Bullet vector
-                btVector3 dim = btVector3(size.x,size.y,size.z);
+                btVector3 dim = btVector3(size.x, size.y, size.z);
                 // BoxShape
                 collision_shape = new btBoxShape(dim);
             }
             // Sphere Collision Shape (in this case we consider only the first component)
             else if (rb_info.type == SPHERE)
                 collision_shape = new btSphereShape(size.x);
+            else
+                collision_shape = new btSphereShape(size.x); // If nothing, use sphere collider
 
             // we add this Collision Shape to the vector
             this->collisionShapes.push_back(collision_shape);
@@ -97,22 +195,22 @@ namespace utils::graphics::opengl
             bool isDynamic = (mass != 0.0f);
 
             // if it is dynamic (mass > 0) then we calculates local inertia
-            btVector3 localInertia(0.0f,0.0f,0.0f);
+            btVector3 localInertia(0.0f, 0.0f, 0.0f);
             if (isDynamic)
-                collision_shape->calculateLocalInertia(mass,localInertia);
+                collision_shape->calculateLocalInertia(mass, localInertia);
 
             // we initialize the Motion State of the object on the basis of the transformations
             // using the Motion State, the physical simulation will calculate the positions and rotations of the rigid body
             btDefaultMotionState* motionState = new btDefaultMotionState(objTransform);
 
             // we set the data structure for the rigid body
-            btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,motionState,collision_shape,localInertia);
+            btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, motionState, collision_shape, localInertia);
             // we set friction and restitution
             rbInfo.m_friction = rb_info.friction;
             rbInfo.m_restitution = rb_info.restitution;
 
             // if the Collision Shape is a sphere
-            if (rb_info.type == SPHERE){
+            if (rb_info.type == SPHERE) {
                 // the sphere touches the plane on the plane on a single point, and thus the friction between sphere and the plane does not work -> the sphere does not stop
                 // to avoid the problem, we apply the rolling friction together with an angular damping (which applies a resistence during the rolling movement), in order to make the sphere to stop after a while
                 rbInfo.m_angularDamping = 0.3f;
@@ -142,9 +240,29 @@ namespace utils::graphics::opengl
             }
         }
 
-        //////////////////////////////////////////
-        // We delete the data of the physical simulation when the program ends
-        void Clear()
+        void addDebugDrawer(btIDebugDraw* newDebugDrawer)
+        {
+            debugDrawer = newDebugDrawer;
+            dynamicsWorld->setDebugDrawer(newDebugDrawer);
+        }
+
+        void set_debug_mode(int isDebug)
+        {
+            debugDrawer->setDebugMode(isDebug);
+        }
+
+        void step(float delta_time)
+        {
+            dynamicsWorld->stepSimulation(delta_time, 10);
+            if (debugDrawer && debugDrawer->getDebugMode())
+            {
+                dynamicsWorld->debugDrawWorld();
+            }
+        }
+    private:
+        btIDebugDraw* debugDrawer;
+
+        void clear()
         {
             //we remove the rigid bodies from the dynamics world and delete them
             for (int i=this->dynamicsWorld->getNumCollisionObjects()-1; i>=0 ;i--)
@@ -179,4 +297,5 @@ namespace utils::graphics::opengl
         }
     };
 
+   
 }

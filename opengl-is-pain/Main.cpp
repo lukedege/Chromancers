@@ -46,6 +46,7 @@
 #include "entities/cube.h"
 
 namespace ugl = utils::graphics::opengl;
+namespace phy = utils::physics;
 
 // window
 ugl::window wdw
@@ -68,6 +69,7 @@ ugl::window wdw
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
 void mouse_pos_callback(GLFWwindow* window, double xPos, double yPos);
 void setup_input_keys();
+void reset_scene();
 
 // input related parameters
 float cursor_x, cursor_y;
@@ -102,12 +104,12 @@ float alpha = 0.2f;
 float F0 = 0.9f;
 
 // Physics
-ugl::Physics physics_engine;
+phy::PhysicsEngine physics_engine;
 float maxSecPerFrame = 1.0f / 60.0f;
 float capped_deltaTime;
 
 // Temporary 
-Entity* sphere;
+Entity* sphere_ptr;
 
 
 // TODOs
@@ -134,7 +136,7 @@ int main()
 	ImGui::StyleColorsDark();
 	ImGui_ImplGlfw_InitForOpenGL(glfw_window, true);
 	ImGui_ImplOpenGL3_Init("#version 430");
-	
+#pragma region scene_setup	
 	// Camera setup
 	main_camera = ugl::Camera{ glm::vec3{0,0,5} };
 	glm::mat4 view = main_camera.viewMatrix();
@@ -157,61 +159,20 @@ int main()
 	ugl::SceneData scene_data;
 	scene_data.current_camera = &main_camera;
 	scene_data.physics_engine = &physics_engine;
+#pragma endregion shader_setup
 
+#pragma region shader_setup
 	// Shader setup
 	std::vector<const GLchar*> utils_shaders { "shaders/types.glsl", "shaders/constants.glsl" };
 
 	ugl::Shader basic_shader{ "shaders/text/generic/mvp.vert", "shaders/text/generic/basic.frag", 4, 3 };
+	ugl::Shader debug_shader{ "shaders/text/generic/mvp.vert", "shaders/text/generic/fullcolor.frag", 4, 3 };
 	ugl::Shader default_lit{ "shaders/text/default_lit.vert", "shaders/text/default_lit.frag", 4, 3, nullptr, utils_shaders };
 
 	std::vector <std::reference_wrapper<ugl::Shader>> lit_shaders, all_shaders;
 	lit_shaders.push_back(default_lit);
 	all_shaders.push_back(basic_shader); all_shaders.push_back(default_lit);
 
-	// Textures setup
-	ugl::Texture wall_diffuse_tex{ "textures/brickwall.jpg" }, wall_normal_tex{ "textures/brickwall_normal.jpg" };
-	ugl::Texture redbricks_diffuse_tex{ "textures/bricks2.jpg" }, 
-		redbricks_normal_tex{ "textures/bricks2_normal.jpg" },
-		redbricks_depth_tex{ "textures/bricks2_disp.jpg" };
-	
-	// Materials
-	ugl::Material redbricks_mat { default_lit };
-	redbricks_mat.diffuse_map = &redbricks_diffuse_tex; redbricks_mat.normal_map = &redbricks_normal_tex; redbricks_mat.displacement_map = &redbricks_depth_tex;
-	redbricks_mat.uv_repeat = 3.f; redbricks_mat.parallax_heightscale = 0.05f;
-
-	ugl::Material floor_mat { default_lit };
-	floor_mat.diffuse_map = &wall_diffuse_tex; floor_mat.normal_map = &wall_normal_tex;
-	floor_mat.uv_repeat = 80.f;
-
-	ugl::Material sph_mat { default_lit };
-
-	ugl::Material basic_mat { basic_shader };
-
-	// Objects setup
-	ugl::Model plane_model{ "models/plane.obj" }, cube_model{ "models/cube.obj" }, sphere_model{ "models/sphere.obj" };
-	Cube cube{ cube_model, redbricks_mat, scene_data };
-	Floor floor_plane{ plane_model, floor_mat, scene_data, 90.f };
-	ugl::Entity sph { sphere_model, sph_mat, scene_data };
-	sphere = &sph;
-
-	ugl::Model triangle_mesh
-	{
-		ugl::Mesh
-		{
-			std::vector<ugl::Vertex>
-			{
-				ugl::Vertex{ glm::vec3{-0.5f, -0.5f, 0.0f} /* position */ },
-				ugl::Vertex{ glm::vec3{ 0.0f,  0.5f, 0.0f} /* position */ },
-				ugl::Vertex{ glm::vec3{ 0.5f, -0.5f, 0.0f} /* position */ }
-			},
-				std::vector<GLuint>{0, 2, 1}
-		}
-	};
-	ugl::Entity cursor{ triangle_mesh, basic_mat, scene_data };
-
-	std::vector<ugl::Entity*> scene_objects;
-	scene_objects.push_back(&floor_plane); scene_objects.push_back(&cube);
-	
 	// Shader commons and "constants" setup
 	for (ugl::Shader& shader : all_shaders)
 	{
@@ -225,13 +186,51 @@ int main()
 		lit_shader.setUint("nPointLights", point_lights.size());
 		lit_shader.setUint("nDirLights", dir_lights.size());
 	}
+#pragma endregion shader_setup
+
+#pragma region materials_setup
+	// Textures setup
+	ugl::Texture wall_diffuse_tex{ "textures/brickwall.jpg" }, wall_normal_tex{ "textures/brickwall_normal.jpg" };
+	ugl::Texture redbricks_diffuse_tex{ "textures/bricks2.jpg" }, 
+		redbricks_normal_tex{ "textures/bricks2_normal.jpg" },
+		redbricks_depth_tex { "textures/bricks2_disp.jpg" };
 	
-	float norm_map_repeat = 90.f, parallax_map_repeat = 3.f;
-	float parallax_heightscale = 0.05f;
+	// Materials
+	ugl::Material redbricks_mat { default_lit };
+	redbricks_mat.diffuse_map = &redbricks_diffuse_tex; redbricks_mat.normal_map = &redbricks_normal_tex; redbricks_mat.displacement_map = &redbricks_depth_tex;
+	redbricks_mat.uv_repeat = 3.f; redbricks_mat.parallax_heightscale = 0.05f;
+
+	ugl::Material floor_mat { default_lit };
+	floor_mat.diffuse_map = &wall_diffuse_tex; floor_mat.normal_map = &wall_normal_tex;
+	floor_mat.uv_repeat = 80.f;
+
+	ugl::Material sph_mat { default_lit };
+
+	ugl::Material basic_mat { basic_shader };
+#pragma endregion materials_setup
+
+	// Entities setup
+	ugl::Model plane_model{ "models/plane.obj" }, cube_model{ "models/cube.obj" }, sphere_model{ "models/sphere.obj" };
+	ugl::Entity cube{ cube_model, redbricks_mat, scene_data };
+	ugl::Entity floor_plane{ plane_model, floor_mat, scene_data };
+	ugl::Entity wall_plane{ plane_model, redbricks_mat, scene_data };
+	ugl::Entity sphere { sphere_model, sph_mat, scene_data };
+	sphere_ptr = &sphere;
+
+	ugl::Model triangle_mesh { ugl::Mesh::simple_triangle_mesh() };
+	ugl::Entity cursor{ triangle_mesh, basic_mat, scene_data };
+
+	std::vector<ugl::Entity*> scene_objects;
+	scene_objects.push_back(&floor_plane); scene_objects.push_back(&wall_plane);
+	scene_objects.push_back(&cube); scene_objects.push_back(&sphere);
 
 	// Entities setup in scene
 	floor_plane.transform.set_position(glm::vec3(0.0f, -1.0f, 0.0f));
-	floor_plane.transform.set_size(glm::vec3(10.0f, 0.1f, 10.0f));
+	floor_plane.transform.set_size(glm::vec3(100.0f, 0.1f, 100.0f));
+
+	wall_plane.transform.set_position(glm::vec3(0.0f, 10.0f, -10.0f));
+	wall_plane.transform.set_rotation(glm::vec3(90.0f, 0.0f, 0.f)); // TODO FIXA ROTAZIONI SBAGLIATE CON BULLET
+	wall_plane.transform.set_size(glm::vec3(10.0f, 0.1f, 5.0f));
 
 	cube.transform.set_position(glm::vec3(0.0f, 3.0f, 0.0f));
 	cube.transform.set_size(glm::vec3(1.f));	// It's a bit too big for our scene, so scale it down
@@ -239,9 +238,14 @@ int main()
 	cursor.transform.set_size(glm::vec3(3.0f));
 
 	// Physics setup
-	floor_plane.add_rigidbody(ugl::Physics::RigidBodyCreateInfo{ ugl::Physics::ColliderShape::BOX, 0.f, 3.0f, 0.5f});
-	cube.add_rigidbody(ugl::Physics::RigidBodyCreateInfo{ ugl::Physics::ColliderShape::BOX, 1.f, 0.1f, 0.1f});
-	sph.add_rigidbody(ugl::Physics::RigidBodyCreateInfo{ ugl::Physics::ColliderShape::SPHERE, 1.f, 1.0f, 1.0f});
+	phy::GLDebugDrawer phy_debug_drawer{main_camera, debug_shader};
+	physics_engine.addDebugDrawer(&phy_debug_drawer);
+	physics_engine.set_debug_mode(1);
+
+	floor_plane.add_rigidbody(phy::PhysicsEngine::RigidBodyCreateInfo{ phy::PhysicsEngine::ColliderShape::BOX, 0.f, 3.0f, 0.5f});
+	wall_plane .add_rigidbody(phy::PhysicsEngine::RigidBodyCreateInfo{ phy::PhysicsEngine::ColliderShape::BOX, 0.f, 3.0f, 0.5f});
+	cube       .add_rigidbody(phy::PhysicsEngine::RigidBodyCreateInfo{ phy::PhysicsEngine::ColliderShape::BOX, 1.f, 0.1f, 0.1f});
+	sphere     .add_rigidbody(phy::PhysicsEngine::RigidBodyCreateInfo{ phy::PhysicsEngine::ColliderShape::SPHERE, 1.f, 1.0f, 1.0f});
 
 	// Rendering loop: this code is executed at each frame
 	while (wdw.is_open())
@@ -260,8 +264,6 @@ int main()
 
 		// Check is an I/O event is happening
 		glfwPollEvents();
-		//process_toggled_keys();
-		//process_pressed_keys();
 		Input::instance().process_pressed_keys();
 
 		// Clear the frame and z buffer
@@ -296,17 +298,12 @@ int main()
 		}
 
 		// Update physics simulation
-		physics_engine.dynamicsWorld->stepSimulation(capped_deltaTime, 10);
-
-		floor_plane.update(capped_deltaTime);
-		floor_plane.draw();
-
-		cube.spinning = spinning;
-		cube.update(capped_deltaTime);
-		cube.draw();
-
-		sph.update(capped_deltaTime);
-		sph.draw();
+		physics_engine.step(capped_deltaTime);
+		for (ugl::Entity* o : scene_objects)
+		{
+			o->update(capped_deltaTime);
+			o->draw();
+		}
 		
 		#pragma region map_draw
 		// MAP
@@ -392,7 +389,6 @@ int main()
 	{
 		shader.dispose();
 	}
-	physics_engine.Clear();
 	
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
@@ -423,12 +419,12 @@ void setup_input_keys()
 	// Pressed input
 	Input::instance().add_onPressed_callback(GLFW_KEY_H, [&]() { std::cout << "h pressed\n"; }); // TEMP
 	Input::instance().add_onRelease_callback(GLFW_KEY_H, [&]() { std::cout << "h released\n"; }); // TEMP
-	Input::instance().add_onPressed_callback(GLFW_KEY_W, [&]() { main_camera.ProcessKeyboard(ugl::Camera::Directions::FORWARD, deltaTime); });
-	Input::instance().add_onPressed_callback(GLFW_KEY_S, [&]() { main_camera.ProcessKeyboard(ugl::Camera::Directions::BACKWARD, deltaTime); });
-	Input::instance().add_onPressed_callback(GLFW_KEY_A, [&]() { main_camera.ProcessKeyboard(ugl::Camera::Directions::LEFT, deltaTime); });
-	Input::instance().add_onPressed_callback(GLFW_KEY_D, [&]() { main_camera.ProcessKeyboard(ugl::Camera::Directions::RIGHT, deltaTime); });
-	Input::instance().add_onPressed_callback(GLFW_KEY_Q, [&]() { main_camera.ProcessKeyboard(ugl::Camera::Directions::DOWN, deltaTime); });
-	Input::instance().add_onPressed_callback(GLFW_KEY_E, [&]() { main_camera.ProcessKeyboard(ugl::Camera::Directions::UP, deltaTime); });
+	Input::instance().add_onPressed_callback(GLFW_KEY_W, [&]() { main_camera.ProcessKeyboard(Camera::Directions::FORWARD, deltaTime); });
+	Input::instance().add_onPressed_callback(GLFW_KEY_S, [&]() { main_camera.ProcessKeyboard(Camera::Directions::BACKWARD, deltaTime); });
+	Input::instance().add_onPressed_callback(GLFW_KEY_A, [&]() { main_camera.ProcessKeyboard(Camera::Directions::LEFT, deltaTime); });
+	Input::instance().add_onPressed_callback(GLFW_KEY_D, [&]() { main_camera.ProcessKeyboard(Camera::Directions::RIGHT, deltaTime); });
+	Input::instance().add_onPressed_callback(GLFW_KEY_Q, [&]() { main_camera.ProcessKeyboard(Camera::Directions::DOWN, deltaTime); });
+	Input::instance().add_onPressed_callback(GLFW_KEY_E, [&]() { main_camera.ProcessKeyboard(Camera::Directions::UP, deltaTime); });
 
 	Input::instance().add_onPressed_callback(GLFW_KEY_LEFT , [&]() { currentLight->position.x -= mov_light_speed * deltaTime; });
 	Input::instance().add_onPressed_callback(GLFW_KEY_RIGHT, [&]() { currentLight->position.x += mov_light_speed * deltaTime; });
@@ -444,10 +440,11 @@ void setup_input_keys()
 		});
 
 	// Toggled input
-	Input::instance().add_onRelease_callback(GLFW_KEY_ESCAPE, [&]() { wdw.close(); });
+	Input::instance().add_onRelease_callback(GLFW_KEY_ESCAPE  , [&]() { wdw.close(); });
 	Input::instance().add_onRelease_callback(GLFW_KEY_LEFT_ALT, [&]() { capture_mouse = !capture_mouse; });
 	Input::instance().add_onRelease_callback(GLFW_KEY_SPACE   , [&]() { main_camera.toggle_fly(); });
 	Input::instance().add_onRelease_callback(GLFW_KEY_P, [&]() { spinning = !spinning; });
+	Input::instance().add_onRelease_callback(GLFW_KEY_R, [&]() { reset_scene(); });
 	Input::instance().add_onRelease_callback(GLFW_KEY_L, [&]() 
 		{ 
 			wireframe = !wireframe; 
@@ -458,12 +455,12 @@ void setup_input_keys()
 		});
 	Input::instance().add_onRelease_callback(GLFW_KEY_X, [&]()
 		{
-			sphere->teleport_at(main_camera.position());
+			sphere_ptr->teleport_at(main_camera.position());
 
 			float shootInitialSpeed = 20.f;
 			glm::vec3 shoot_dir = main_camera.forward() * shootInitialSpeed;
 			btVector3 impulse = btVector3(shoot_dir.x, shoot_dir.y, shoot_dir.z);
-			sphere->rigid_body->applyCentralImpulse(impulse);
+			sphere_ptr->rigid_body->applyCentralImpulse(impulse);
 		});
 }
 
@@ -485,4 +482,9 @@ void mouse_pos_callback(GLFWwindow* window, double x_pos, double y_pos)
 
 	if(capture_mouse)
 		main_camera.ProcessMouseMovement(x_offset, y_offset);
+}
+
+void reset_scene()
+{
+
 }

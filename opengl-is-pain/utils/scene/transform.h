@@ -6,6 +6,9 @@
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
+#include <glm/common.hpp>
+#include <glm/gtc/quaternion.hpp> 
+#include <glm/gtx/quaternion.hpp>
 
 namespace utils::graphics::opengl
 {
@@ -37,9 +40,9 @@ namespace utils::graphics::opengl
 			_world_matrix = matrix;
 		}
 
-		void set_position(const glm::vec3& new_position   ) { if(new_position != _position)       { _position = new_position;       update_world_matrix();} }
-		void set_rotation(const glm::vec3& new_orientation) { if(new_orientation != _orientation) { _orientation = new_orientation; update_world_matrix();} }
-		void set_size    (const glm::vec3& new_size       ) { if(new_size != _size)               { _size = new_size;               update_world_matrix();} }
+		void set_position(const glm::vec3& new_position   ) { _position = new_position;       update_world_matrix(); }
+		void set_rotation(const glm::vec3& new_orientation) { _orientation = new_orientation; update_world_matrix(); }
+		void set_size    (const glm::vec3& new_size       ) { _size = new_size;               update_world_matrix(); }
 
 		void translate(const glm::vec3& translation) { _position += translation; update_world_matrix(); }
 		void rotate   (const glm::vec3& rotation   ) { _orientation += rotation; update_world_matrix(); }
@@ -53,11 +56,14 @@ namespace utils::graphics::opengl
 	private:
 		void update_world_matrix()
 		{
+			// TODO start using quats
+			//glm::quat rotation_quat {_orientation};
+			//glm::mat4 rotation_matrix = glm::toMat4(rotation_quat);
+			
+			// Y * X * Z
 			glm::mat4 rot_X = glm::rotate(glm::mat4{ 1.0f }, glm::radians(_orientation.x), glm::vec3(1.0f, 0.0f, 0.0f));
 			glm::mat4 rot_Y = glm::rotate(glm::mat4{ 1.0f }, glm::radians(_orientation.y), glm::vec3(0.0f, 1.0f, 0.0f));
 			glm::mat4 rot_Z = glm::rotate(glm::mat4{ 1.0f }, glm::radians(_orientation.z), glm::vec3(0.0f, 0.0f, 1.0f));
-
-			// Y * X * Z
 			glm::mat4 rotation_matrix = rot_Y * rot_X * rot_Z;
 
 			glm::mat4 scale_matrix = glm::scale(glm::mat4{ 1.0f }, _size);

@@ -11,17 +11,40 @@ namespace utils::graphics::opengl
 	{
 		Camera* current_camera;
 		std::vector<Light*> lights;
-		Physics* physics_engine;
+		physics::PhysicsEngine* physics_engine;
 	};
 
-	//class Scene
-	//{
-	//private:
-	//	std::vector<Entity*> entities;  //TODO for now vector is sufficient, a tree or a better container would be optimal (also for now pointers are sufficient)
-	//public:
-	//	Camera* main_camera;
-	//	std::vector<Light*> lights;
-	//
-	//	// TODO
-	//};
+	/*
+	class Scene
+	{
+	private:
+		std::vector<Entity*> entities;  //TODO for now vector is sufficient, a tree or a better container (e.g. unordered_map) would be optimal 
+	public:
+		Camera* current_camera;
+		std::vector<Light*> lights;
+		physics::PhysicsEngine* physics_engine;
+
+		void add_entity(Entity& entity)
+		{
+			entities.push_back(&entity);
+		}
+
+		void update(float deltaTime)
+		{
+			for (Entity* o : entities)
+			{
+				o->update(deltaTime);
+			}
+		}
+
+		void draw()
+		{
+			for (Entity* o : entities)
+			{
+				o->draw();
+			}
+		}
+	
+		// TODO
+	};*/
 }

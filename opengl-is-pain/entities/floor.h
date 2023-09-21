@@ -12,7 +12,7 @@ using namespace utils::graphics::opengl;
 class Floor : public Entity
 {
 public:
-	Floor(Model& drawable, Material& material, SceneData& current_scene, float norm_map_repeat = 80.f) :
+	Floor(Model& drawable, Material& material, SceneData& current_scene) :
 		Entity{ drawable, material, current_scene }
 	{
 
