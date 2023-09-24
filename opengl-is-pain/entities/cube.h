@@ -24,7 +24,7 @@ public:
 
 	void child_update(float delta_time) noexcept
 	{
-		if (spinning && is_kinematic)
+		if (spinning)
 			transform.rotate(glm::vec3(0.0f, spin_speed * delta_time, 0.0f));
 	}
 };

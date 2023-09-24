@@ -7,8 +7,6 @@
 #include <glad.h>
 #include <glm/glm.hpp>
 
-#include "interfaces.h"
-
 namespace utils::graphics::opengl
 {
 	//unifica con model, funzione statica per caricare obj con più sottomesh
@@ -19,7 +17,7 @@ namespace utils::graphics::opengl
 		glm::vec3 normal, tangent, bitangent;
 	};
 
-	class Mesh : public Drawable
+	class Mesh
 	{
 	public:
 		std::vector<Vertex> vertices;

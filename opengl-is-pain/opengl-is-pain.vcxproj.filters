@@ -49,6 +49,9 @@
     <Filter Include="Header Files\entities">
       <UniqueIdentifier>{b9040ea0-50f0-425a-907c-1ed55834d0c9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\utils\components">
+      <UniqueIdentifier>{85af7629-f612-4ce0-ade6-a7b5781f0615}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -98,9 +101,6 @@
     <ClInclude Include="utils\scene\transform.h">
       <Filter>Header Files\utils\scene</Filter>
     </ClInclude>
-    <ClInclude Include="utils\interfaces.h">
-      <Filter>Header Files\utils</Filter>
-    </ClInclude>
     <ClInclude Include="utils\mesh.h">
       <Filter>Header Files\utils</Filter>
     </ClInclude>
@@ -136,6 +136,12 @@
     </ClInclude>
     <ClInclude Include="utils\input.h">
       <Filter>Header Files\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\component.h">
+      <Filter>Header Files\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\components\rigidbody_component.h">
+      <Filter>Header Files\utils\components</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

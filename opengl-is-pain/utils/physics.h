@@ -161,10 +161,13 @@ namespace utils::physics
             // we convert the glm vector to a Bullet vector
             btVector3 position = btVector3(pos.x, pos.y, pos.z);
 
+            // we convert from degrees to radians because in setEuler function BULLET USES RADIANS BUT DOESNT SAY 
+            glm::vec3 rot_radians {glm::radians(rot)};
+
             // we set a quaternion from the Euler angles passed as parameters
             btQuaternion rotation;
             
-            rotation.setEuler(rot.y, rot.x, rot.z);
+            rotation.setEuler(rot_radians.y, rot_radians.x, rot_radians.z);
 
             // Box Collision shape
             if (rb_info.type == BOX)

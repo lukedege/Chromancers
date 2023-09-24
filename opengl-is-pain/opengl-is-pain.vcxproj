@@ -164,8 +164,9 @@
   <ItemGroup>
     <ClInclude Include="entities\cube.h" />
     <ClInclude Include="entities\floor.h" />
+    <ClInclude Include="utils\component.h" />
+    <ClInclude Include="utils\components\rigidbody_component.h" />
     <ClInclude Include="utils\input.h" />
-    <ClInclude Include="utils\interfaces.h" />
     <ClInclude Include="utils\material.h" />
     <ClInclude Include="utils\mesh.h" />
     <ClInclude Include="utils\model.h" />

@@ -10,7 +10,6 @@
 #include <glad.h>
 #include <glm/glm.hpp>
 
-#include "interfaces.h"
 #include "mesh.h"
 
 // Model class purpose:
@@ -21,7 +20,7 @@
 
 namespace utils::graphics::opengl
 {
-	class Model : public Drawable
+	class Model
 	{
 	public:
 		std::vector<Mesh> meshes;

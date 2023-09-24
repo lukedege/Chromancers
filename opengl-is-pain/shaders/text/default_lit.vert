@@ -60,25 +60,31 @@ void calculateSpotLightTangentDir(uint plIndex)
 	
 }
 
-void main()
+mat3 calculateInverseTBN(mat3 worldNormalMatrix, vec3 normal_vec, vec3 tangent_vec, vec3 bitangent_vec)
 {
-	mat3 worldNormalMatrix = transpose(inverse(mat3(modelMatrix)));
-	vec3 N = normalize(worldNormalMatrix * normal);
-	vec3 T = normalize(worldNormalMatrix * tangent);
-	vec3 B = normalize(worldNormalMatrix * bitangent);
+	vec3 N = normalize(worldNormalMatrix * normal_vec);
+	vec3 T = normalize(worldNormalMatrix * tangent_vec);
+	vec3 B = normalize(worldNormalMatrix * bitangent_vec);
     T = normalize(T - dot(T, N) * N);
     vec3 reortho_B = cross(N, T);
 	if(dot(B, reortho_B) < 0) B = -reortho_B; // if they are opposite, adjust the ortho to match B facing and use the reorthogonalized value
 
+	return transpose(mat3(T, B, N)); 
+}
+
+void main()
+{
 	// we calculate the inverse transform matrix to transform coords world space -> tangent space
 	// we prefer calcs in the vertex shader since it is called less, thus less expensive computationally over time
-	invTBN = transpose(mat3(T, B, N)); 
+	mat3 worldNormalMatrix = transpose(inverse(mat3(modelMatrix))); // this matrix updates normals to follow world/model matrix transformations
+	invTBN = calculateInverseTBN(worldNormalMatrix, normal, tangent, bitangent); 
 
 	wFragPos = vec3(modelMatrix * vec4(position, 1));
 
 	vs_out.twFragPos = invTBN * wFragPos;
 	vs_out.interp_UV = UV;
-	vs_out.twNormal = normalize(invTBN * N);
+	vec3 wN = worldNormalMatrix * normal;
+	vs_out.twNormal = normalize(invTBN * wN);
 	vs_out.twCameraPos = invTBN * wCameraPos;
 	
 	for(uint i = 0; i < nPointLights; i++)

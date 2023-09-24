@@ -39,6 +39,8 @@
 #include "utils/scene/scene.h "
 #include "utils/scene/entity.h"
 
+#include "utils/components/rigidbody_component.h"
+
 #include "utils/window.h"
 
 // entities
@@ -113,6 +115,8 @@ Entity* sphere_ptr;
 
 
 // TODOs
+// - FIX LIGHTING FOR THE BACK OF THE PLANES (somethings up with the normals in the backface)
+// - 
 // - Spawn multiple spheres with rigidbodies
 // - Make a "Physics_entity" class which is the same as entity but involves a rigidbody as default
 
@@ -200,9 +204,14 @@ int main()
 	redbricks_mat.diffuse_map = &redbricks_diffuse_tex; redbricks_mat.normal_map = &redbricks_normal_tex; redbricks_mat.displacement_map = &redbricks_depth_tex;
 	redbricks_mat.uv_repeat = 3.f; redbricks_mat.parallax_heightscale = 0.05f;
 
+	ugl::Material redbricks_mat_2 { default_lit };
+	redbricks_mat_2.diffuse_map = &redbricks_diffuse_tex; redbricks_mat_2.normal_map = &redbricks_normal_tex; redbricks_mat_2.displacement_map = &redbricks_depth_tex;
+	redbricks_mat_2.uv_repeat = 20.f; redbricks_mat_2.parallax_heightscale = 0.05f;
+
 	ugl::Material floor_mat { default_lit };
 	floor_mat.diffuse_map = &wall_diffuse_tex; floor_mat.normal_map = &wall_normal_tex;
-	floor_mat.uv_repeat = 80.f;
+	// LA UV REPEAT E I SUOI ESTREMI DEVONO DIPENDERE DALLA DIMENSIONE DELLA TEXTURE E/O DALLA SIZE DELLA TRANSFORM?
+	floor_mat.uv_repeat = 0.75f * std::max(floor_mat.diffuse_map->width(), floor_mat.diffuse_map->height()); 
 
 	ugl::Material sph_mat { default_lit };
 
@@ -210,11 +219,12 @@ int main()
 #pragma endregion materials_setup
 
 	// Entities setup
-	ugl::Model plane_model{ "models/plane.obj" }, cube_model{ "models/cube.obj" }, sphere_model{ "models/sphere.obj" };
+	ugl::Model plane_model{ "models/quad.obj" }, cube_model{ "models/cube.obj" }, sphere_model{ "models/sphere.obj" }, bunny_model{ "models/bunny.obj" };
 	ugl::Entity cube{ cube_model, redbricks_mat, scene_data };
 	ugl::Entity floor_plane{ plane_model, floor_mat, scene_data };
-	ugl::Entity wall_plane{ plane_model, redbricks_mat, scene_data };
+	ugl::Entity wall_plane{ plane_model, redbricks_mat_2, scene_data };
 	ugl::Entity sphere { sphere_model, sph_mat, scene_data };
+	ugl::Entity bunny { bunny_model, sph_mat, scene_data };
 	sphere_ptr = &sphere;
 
 	ugl::Model triangle_mesh { ugl::Mesh::simple_triangle_mesh() };
@@ -223,17 +233,21 @@ int main()
 	std::vector<ugl::Entity*> scene_objects;
 	scene_objects.push_back(&floor_plane); scene_objects.push_back(&wall_plane);
 	scene_objects.push_back(&cube); scene_objects.push_back(&sphere);
+	scene_objects.push_back(&bunny);
 
 	// Entities setup in scene
 	floor_plane.transform.set_position(glm::vec3(0.0f, -1.0f, 0.0f));
 	floor_plane.transform.set_size(glm::vec3(100.0f, 0.1f, 100.0f));
 
-	wall_plane.transform.set_position(glm::vec3(0.0f, 10.0f, -10.0f));
-	wall_plane.transform.set_rotation(glm::vec3(90.0f, 0.0f, 0.f)); // TODO FIXA ROTAZIONI SBAGLIATE CON BULLET
+	wall_plane.transform.set_position(glm::vec3(0.0f, 4.0f, -10.0f));
+	wall_plane.transform.set_rotation(glm::vec3(90.0f, 0.0f, 0.f)); 
 	wall_plane.transform.set_size(glm::vec3(10.0f, 0.1f, 5.0f));
 
 	cube.transform.set_position(glm::vec3(0.0f, 3.0f, 0.0f));
-	cube.transform.set_size(glm::vec3(1.f));	// It's a bit too big for our scene, so scale it down
+	cube.transform.set_size(glm::vec3(1.f));	
+
+	bunny.transform.set_position(glm::vec3(-5.0f, 3.0f, 0.0f));
+	bunny.transform.set_size(glm::vec3(0.5f));
 
 	cursor.transform.set_size(glm::vec3(3.0f));
 
@@ -242,10 +256,14 @@ int main()
 	physics_engine.addDebugDrawer(&phy_debug_drawer);
 	physics_engine.set_debug_mode(1);
 
-	floor_plane.add_rigidbody(phy::PhysicsEngine::RigidBodyCreateInfo{ phy::PhysicsEngine::ColliderShape::BOX, 0.f, 3.0f, 0.5f});
-	wall_plane .add_rigidbody(phy::PhysicsEngine::RigidBodyCreateInfo{ phy::PhysicsEngine::ColliderShape::BOX, 0.f, 3.0f, 0.5f});
-	cube       .add_rigidbody(phy::PhysicsEngine::RigidBodyCreateInfo{ phy::PhysicsEngine::ColliderShape::BOX, 1.f, 0.1f, 0.1f});
-	sphere     .add_rigidbody(phy::PhysicsEngine::RigidBodyCreateInfo{ phy::PhysicsEngine::ColliderShape::SPHERE, 1.f, 1.0f, 1.0f});
+	RigidBodyComponent fpl_rb{ floor_plane, physics_engine, phy::PhysicsEngine::RigidBodyCreateInfo{ phy::PhysicsEngine::ColliderShape::BOX, 0.f, 3.0f, 0.5f} };
+	RigidBodyComponent wpl_rb{ wall_plane , physics_engine, phy::PhysicsEngine::RigidBodyCreateInfo{ phy::PhysicsEngine::ColliderShape::BOX, 0.f, 3.0f, 0.5f} };
+	RigidBodyComponent cub_rb{ cube       , physics_engine, phy::PhysicsEngine::RigidBodyCreateInfo{ phy::PhysicsEngine::ColliderShape::BOX, 1.f, 0.1f, 0.1f} };
+	RigidBodyComponent sph_rb{ sphere     , physics_engine, phy::PhysicsEngine::RigidBodyCreateInfo{ phy::PhysicsEngine::ColliderShape::SPHERE, 1.f, 1.0f, 1.0f} };
+	floor_plane.components.push_back(&fpl_rb);
+	wall_plane .components.push_back(&wpl_rb);
+	cube       .components.push_back(&cub_rb);
+	sphere     .components.push_back(&sph_rb);
 
 	// Rendering loop: this code is executed at each frame
 	while (wdw.is_open())
@@ -342,7 +360,7 @@ int main()
 		if (ImGui::CollapsingHeader("Coefficients and scales"))
 		{
 			ImGui::Separator(); ImGui::Text("Normal");
-			ImGui::SliderFloat("Repeat tex##norm", &floor_plane.material->uv_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Repeat tex##norm", &floor_plane.material->uv_repeat, 0, 3000, " % .1f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::Separator(); ImGui::Text("Parallax");
 			ImGui::SliderFloat("Height Scale", &cube.material->parallax_heightscale, 0, 0.5, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::SliderFloat("Repeat tex##prlx", &cube.material->uv_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
@@ -460,7 +478,8 @@ void setup_input_keys()
 			float shootInitialSpeed = 20.f;
 			glm::vec3 shoot_dir = main_camera.forward() * shootInitialSpeed;
 			btVector3 impulse = btVector3(shoot_dir.x, shoot_dir.y, shoot_dir.z);
-			sphere_ptr->rigid_body->applyCentralImpulse(impulse);
+			btRigidBody* rb = static_cast<RigidBodyComponent*>(sphere_ptr->components[0])->rigid_body;// temp
+			rb->applyCentralImpulse(impulse); // temp
 		});
 }
 

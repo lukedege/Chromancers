@@ -9,12 +9,12 @@
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "../interfaces.h"
 #include "../model.h"
 #include "../shader.h"
 #include "../material.h"
 #include "../scene/scene.h"
 #include "../physics.h"
+#include "../component.h"
 
 #include "transform.h"
 
@@ -26,12 +26,11 @@ namespace utils::graphics::opengl
 	protected:
 		Model* model; 
 		SceneData* current_scene; // an entity can concurrently exist in only one scene at a time
-		bool is_kinematic;
 
 	public:
 		Transform transform;
 		Material* material;
-		btRigidBody* rigid_body;
+		std::vector<Component*> components; // map should be okay 
 
 		Entity(Model& drawable, Material& material, SceneData& scene) :
 			model{ &drawable }, material{ &material }, current_scene{ &scene }
@@ -57,8 +56,11 @@ namespace utils::graphics::opengl
 		{
 			child_update(delta_time);
 
-			if(rigid_body && !is_kinematic)
-				update_physics(delta_time);
+			// TODO check order of updates (components or child first?)
+			for (Component* c : components)
+			{
+				c->update(delta_time);
+			}
 		}
 
 		void set_scene(SceneData& scene_data)
@@ -69,43 +71,12 @@ namespace utils::graphics::opengl
 		void teleport_at(const glm::vec3 new_position)
 		{
 			transform.set_position(new_position);
-
-			if (rigid_body)
+			
+			// We need to sync rigidbodies
+			for (Component* c : components)
 			{
-				// Copying old transform and changing the position
-				btTransform old_physics_transform = rigid_body->getWorldTransform();
-				btVector3 new_pos{ new_position.x, new_position.y, new_position.z };
-				old_physics_transform.setOrigin(new_pos);
-
-				// Updating physics transforms
-				rigid_body->setWorldTransform(old_physics_transform);
-				rigid_body->getMotionState()->setWorldTransform(old_physics_transform);
-
-				// Resetting forces and velocities
-				rigid_body->setLinearVelocity(btVector3{ 0,0,0 });
-				rigid_body->setAngularVelocity(btVector3{ 0,0,0 });
-				rigid_body->clearForces();
-
-				rigid_body->activate();
+				c->sync();
 			}
-		}
-
-		// Physics related
-		void add_rigidbody(physics::PhysicsEngine::RigidBodyCreateInfo rb_cinfo)
-		{
-			rigid_body = current_scene->physics_engine->createRigidBody(transform.position(), transform.size(), transform.orientation(), rb_cinfo);
-		}
-
-		void remove_rigidbody()
-		{
-			current_scene->physics_engine->deleteRigidBody(rigid_body);
-			rigid_body = nullptr;
-		}
-
-		void set_kinematic(bool is_kinematic)
-		{
-			is_kinematic = is_kinematic;
-			// TODO check if rigid body's mass needs to be set to zero or this is enough
 		}
 
 		//void draw(GLuint ubo_obj_matrices, const glm::mat4& view_matrix)
@@ -128,20 +99,5 @@ namespace utils::graphics::opengl
 	private:
 		glm::mat3 compute_normal(glm::mat4 view_matrix) const noexcept { return glm::inverseTranspose(glm::mat3(view_matrix * transform.world_matrix())); }
 
-		void update_physics(float delta_time)
-		{
-			GLfloat matrix[16];
-			btTransform bt_transform;
-			glm::vec3 size = transform.size();
-
-			// we take the transformation matrix of the rigid boby, as calculated by the physics engine
-			rigid_body->getMotionState()->getWorldTransform(bt_transform);
-
-			// we convert the Bullet matrix (transform) to an array of floats
-			bt_transform.getOpenGLMatrix(matrix);
-
-			// Bullet matrix provides rotations and translations: it does not consider scale
-			transform.set(glm::make_mat4(matrix) * glm::scale(glm::mat4{ 1.0f }, size));
-		}
 	};
 }

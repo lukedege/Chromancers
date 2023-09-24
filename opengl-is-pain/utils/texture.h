@@ -9,6 +9,11 @@ namespace utils::graphics::opengl
 {
 	class Texture
 	{
+	private:
+		int _width;
+		int _height;
+		int _channels;
+
 	public:
 		GLuint id;
 
@@ -22,10 +27,9 @@ namespace utils::graphics::opengl
 		void load_texture(const std::string& path)
 		{
 			//stbi_set_flip_vertically_on_load(1);
-			int w, h, channels;
 			unsigned char* image;
 
-			image = stbi_load(path.c_str(), &w, &h, &channels, 0);
+			image = stbi_load(path.c_str(), &_width, &_height, &_channels, 0);
 
 			if (image == nullptr)
 			{
@@ -34,20 +38,20 @@ namespace utils::graphics::opengl
 			}
 
 			GLenum format;
-			if (channels == 1)
+			if (_channels == 1)
 				format = GL_RED;
-			else if (channels == 3)
+			else if (_channels == 3)
 				format = GL_RGB;
-			else if (channels == 4)
+			else if (_channels == 4)
 				format = GL_RGBA;
 			else
 			{
-				std::cout << "Unrecognized format with: " << channels << " channels" << std::endl;
+				std::cout << "Unrecognized format with: " << _channels << " channels" << std::endl;
 				return;
 			}
 
 			glBindTexture(GL_TEXTURE_2D, id);
-			glTexImage2D(GL_TEXTURE_2D, 0, format, w, h, 0, format, GL_UNSIGNED_BYTE, image);
+			glTexImage2D(GL_TEXTURE_2D, 0, format, _width, _height, 0, format, GL_UNSIGNED_BYTE, image);
 
 			glGenerateMipmap(GL_TEXTURE_2D);
 			// we set how to consider UVs outside [0,1] range
@@ -76,6 +80,10 @@ namespace utils::graphics::opengl
 			glActiveTexture(GL_TEXTURE0 + id);
 			glBindTexture(GL_TEXTURE_2D, 0);
 		}
+
+		int width ()     { return _width   ; }
+		int height()     { return _height  ; }
+		int n_channels() { return _channels; }
 
 		// extensible when needed, for now is enough
 	private:
