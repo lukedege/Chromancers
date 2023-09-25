@@ -22,7 +22,6 @@ out VS_OUT
 uniform mat4 modelMatrix      = mat4(1);
 uniform mat4 viewMatrix       = mat4(1);
 uniform mat4 projectionMatrix = mat4(1);
-uniform mat3 normalMatrix     = mat3(1); //this is the normal matrix multiplied by the viewprojection by scene object
 
 //Lights
 uniform uint nPointLights;

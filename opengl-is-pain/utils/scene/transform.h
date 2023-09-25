@@ -48,7 +48,7 @@ namespace utils::graphics::opengl
 		void rotate   (const glm::vec3& rotation   ) { _orientation += rotation; update_world_matrix(); }
 		void scale    (const glm::vec3& scale      ) { _size *= scale;           update_world_matrix(); }
 
-		glm::mat4 world_matrix() const noexcept
+		const glm::mat4& world_matrix() const noexcept
 		{	
 			return _world_matrix;
 		}

@@ -24,11 +24,12 @@ namespace utils::graphics::opengl
 	class Entity
 	{
 	protected:
+		Transform _transform;
 		Model* model; 
 		SceneData* current_scene; // an entity can concurrently exist in only one scene at a time
-
+	
 	public:
-		Transform transform;
+		
 		Material* material;
 		std::vector<Component*> components; // map should be okay 
 
@@ -42,11 +43,7 @@ namespace utils::graphics::opengl
 
 			material->bind();
 			
-			glm::mat4 view_matrix = current_scene->current_camera->viewMatrix();
-			material->shader->setVec3("wCameraPos", current_scene->current_camera->position());
-			material->shader->setMat4("viewMatrix", view_matrix);
-			material->shader->setMat4("modelMatrix", transform.world_matrix());
-			material->shader->setMat3("normalMatrix", compute_normal(view_matrix));
+			material->shader->setMat4("modelMatrix", _transform.world_matrix());
 
 			model->draw();
 			material->unbind();
@@ -63,21 +60,24 @@ namespace utils::graphics::opengl
 			}
 		}
 
-		void set_scene(SceneData& scene_data)
+		void set_scene(SceneData& scene_data) noexcept
 		{
 			current_scene = &scene_data;
 		}
 
-		void teleport_at(const glm::vec3 new_position)
-		{
-			transform.set_position(new_position);
-			
-			// We need to sync rigidbodies
-			for (Component* c : components)
-			{
-				c->sync();
-			}
-		}
+#pragma region transform_stuff
+		const Transform& transform() const noexcept { return _transform; }
+
+		void set_position  (const glm::vec3& new_position)    noexcept { _transform.set_position(new_position);    on_transform_update(); }
+		void set_rotation  (const glm::vec3& new_orientation) noexcept { _transform.set_rotation(new_orientation); on_transform_update(); }
+		void set_size      (const glm::vec3& new_size)        noexcept { _transform.set_size(new_size);            on_transform_update(); }
+
+		void translate     (const glm::vec3& translation)     noexcept { _transform.translate(translation); on_transform_update(); }
+		void rotate        (const glm::vec3& rotation)        noexcept { _transform.rotate(rotation);       on_transform_update(); }
+		void scale         (const glm::vec3& scale)           noexcept { _transform.scale(scale);           on_transform_update(); }
+
+		void set_transform (const glm::mat4& matrix, bool trigger_update = true) noexcept { _transform.set(matrix); if(trigger_update) on_transform_update(); }
+#pragma endregion transform_stuff
 
 		//void draw(GLuint ubo_obj_matrices, const glm::mat4& view_matrix)
 		//{
@@ -96,8 +96,15 @@ namespace utils::graphics::opengl
 		virtual void prepare_draw() const noexcept {}
 		virtual void child_update(float delta_time) noexcept {}
 
+		void on_transform_update()
+		{
+			for (Component* c : components)
+			{
+				c->on_transform_update();
+			}
+		}
+
 	private:
-		glm::mat3 compute_normal(glm::mat4 view_matrix) const noexcept { return glm::inverseTranspose(glm::mat3(view_matrix * transform.world_matrix())); }
 
 	};
 }

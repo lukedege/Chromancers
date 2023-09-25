@@ -105,6 +105,7 @@ namespace utils::physics
         struct RigidBodyCreateInfo
         {
             ColliderShape type{ ColliderShape::BOX };
+            glm::vec3 size {1.0f, 1.0f, 1.0f};
             float mass{ 1.0f };
             float friction{ 0.1f };
             float restitution{ 0.1f };
@@ -154,7 +155,7 @@ namespace utils::physics
         //////////////////////////////////////////
         // Method for the creation of a rigid body, based on a Box or Sphere Collision Shape
         // The Collision Shape is a reference solid that approximates the shape of the actual object of the scene. The Physical simulation is applied to these solids, and the rotations and positions of these solids are used on the real models.
-        btRigidBody* createRigidBody(glm::vec3 pos, glm::vec3 size, glm::vec3 rot, RigidBodyCreateInfo rb_info)
+        btRigidBody* createRigidBody(glm::vec3 pos, glm::vec3 rot, RigidBodyCreateInfo rb_info)
         {
             btCollisionShape* collision_shape = NULL;
 
@@ -173,15 +174,15 @@ namespace utils::physics
             if (rb_info.type == BOX)
             {
                 // we convert the glm vector to a Bullet vector
-                btVector3 dim = btVector3(size.x, size.y, size.z);
+                btVector3 dim = btVector3(rb_info.size.x, rb_info.size.y, rb_info.size.z);
                 // BoxShape
                 collision_shape = new btBoxShape(dim);
             }
             // Sphere Collision Shape (in this case we consider only the first component)
             else if (rb_info.type == SPHERE)
-                collision_shape = new btSphereShape(size.x);
+                collision_shape = new btSphereShape(rb_info.size.x);
             else
-                collision_shape = new btSphereShape(size.x); // If nothing, use sphere collider
+                collision_shape = new btSphereShape(rb_info.size.x); // If nothing, use sphere collider
 
             // we add this Collision Shape to the vector
             this->collisionShapes.push_back(collision_shape);

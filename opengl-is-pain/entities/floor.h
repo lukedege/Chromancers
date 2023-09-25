@@ -6,8 +6,10 @@
 #include "../utils/scene/entity.h"
 #include "../utils/scene/scene.h"
 
-using namespace utils::graphics::opengl;
-
+namespace
+{
+	using namespace utils::graphics::opengl;
+}
 
 class Floor : public Entity
 {

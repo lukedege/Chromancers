@@ -5,8 +5,10 @@
 #include "../utils/scene/entity.h"
 #include "../utils/scene/scene.h"
 
-using namespace utils::graphics::opengl;
-
+namespace
+{
+	using namespace utils::graphics::opengl;
+}
 class Cube : public Entity
 {
 public:
@@ -25,6 +27,6 @@ public:
 	void child_update(float delta_time) noexcept
 	{
 		if (spinning)
-			transform.rotate(glm::vec3(0.0f, spin_speed * delta_time, 0.0f));
+			_transform.rotate(glm::vec3(0.0f, spin_speed * delta_time, 0.0f));
 	}
 };

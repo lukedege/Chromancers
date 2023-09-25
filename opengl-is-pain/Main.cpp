@@ -71,7 +71,7 @@ ugl::window wdw
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
 void mouse_pos_callback(GLFWwindow* window, double xPos, double yPos);
 void setup_input_keys();
-void reset_scene();
+
 
 // input related parameters
 float cursor_x, cursor_y;
@@ -81,6 +81,7 @@ bool capture_mouse = true;
 // global scene camera
 ugl::Camera main_camera;
 ugl::Camera topdown_camera;
+std::function<void()> scene_setup;
 
 // parameters for time computation
 float deltaTime = 0.0f;
@@ -236,34 +237,44 @@ int main()
 	scene_objects.push_back(&bunny);
 
 	// Entities setup in scene
-	floor_plane.transform.set_position(glm::vec3(0.0f, -1.0f, 0.0f));
-	floor_plane.transform.set_size(glm::vec3(100.0f, 0.1f, 100.0f));
+	scene_setup = [&]()
+	{
+		floor_plane.set_position(glm::vec3(0.0f, -1.0f, 0.0f));
+		floor_plane.set_size(glm::vec3(100.0f, 0.1f, 100.0f));
 
-	wall_plane.transform.set_position(glm::vec3(0.0f, 4.0f, -10.0f));
-	wall_plane.transform.set_rotation(glm::vec3(90.0f, 0.0f, 0.f)); 
-	wall_plane.transform.set_size(glm::vec3(10.0f, 0.1f, 5.0f));
+		wall_plane.set_position(glm::vec3(0.0f, 4.0f, -10.0f));
+		wall_plane.set_rotation(glm::vec3(90.0f, 0.0f, 0.f));
+		wall_plane.set_size(glm::vec3(10.0f, 0.1f, 5.0f));
 
-	cube.transform.set_position(glm::vec3(0.0f, 3.0f, 0.0f));
-	cube.transform.set_size(glm::vec3(1.f));	
+		cube.set_position(glm::vec3(0.0f, 3.0f, 0.0f));
+		cube.set_rotation(glm::vec3(0.0f, 0.0f, 0.0f));
 
-	bunny.transform.set_position(glm::vec3(-5.0f, 3.0f, 0.0f));
-	bunny.transform.set_size(glm::vec3(0.5f));
+		sphere.set_position(glm::vec3(0.0f, 0.0f, 0.0f));
+		sphere.set_rotation(glm::vec3(0.0f, 0.0f, 0.0f));
 
-	cursor.transform.set_size(glm::vec3(3.0f));
+		bunny.set_position(glm::vec3(-5.0f, 3.0f, 0.0f));
+		bunny.set_size(glm::vec3(0.5f));
+
+		cursor.set_size(glm::vec3(3.0f));
+	};
+	scene_setup();
+	
 
 	// Physics setup
 	phy::GLDebugDrawer phy_debug_drawer{main_camera, debug_shader};
 	physics_engine.addDebugDrawer(&phy_debug_drawer);
 	physics_engine.set_debug_mode(1);
 
-	RigidBodyComponent fpl_rb{ floor_plane, physics_engine, phy::PhysicsEngine::RigidBodyCreateInfo{ phy::PhysicsEngine::ColliderShape::BOX, 0.f, 3.0f, 0.5f} };
-	RigidBodyComponent wpl_rb{ wall_plane , physics_engine, phy::PhysicsEngine::RigidBodyCreateInfo{ phy::PhysicsEngine::ColliderShape::BOX, 0.f, 3.0f, 0.5f} };
-	RigidBodyComponent cub_rb{ cube       , physics_engine, phy::PhysicsEngine::RigidBodyCreateInfo{ phy::PhysicsEngine::ColliderShape::BOX, 1.f, 0.1f, 0.1f} };
-	RigidBodyComponent sph_rb{ sphere     , physics_engine, phy::PhysicsEngine::RigidBodyCreateInfo{ phy::PhysicsEngine::ColliderShape::SPHERE, 1.f, 1.0f, 1.0f} };
+	RigidBodyComponent fpl_rb{ floor_plane, physics_engine, phy::PhysicsEngine::RigidBodyCreateInfo{ phy::PhysicsEngine::ColliderShape::BOX,    glm::vec3{1}, 0.0f, 3.0f, 0.5f}, true };
+	RigidBodyComponent wpl_rb{ wall_plane , physics_engine, phy::PhysicsEngine::RigidBodyCreateInfo{ phy::PhysicsEngine::ColliderShape::BOX,    glm::vec3{1}, 0.0f, 3.0f, 0.5f}, true };
+	RigidBodyComponent cub_rb{ cube       , physics_engine, phy::PhysicsEngine::RigidBodyCreateInfo{ phy::PhysicsEngine::ColliderShape::BOX,    glm::vec3{1}, 1.0f, 0.1f, 0.1f}, true };
+	RigidBodyComponent sph_rb{ sphere     , physics_engine, phy::PhysicsEngine::RigidBodyCreateInfo{ phy::PhysicsEngine::ColliderShape::SPHERE, glm::vec3{1}, 1.0f, 1.0f, 1.0f}, true };
+	RigidBodyComponent bun_rb{ bunny      , physics_engine, phy::PhysicsEngine::RigidBodyCreateInfo{ phy::PhysicsEngine::ColliderShape::BOX, glm::vec3{2}, 1.0f, 1.0f, 1.0f}, false };
 	floor_plane.components.push_back(&fpl_rb);
 	wall_plane .components.push_back(&wpl_rb);
 	cube       .components.push_back(&cub_rb);
 	sphere     .components.push_back(&sph_rb);
+	bunny      .components.push_back(&bun_rb);
 
 	// Rendering loop: this code is executed at each frame
 	while (wdw.is_open())
@@ -294,12 +305,13 @@ int main()
 		ws = wdw.get_size();
 		glViewport(0, 0, ws.width, ws.height); 
 
-		// TODO Update commons for all shaders (better in a common loop or done in entity like now?)
-		//for (ugl::Shader& shader : all_shaders)
-		//{
-		//	shader.bind();
-		//	shader.setVec3("wCameraPos", main_camera.position());
-		//}
+		// Update commons for all shaders (better in a common loop or done in entity like now?)
+		for (ugl::Shader& shader : all_shaders)
+		{
+			shader.bind();
+			shader.setVec3("wCameraPos", scene_data.current_camera->position());
+			shader.setMat4("viewMatrix", scene_data.current_camera->viewMatrix());
+		}
 
 		// Update lighting for lit shaders
 		for (ugl::Shader& lit_shader : lit_shaders)
@@ -332,6 +344,13 @@ int main()
 		topdown_camera.set_position(main_camera.position() + glm::vec3{ 0, topdown_height, 0 });
 		topdown_camera.lookAt(main_camera.position());
 		scene_data.current_camera = &topdown_camera;
+
+		for (ugl::Shader& shader : all_shaders)
+		{
+			shader.bind();
+			shader.setVec3("wCameraPos", scene_data.current_camera->position());
+			shader.setMat4("viewMatrix", scene_data.current_camera->viewMatrix());
+		}
 		
 		// Redraw all scene objects from map pov
 		for (ugl::Entity* o : scene_objects)
@@ -342,8 +361,8 @@ int main()
 		// Prepare cursor shader
 		glClear(GL_DEPTH_BUFFER_BIT);
 
-		cursor.transform.set_position(main_camera.position());
-		cursor.transform.set_rotation({ -90.0f, 0.0f, -main_camera.rotation().y - 90.f });
+		cursor.set_position(main_camera.position());
+		cursor.set_rotation({ -90.0f, 0.0f, -main_camera.rotation().y - 90.f });
 
 		cursor.update(deltaTime);
 		cursor.draw();
@@ -462,7 +481,7 @@ void setup_input_keys()
 	Input::instance().add_onRelease_callback(GLFW_KEY_LEFT_ALT, [&]() { capture_mouse = !capture_mouse; });
 	Input::instance().add_onRelease_callback(GLFW_KEY_SPACE   , [&]() { main_camera.toggle_fly(); });
 	Input::instance().add_onRelease_callback(GLFW_KEY_P, [&]() { spinning = !spinning; });
-	Input::instance().add_onRelease_callback(GLFW_KEY_R, [&]() { reset_scene(); });
+	Input::instance().add_onRelease_callback(GLFW_KEY_R, [&]() { scene_setup(); });
 	Input::instance().add_onRelease_callback(GLFW_KEY_L, [&]() 
 		{ 
 			wireframe = !wireframe; 
@@ -473,7 +492,7 @@ void setup_input_keys()
 		});
 	Input::instance().add_onRelease_callback(GLFW_KEY_X, [&]()
 		{
-			sphere_ptr->teleport_at(main_camera.position());
+			sphere_ptr->set_position(main_camera.position());
 
 			float shootInitialSpeed = 20.f;
 			glm::vec3 shoot_dir = main_camera.forward() * shootInitialSpeed;
@@ -501,9 +520,4 @@ void mouse_pos_callback(GLFWwindow* window, double x_pos, double y_pos)
 
 	if(capture_mouse)
 		main_camera.ProcessMouseMovement(x_offset, y_offset);
-}
-
-void reset_scene()
-{
-
 }
