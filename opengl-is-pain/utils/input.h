@@ -4,7 +4,7 @@
 #include <vector>
 #include <unordered_set>
 
-namespace utils::graphics::opengl
+namespace engine::input
 {
     struct KeyCallbacks
     {

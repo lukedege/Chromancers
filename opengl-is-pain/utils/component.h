@@ -2,10 +2,13 @@
 
 #include "scene/entity.h"
 
-namespace utils::graphics::opengl // get a better namespace later because this is not strictly opengl related but engine related
+namespace engine::scene
 {
-	class Entity; // we need to know entity exists while compiling
+	class Entity;
+}
 
+namespace engine::components // get a better namespace later because this is not strictly opengl related but engine related
+{
 	class Component
 	{
 	protected:

@@ -16,9 +16,14 @@
 #include "../physics.h"
 #include "../component.h"
 
-#include "transform.h"
+#include "../transform.h"
 
-namespace utils::graphics::opengl
+namespace
+{
+	using namespace engine::components;
+}
+
+namespace engine::scene
 {
 	// Object in scene
 	class Entity

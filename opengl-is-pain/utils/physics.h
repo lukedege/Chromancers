@@ -12,17 +12,23 @@
 #include "shader.h"
 #include "scene/camera.h"
 
-namespace utils::physics
+namespace
+{
+    using namespace engine::scene;
+    using namespace engine::resources;
+}
+
+namespace engine::physics
 {
     // Debug drawer for Physics engine
     class GLDebugDrawer : public btIDebugDraw
     {
         int m_debugMode;
-        graphics::opengl::Camera* camera;
-        graphics::opengl::Shader* shader;
+        Camera* camera;
+        Shader* shader;
 
     public:
-        GLDebugDrawer(graphics::opengl::Camera& camera, graphics::opengl::Shader& shader) :
+        GLDebugDrawer(Camera& camera, Shader& shader) :
             m_debugMode(0),
             camera(&camera),
             shader(&shader)
@@ -86,7 +92,7 @@ namespace utils::physics
 
         virtual void   drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& color) {}
 
-        virtual void   reportErrorWarning(const char* warningString) { io::log(warningString); }
+        virtual void   reportErrorWarning(const char* warningString) { utils::io::log(warningString); }
 
         virtual void   draw3dText(const btVector3& location, const char* textString) {}
 

@@ -2,19 +2,19 @@
 
 #include "../component.h"
 #include "../physics.h"
-#include "../scene/transform.h"
+#include "../transform.h"
 
 // unnamed namespace will keep this namespace declaration for this file only, even if included
 namespace
 {
-	using namespace utils::physics;
+	using namespace engine::physics;
+	using namespace engine::scene;
 }
 
-namespace utils::graphics::opengl
+namespace engine::components
 {
 	class RigidBodyComponent : public Component
 	{
-		friend class Entity;
 	private:
 		PhysicsEngine* physics_engine;
 

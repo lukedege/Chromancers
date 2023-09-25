@@ -7,7 +7,7 @@
 #include <glad.h>
 #include <glm/glm.hpp>
 
-namespace utils::graphics::opengl
+namespace engine::resources
 {
 	//unifica con model, funzione statica per caricare obj con più sottomesh
 	struct Vertex

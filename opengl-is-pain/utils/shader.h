@@ -16,9 +16,8 @@
 
 #include "utils.h"
 
-namespace utils::graphics::opengl
+namespace engine::resources
 {
-
 	class Shader
 	{
 	private:

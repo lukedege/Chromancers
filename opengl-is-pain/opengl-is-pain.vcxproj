@@ -175,9 +175,9 @@
     <ClInclude Include="utils\scene\entity.h" />
     <ClInclude Include="utils\scene\light.h" />
     <ClInclude Include="utils\scene\scene.h" />
-    <ClInclude Include="utils\scene\transform.h" />
     <ClInclude Include="utils\shader.h" />
     <ClInclude Include="utils\texture.h" />
+    <ClInclude Include="utils\transform.h" />
     <ClInclude Include="utils\utils.h" />
     <ClInclude Include="utils\window.h" />
   </ItemGroup>

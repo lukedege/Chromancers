@@ -18,7 +18,7 @@
 // 3. Pass all nodes to data structure
 // 4. Create a mesh from data structure (which will setup VBO)
 
-namespace utils::graphics::opengl
+namespace engine::resources
 {
 	class Model
 	{

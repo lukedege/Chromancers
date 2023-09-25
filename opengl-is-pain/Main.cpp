@@ -47,13 +47,20 @@
 #include "entities/floor.h"
 #include "entities/cube.h"
 
-namespace ugl = utils::graphics::opengl;
-namespace phy = utils::physics;
+namespace
+{
+	using namespace engine::physics;
+	using namespace engine::scene;
+	using namespace engine::components;
+	using namespace engine::input;
+	using namespace engine::resources;
+	using namespace utils::graphics::opengl;
+}
 
 // window
-ugl::window wdw
+window wdw
 {
-	ugl::window::window_create_info
+	window::window_create_info
 	{
 		{ "Lighting test" }, //.title
 		{ 4 }, //.gl_version_major
@@ -79,8 +86,8 @@ bool firstMouse = true;
 bool capture_mouse = true;
 
 // global scene camera
-ugl::Camera main_camera;
-ugl::Camera topdown_camera;
+Camera main_camera;
+Camera topdown_camera;
 std::function<void()> scene_setup;
 
 // parameters for time computation
@@ -96,7 +103,7 @@ bool spinning = false;
 bool wireframe = false;
 
 // Lights
-ugl::PointLight* currentLight;
+PointLight* currentLight;
 float mov_light_speed = 30.f;
 
 // Scene material/lighting setup 
@@ -107,7 +114,7 @@ float alpha = 0.2f;
 float F0 = 0.9f;
 
 // Physics
-phy::PhysicsEngine physics_engine;
+PhysicsEngine physics_engine;
 float maxSecPerFrame = 1.0f / 60.0f;
 float capped_deltaTime;
 
@@ -125,7 +132,7 @@ Entity* sphere_ptr;
 int main()
 {
 	GLFWwindow* glfw_window = wdw.get();
-	ugl::window::window_size ws = wdw.get_size();
+	window::window_size ws = wdw.get_size();
 	float width = static_cast<float>(ws.width), height = static_cast<float>(ws.height);	
 	
 	// Callbacks linking with glfw
@@ -143,25 +150,25 @@ int main()
 	ImGui_ImplOpenGL3_Init("#version 430");
 #pragma region scene_setup	
 	// Camera setup
-	main_camera = ugl::Camera{ glm::vec3{0,0,5} };
+	main_camera = Camera{ glm::vec3{0,0,5} };
 	glm::mat4 view = main_camera.viewMatrix();
 	glm::mat4 projection = main_camera.projectionMatrix();
 
 	// Lights setup 
-	ugl::PointLight pl1{ glm::vec3{-20.f, 10.f, 10.f}, glm::vec4{1, 1, 1, 1}, 1 };
-	ugl::PointLight pl2{ glm::vec3{ 20.f, 10.f, 10.f}, glm::vec4{1, 1, 1, 1}, 1 };
-	ugl::DirectionalLight dl1{glm::vec3{ 0, -1, -1 }, glm::vec4{1, 1, 1, 1}, 1 };
+	PointLight pl1{ glm::vec3{-20.f, 10.f, 10.f}, glm::vec4{1, 1, 1, 1}, 1 };
+	PointLight pl2{ glm::vec3{ 20.f, 10.f, 10.f}, glm::vec4{1, 1, 1, 1}, 1 };
+	DirectionalLight dl1{glm::vec3{ 0, -1, -1 }, glm::vec4{1, 1, 1, 1}, 1 };
 
-	std::vector<ugl::PointLight> point_lights;
+	std::vector<PointLight> point_lights;
 	point_lights.push_back(pl1); point_lights.push_back(pl2);
 
-	std::vector<ugl::DirectionalLight> dir_lights;
+	std::vector<DirectionalLight> dir_lights;
 	dir_lights.push_back(dl1);
 
 	currentLight = &point_lights[0];
 
 	// Scene setup
-	ugl::SceneData scene_data;
+	SceneData scene_data;
 	scene_data.current_camera = &main_camera;
 	scene_data.physics_engine = &physics_engine;
 #pragma endregion shader_setup
@@ -170,22 +177,22 @@ int main()
 	// Shader setup
 	std::vector<const GLchar*> utils_shaders { "shaders/types.glsl", "shaders/constants.glsl" };
 
-	ugl::Shader basic_shader{ "shaders/text/generic/mvp.vert", "shaders/text/generic/basic.frag", 4, 3 };
-	ugl::Shader debug_shader{ "shaders/text/generic/mvp.vert", "shaders/text/generic/fullcolor.frag", 4, 3 };
-	ugl::Shader default_lit{ "shaders/text/default_lit.vert", "shaders/text/default_lit.frag", 4, 3, nullptr, utils_shaders };
+	Shader basic_shader{ "shaders/text/generic/mvp.vert", "shaders/text/generic/basic.frag", 4, 3 };
+	Shader debug_shader{ "shaders/text/generic/mvp.vert", "shaders/text/generic/fullcolor.frag", 4, 3 };
+	Shader default_lit{ "shaders/text/default_lit.vert", "shaders/text/default_lit.frag", 4, 3, nullptr, utils_shaders };
 
-	std::vector <std::reference_wrapper<ugl::Shader>> lit_shaders, all_shaders;
+	std::vector <std::reference_wrapper<Shader>> lit_shaders, all_shaders;
 	lit_shaders.push_back(default_lit);
 	all_shaders.push_back(basic_shader); all_shaders.push_back(default_lit);
 
 	// Shader commons and "constants" setup
-	for (ugl::Shader& shader : all_shaders)
+	for (Shader& shader : all_shaders)
 	{
 		shader.bind();
 		shader.setMat4("projectionMatrix", projection);
 		shader.setVec3("wCameraPos", main_camera.position());
 	}
-	for (ugl::Shader& lit_shader : lit_shaders)
+	for (Shader& lit_shader : lit_shaders)
 	{
 		lit_shader.bind();
 		lit_shader.setUint("nPointLights", point_lights.size());
@@ -195,43 +202,43 @@ int main()
 
 #pragma region materials_setup
 	// Textures setup
-	ugl::Texture wall_diffuse_tex{ "textures/brickwall.jpg" }, wall_normal_tex{ "textures/brickwall_normal.jpg" };
-	ugl::Texture redbricks_diffuse_tex{ "textures/bricks2.jpg" }, 
+	Texture wall_diffuse_tex{ "textures/brickwall.jpg" }, wall_normal_tex{ "textures/brickwall_normal.jpg" };
+	Texture redbricks_diffuse_tex{ "textures/bricks2.jpg" }, 
 		redbricks_normal_tex{ "textures/bricks2_normal.jpg" },
 		redbricks_depth_tex { "textures/bricks2_disp.jpg" };
 	
 	// Materials
-	ugl::Material redbricks_mat { default_lit };
+	Material redbricks_mat { default_lit };
 	redbricks_mat.diffuse_map = &redbricks_diffuse_tex; redbricks_mat.normal_map = &redbricks_normal_tex; redbricks_mat.displacement_map = &redbricks_depth_tex;
 	redbricks_mat.uv_repeat = 3.f; redbricks_mat.parallax_heightscale = 0.05f;
 
-	ugl::Material redbricks_mat_2 { default_lit };
+	Material redbricks_mat_2 { default_lit };
 	redbricks_mat_2.diffuse_map = &redbricks_diffuse_tex; redbricks_mat_2.normal_map = &redbricks_normal_tex; redbricks_mat_2.displacement_map = &redbricks_depth_tex;
 	redbricks_mat_2.uv_repeat = 20.f; redbricks_mat_2.parallax_heightscale = 0.05f;
 
-	ugl::Material floor_mat { default_lit };
+	Material floor_mat { default_lit };
 	floor_mat.diffuse_map = &wall_diffuse_tex; floor_mat.normal_map = &wall_normal_tex;
 	// LA UV REPEAT E I SUOI ESTREMI DEVONO DIPENDERE DALLA DIMENSIONE DELLA TEXTURE E/O DALLA SIZE DELLA TRANSFORM?
 	floor_mat.uv_repeat = 0.75f * std::max(floor_mat.diffuse_map->width(), floor_mat.diffuse_map->height()); 
 
-	ugl::Material sph_mat { default_lit };
+	Material sph_mat { default_lit };
 
-	ugl::Material basic_mat { basic_shader };
+	Material basic_mat { basic_shader };
 #pragma endregion materials_setup
 
 	// Entities setup
-	ugl::Model plane_model{ "models/quad.obj" }, cube_model{ "models/cube.obj" }, sphere_model{ "models/sphere.obj" }, bunny_model{ "models/bunny.obj" };
-	ugl::Entity cube{ cube_model, redbricks_mat, scene_data };
-	ugl::Entity floor_plane{ plane_model, floor_mat, scene_data };
-	ugl::Entity wall_plane{ plane_model, redbricks_mat_2, scene_data };
-	ugl::Entity sphere { sphere_model, sph_mat, scene_data };
-	ugl::Entity bunny { bunny_model, sph_mat, scene_data };
+	Model plane_model{ "models/quad.obj" }, cube_model{ "models/cube.obj" }, sphere_model{ "models/sphere.obj" }, bunny_model{ "models/bunny.obj" };
+	Entity cube{ cube_model, redbricks_mat, scene_data };
+	Entity floor_plane{ plane_model, floor_mat, scene_data };
+	Entity wall_plane{ plane_model, redbricks_mat_2, scene_data };
+	Entity sphere { sphere_model, sph_mat, scene_data };
+	Entity bunny { bunny_model, sph_mat, scene_data };
 	sphere_ptr = &sphere;
 
-	ugl::Model triangle_mesh { ugl::Mesh::simple_triangle_mesh() };
-	ugl::Entity cursor{ triangle_mesh, basic_mat, scene_data };
+	Model triangle_mesh { Mesh::simple_triangle_mesh() };
+	Entity cursor{ triangle_mesh, basic_mat, scene_data };
 
-	std::vector<ugl::Entity*> scene_objects;
+	std::vector<Entity*> scene_objects;
 	scene_objects.push_back(&floor_plane); scene_objects.push_back(&wall_plane);
 	scene_objects.push_back(&cube); scene_objects.push_back(&sphere);
 	scene_objects.push_back(&bunny);
@@ -261,15 +268,15 @@ int main()
 	
 
 	// Physics setup
-	phy::GLDebugDrawer phy_debug_drawer{main_camera, debug_shader};
+	GLDebugDrawer phy_debug_drawer{main_camera, debug_shader};
 	physics_engine.addDebugDrawer(&phy_debug_drawer);
 	physics_engine.set_debug_mode(1);
 
-	RigidBodyComponent fpl_rb{ floor_plane, physics_engine, phy::PhysicsEngine::RigidBodyCreateInfo{ phy::PhysicsEngine::ColliderShape::BOX,    glm::vec3{1}, 0.0f, 3.0f, 0.5f}, true };
-	RigidBodyComponent wpl_rb{ wall_plane , physics_engine, phy::PhysicsEngine::RigidBodyCreateInfo{ phy::PhysicsEngine::ColliderShape::BOX,    glm::vec3{1}, 0.0f, 3.0f, 0.5f}, true };
-	RigidBodyComponent cub_rb{ cube       , physics_engine, phy::PhysicsEngine::RigidBodyCreateInfo{ phy::PhysicsEngine::ColliderShape::BOX,    glm::vec3{1}, 1.0f, 0.1f, 0.1f}, true };
-	RigidBodyComponent sph_rb{ sphere     , physics_engine, phy::PhysicsEngine::RigidBodyCreateInfo{ phy::PhysicsEngine::ColliderShape::SPHERE, glm::vec3{1}, 1.0f, 1.0f, 1.0f}, true };
-	RigidBodyComponent bun_rb{ bunny      , physics_engine, phy::PhysicsEngine::RigidBodyCreateInfo{ phy::PhysicsEngine::ColliderShape::BOX, glm::vec3{2}, 1.0f, 1.0f, 1.0f}, false };
+	RigidBodyComponent fpl_rb{ floor_plane, physics_engine, PhysicsEngine::RigidBodyCreateInfo{ PhysicsEngine::ColliderShape::BOX,    glm::vec3{1}, 0.0f, 3.0f, 0.5f}, true };
+	RigidBodyComponent wpl_rb{ wall_plane , physics_engine, PhysicsEngine::RigidBodyCreateInfo{ PhysicsEngine::ColliderShape::BOX,    glm::vec3{1}, 0.0f, 3.0f, 0.5f}, true };
+	RigidBodyComponent cub_rb{ cube       , physics_engine, PhysicsEngine::RigidBodyCreateInfo{ PhysicsEngine::ColliderShape::BOX,    glm::vec3{1}, 1.0f, 0.1f, 0.1f}, true };
+	RigidBodyComponent sph_rb{ sphere     , physics_engine, PhysicsEngine::RigidBodyCreateInfo{ PhysicsEngine::ColliderShape::SPHERE, glm::vec3{1}, 1.0f, 1.0f, 1.0f}, true };
+	RigidBodyComponent bun_rb{ bunny      , physics_engine, PhysicsEngine::RigidBodyCreateInfo{ PhysicsEngine::ColliderShape::BOX, glm::vec3{2}, 1.0f, 1.0f, 1.0f}, false };
 	floor_plane.components.push_back(&fpl_rb);
 	wall_plane .components.push_back(&wpl_rb);
 	cube       .components.push_back(&cub_rb);
@@ -306,7 +313,7 @@ int main()
 		glViewport(0, 0, ws.width, ws.height); 
 
 		// Update commons for all shaders (better in a common loop or done in entity like now?)
-		for (ugl::Shader& shader : all_shaders)
+		for (Shader& shader : all_shaders)
 		{
 			shader.bind();
 			shader.setVec3("wCameraPos", scene_data.current_camera->position());
@@ -314,7 +321,7 @@ int main()
 		}
 
 		// Update lighting for lit shaders
-		for (ugl::Shader& lit_shader : lit_shaders)
+		for (Shader& lit_shader : lit_shaders)
 		{
 			lit_shader.bind();
 			for (size_t i = 0; i < point_lights.size(); i++)
@@ -329,7 +336,7 @@ int main()
 
 		// Update physics simulation
 		physics_engine.step(capped_deltaTime);
-		for (ugl::Entity* o : scene_objects)
+		for (Entity* o : scene_objects)
 		{
 			o->update(capped_deltaTime);
 			o->draw();
@@ -345,7 +352,7 @@ int main()
 		topdown_camera.lookAt(main_camera.position());
 		scene_data.current_camera = &topdown_camera;
 
-		for (ugl::Shader& shader : all_shaders)
+		for (Shader& shader : all_shaders)
 		{
 			shader.bind();
 			shader.setVec3("wCameraPos", scene_data.current_camera->position());
@@ -353,7 +360,7 @@ int main()
 		}
 		
 		// Redraw all scene objects from map pov
-		for (ugl::Entity* o : scene_objects)
+		for (Entity* o : scene_objects)
 		{
 			o->draw();
 		}
@@ -422,7 +429,7 @@ int main()
 	}
 
 	// Cleanup
-	for (ugl::Shader& shader : all_shaders)
+	for (Shader& shader : all_shaders)
 	{
 		shader.dispose();
 	}
@@ -470,8 +477,8 @@ void setup_input_keys()
 
 	Input::instance().add_onPressed_callback(GLFW_KEY_F, [&]()
 		{
-			ugl::window::window_size ws = wdw.get_size();
-			glm::vec4 wCursorPosition = ugl::unproject(cursor_x, cursor_y, ws.width, ws.height, main_camera.viewMatrix(), main_camera.projectionMatrix());
+			window::window_size ws = wdw.get_size();
+			glm::vec4 wCursorPosition = utils::math::unproject(cursor_x, cursor_y, ws.width, ws.height, main_camera.viewMatrix(), main_camera.projectionMatrix());
 
 			// TODO modify stuff based on cursor position
 		});

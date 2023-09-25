@@ -5,7 +5,7 @@
 #include "light.h"
 #include "../physics.h"
 
-namespace utils::graphics::opengl
+namespace engine::scene
 {
 	struct SceneData
 	{

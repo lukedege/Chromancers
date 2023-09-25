@@ -8,7 +8,8 @@
 
 namespace
 {
-	using namespace utils::graphics::opengl;
+	using namespace engine::resources;
+	using namespace engine::scene;
 }
 
 class Floor : public Entity

@@ -61,7 +61,7 @@ namespace utils::strings
 	}
 }
 
-namespace utils::graphics::opengl
+namespace utils::math
 {
 	inline glm::vec4 unproject(float screen_x, float screen_y, float screen_width, float screen_height, glm::mat4 view, glm::mat4 proj)
 	{
@@ -85,7 +85,10 @@ namespace utils::graphics::opengl
 
 		return ret;
 	}
+}
 
+namespace utils::graphics::opengl
+{
 	inline void setup_buffer_object(GLuint& buffer_object, GLenum target, int bind_index, void* data, size_t alloc_size)
 	{
 		glGenBuffers(1, &buffer_object);

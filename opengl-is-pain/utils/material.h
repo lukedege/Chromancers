@@ -5,7 +5,7 @@
 #include "shader.h"
 #include "texture.h"
 
-namespace utils::graphics::opengl
+namespace engine::resources
 {
 	class Material
 	{

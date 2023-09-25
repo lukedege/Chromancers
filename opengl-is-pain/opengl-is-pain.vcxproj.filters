@@ -98,9 +98,6 @@
     <ClInclude Include="utils\scene\light.h">
       <Filter>Header Files\utils\scene</Filter>
     </ClInclude>
-    <ClInclude Include="utils\scene\transform.h">
-      <Filter>Header Files\utils\scene</Filter>
-    </ClInclude>
     <ClInclude Include="utils\mesh.h">
       <Filter>Header Files\utils</Filter>
     </ClInclude>
@@ -142,6 +139,9 @@
     </ClInclude>
     <ClInclude Include="utils\components\rigidbody_component.h">
       <Filter>Header Files\utils\components</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\transform.h">
+      <Filter>Header Files\utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

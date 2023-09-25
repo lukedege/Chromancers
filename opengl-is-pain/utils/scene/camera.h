@@ -3,7 +3,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-namespace utils::graphics::opengl
+namespace engine::scene
 {
 	class Camera
 	{

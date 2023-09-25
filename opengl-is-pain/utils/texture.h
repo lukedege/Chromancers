@@ -5,7 +5,7 @@
 #include <glad.h>
 #include <stb_image.h>
 
-namespace utils::graphics::opengl
+namespace engine::resources
 {
 	class Texture
 	{
