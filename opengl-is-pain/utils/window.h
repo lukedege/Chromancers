@@ -160,9 +160,6 @@ namespace utils::graphics::opengl
 				glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, NULL, GL_TRUE);
 			}
 
-			//the "clear" color for the frame buffer
-			glClearColor(0.26f, 0.46f, 0.98f, 1.0f);
-
 			std::cout << "Window and context initialized!" << std::endl;
 			std::cout << "Vendor:" << glGetString(GL_VENDOR) << std::endl;
 			std::cout << "Renderer:" << glGetString(GL_RENDERER) << std::endl;

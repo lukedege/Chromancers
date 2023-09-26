@@ -85,10 +85,31 @@ namespace engine::resources
 				std::vector<Vertex>
 				{
 					Vertex{ glm::vec3{-0.5f, -0.5f, 0.0f} /* position */ },
+					Vertex{ glm::vec3{ 0.5f, -0.5f, 0.0f} /* position */ },
 					Vertex{ glm::vec3{ 0.0f,  0.5f, 0.0f} /* position */ },
-					Vertex{ glm::vec3{ 0.5f, -0.5f, 0.0f} /* position */ }
 				},
-					std::vector<GLuint>{0, 2, 1}
+					std::vector<GLuint>{0, 1, 2}
+			};
+		}
+
+		// Creates and returns a simple triangle mesh
+		static Mesh simple_quad_mesh()
+		{
+			float size = 0.5f;
+			return Mesh
+			{
+				std::vector<Vertex>
+				{
+					Vertex{ glm::vec3{-size, -size, 0.0f} /* position */, glm::vec2{ 0.0f, 0.0f } /* texcoords*/ },
+					Vertex{ glm::vec3{ size, -size, 0.0f} /* position */, glm::vec2{ 1.0f, 0.0f } /* texcoords*/ },
+					Vertex{ glm::vec3{ size,  size, 0.0f} /* position */, glm::vec2{ 1.0f, 1.0f } /* texcoords*/ },
+					Vertex{ glm::vec3{-size,  size, 0.0f} /* position */, glm::vec2{ 0.0f, 1.0f } /* texcoords*/ },
+				},
+				std::vector<GLuint>
+				{
+					0, 1, 2, // first  triangle
+					0, 2, 3  // second triangle
+				}
 			};
 		}
 
