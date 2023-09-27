@@ -59,22 +59,26 @@ namespace engine::resources
 			
 			if (diffuse_map)
 			{
+				// activate a texture unit per map
+				glActiveTexture(GL_TEXTURE0);
 				diffuse_map->bind();
-				shader->setInt("diffuse_tex", diffuse_map->id);
+				shader->setInt("diffuse_tex", 0);
 				shader->setInt("sample_diffuse_map", 1);
 			}
 
 			if (normal_map)
 			{
+				glActiveTexture(GL_TEXTURE1);
 				normal_map->bind();
-				shader->setInt("normal_tex", normal_map->id);
+				shader->setInt("normal_tex", 1);
 				shader->setInt("sample_normal_map", 1);
 			}
 			
 			if (displacement_map)
 			{
+				glActiveTexture(GL_TEXTURE2);
 				displacement_map->bind();
-				shader->setInt("displacement_tex", displacement_map->id); 
+				shader->setInt("displacement_tex", 2); 
 				shader->setInt("sample_displacement_map", 1);
 			}
 		}

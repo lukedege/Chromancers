@@ -33,6 +33,7 @@
 #include "utils/material.h"
 #include "utils/physics.h"
 #include "utils/input.h"
+#include "utils/framebuffer.h"
 
 #include "utils/scene/light.h "
 #include "utils/scene/camera.h"
@@ -58,21 +59,7 @@ namespace
 }
 
 // window
-window wdw
-{
-	window::window_create_info
-	{
-		{ "Lighting test" }, //.title
-		{ 4 }, //.gl_version_major
-		{ 6 }, //.gl_version_minor
-		{ 1280 }, //.window_width
-		{ 720 }, //.window_height
-		{ 1280 }, //.viewport_width
-		{ 720 }, //.viewport_height
-		{ true }, //.resizable
-		{ true }, //.debug_gl
-	}
-};
+window* wdw_ptr;
 
 // callback function for keyboard events
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
@@ -131,6 +118,24 @@ Entity* sphere_ptr;
 /////////////////// MAIN function ///////////////////////
 int main()
 {
+	window wdw
+	{
+		window::window_create_info
+		{
+			{ "Lighting test" }, //.title
+			{ 4 }, //.gl_version_major
+			{ 6 }, //.gl_version_minor
+			{ 1280 }, //.window_width
+			{ 720 }, //.window_height
+			{ 1280 }, //.viewport_width
+			{ 720 }, //.viewport_height
+			{ true }, //.resizable
+			{ true }, //.debug_gl
+		}
+	};
+
+	wdw_ptr = &wdw;
+
 	GLFWwindow* glfw_window = wdw.get();
 	window::window_size ws = wdw.get_size();
 	float width = static_cast<float>(ws.width), height = static_cast<float>(ws.height);	
@@ -148,6 +153,7 @@ int main()
 	ImGui::StyleColorsDark();
 	ImGui_ImplGlfw_InitForOpenGL(glfw_window, true);
 	ImGui_ImplOpenGL3_Init("#version 430");
+
 #pragma region scene_setup	
 	// Camera setup
 	main_camera = Camera{ glm::vec3{0,0,5} };
@@ -177,13 +183,15 @@ int main()
 	// Shader setup
 	std::vector<const GLchar*> utils_shaders { "shaders/types.glsl", "shaders/constants.glsl" };
 
-	Shader basic_shader{ "shaders/text/generic/mvp.vert", "shaders/text/generic/basic.frag", 4, 3 };
-	Shader debug_shader{ "shaders/text/generic/mvp.vert", "shaders/text/generic/fullcolor.frag", 4, 3 };
-	Shader default_lit{ "shaders/text/default_lit.vert", "shaders/text/default_lit.frag", 4, 3, nullptr, utils_shaders };
+	Shader basic_shader     { "shaders/text/generic/basic.vert" ,"shaders/text/generic/basic.frag", 4, 3 };
+	Shader basic_mvp_shader { "shaders/text/generic/mvp.vert", "shaders/text/generic/basic.frag", 4, 3 };
+	Shader debug_shader     { "shaders/text/generic/mvp.vert", "shaders/text/generic/fullcolor.frag", 4, 3 };
+	Shader default_lit      { "shaders/text/default_lit.vert", "shaders/text/default_lit.frag", 4, 3, nullptr, utils_shaders };
+	Shader textured_shader  { "shaders/text/generic/textured.vert" , "shaders/text/generic/textured.frag", 4, 3 };
 
 	std::vector <std::reference_wrapper<Shader>> lit_shaders, all_shaders;
 	lit_shaders.push_back(default_lit);
-	all_shaders.push_back(basic_shader); all_shaders.push_back(default_lit);
+	all_shaders.push_back(basic_mvp_shader); all_shaders.push_back(default_lit);
 
 	// Shader commons and "constants" setup
 	for (Shader& shader : all_shaders)
@@ -202,7 +210,7 @@ int main()
 
 #pragma region materials_setup
 	// Textures setup
-	Texture wall_diffuse_tex{ "textures/brickwall.jpg" }, wall_normal_tex{ "textures/brickwall_normal.jpg" };
+	Texture floor_diffuse_tex{ "textures/brickwall.jpg" }, floor_normal_tex{ "textures/brickwall_normal.jpg" };
 	Texture redbricks_diffuse_tex{ "textures/bricks2.jpg" }, 
 		redbricks_normal_tex{ "textures/bricks2_normal.jpg" },
 		redbricks_depth_tex { "textures/bricks2_disp.jpg" };
@@ -217,13 +225,13 @@ int main()
 	redbricks_mat_2.uv_repeat = 20.f; redbricks_mat_2.parallax_heightscale = 0.05f;
 
 	Material floor_mat { default_lit };
-	floor_mat.diffuse_map = &wall_diffuse_tex; floor_mat.normal_map = &wall_normal_tex;
+	floor_mat.diffuse_map = &floor_diffuse_tex; floor_mat.normal_map = &floor_normal_tex;
 	// LA UV REPEAT E I SUOI ESTREMI DEVONO DIPENDERE DALLA DIMENSIONE DELLA TEXTURE E/O DALLA SIZE DELLA TRANSFORM?
 	floor_mat.uv_repeat = 0.75f * std::max(floor_mat.diffuse_map->width(), floor_mat.diffuse_map->height()); 
 
 	Material sph_mat { default_lit };
 
-	Material basic_mat { basic_shader };
+	Material basic_mat { basic_mvp_shader };
 #pragma endregion materials_setup
 
 	// Entities setup
@@ -236,6 +244,7 @@ int main()
 	sphere_ptr = &sphere;
 
 	Model triangle_mesh { Mesh::simple_triangle_mesh() };
+	Model quad_mesh{ Mesh::simple_quad_mesh() };
 	Entity cursor{ triangle_mesh, basic_mat, scene_data };
 
 	std::vector<Entity*> scene_objects;
@@ -283,6 +292,34 @@ int main()
 	sphere     .components.push_back(&sph_rb);
 	bunny      .components.push_back(&bun_rb);
 
+	// Map setup
+	
+	Framebuffer framebuffer{ ws.width, ws.height };
+	/*while (wdw.is_open())
+	{
+		glfwPollEvents();
+
+		framebuffer.bind();
+		glViewport(ws.width - framebuffer.width(), ws.height - framebuffer.height(), framebuffer.width(), framebuffer.height()); // we render now into the smaller map viewport
+		glClearColor(0.5f, 0.1f, 0.1f, 1.0f); //the "clear" color for the frame buffer
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		basic_shader.bind();
+		triangle_mesh.draw();
+		framebuffer.unbind();
+
+		glViewport(0, 0, ws.width, ws.height);
+		glClearColor(0.26f, 0.46f, 0.98f, 1.0f); //the "clear" color for the default frame buffer
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		textured_shader.bind();
+		// TODO SOMETHING WRONG WITH THE FRAMEBUFFERS, TEXTURE ATTACHMENTS DOESNT WORK
+		//redbricks_diffuse_tex.bind();
+		//textured_shader.setInt("tex", redbricks_diffuse_tex.id);
+		framebuffer.get_color_attachment().bind();
+		textured_shader.setInt("tex", framebuffer.get_color_attachment().id);
+		quad_mesh.draw();
+
+		glfwSwapBuffers(glfw_window);
+	}*/
 	// Rendering loop: this code is executed at each frame
 	while (wdw.is_open())
 	{
@@ -303,9 +340,9 @@ int main()
 		Input::instance().process_pressed_keys();
 
 		// Clear the frame and z buffer
+		glClearColor(0.26f, 0.46f, 0.98f, 1.0f); //the "clear" color for the default frame buffer
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		// Get matrices from camera
 		scene_data.current_camera = &main_camera;
 
 		// Render objects with a window-wide viewport
@@ -344,14 +381,17 @@ int main()
 		
 		#pragma region map_draw
 		// MAP
-		glClear(GL_DEPTH_BUFFER_BIT); // clears depth information, thus everything rendered from now on will be on top https://stackoverflow.com/questions/5526704/how-do-i-keep-an-object-always-in-front-of-everything-else-in-opengl
-		glViewport(ws.width - 200, ws.height - 150, 200, 150); // we render now into the smaller map viewport
 		
+		framebuffer.bind();
+		glClearColor(0.5f, 0.1f, 0.1f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 		float topdown_height = 20;
 		topdown_camera.set_position(main_camera.position() + glm::vec3{ 0, topdown_height, 0 });
 		topdown_camera.lookAt(main_camera.position());
 		scene_data.current_camera = &topdown_camera;
 
+		// Update camera info since we swapped to topdown
 		for (Shader& shader : all_shaders)
 		{
 			shader.bind();
@@ -366,13 +406,23 @@ int main()
 		}
 		
 		// Prepare cursor shader
-		glClear(GL_DEPTH_BUFFER_BIT);
+		glClear(GL_DEPTH_BUFFER_BIT); // clears depth information, thus everything rendered from now on will be on top https://stackoverflow.com/questions/5526704/how-do-i-keep-an-object-always-in-front-of-everything-else-in-opengl
 
 		cursor.set_position(main_camera.position());
 		cursor.set_rotation({ -90.0f, 0.0f, -main_camera.rotation().y - 90.f });
 
 		cursor.update(deltaTime);
 		cursor.draw();
+
+		framebuffer.unbind();
+
+		// we render now into the smaller map viewport
+		glViewport(ws.width - framebuffer.width() / 4 - 10, ws.height - framebuffer.height() / 4 - 10, framebuffer.width() / 4, framebuffer.height() / 4);
+		textured_shader.bind();
+		glActiveTexture(GL_TEXTURE0);
+		framebuffer.get_color_attachment().bind();
+		quad_mesh.draw();
+		glViewport(0, 0, ws.width, ws.height);
 		#pragma endregion map_draw
 		
 		#pragma region imgui_draw
@@ -477,14 +527,14 @@ void setup_input_keys()
 
 	Input::instance().add_onPressed_callback(GLFW_KEY_F, [&]()
 		{
-			window::window_size ws = wdw.get_size();
+			window::window_size ws = wdw_ptr->get_size();
 			glm::vec4 wCursorPosition = utils::math::unproject(cursor_x, cursor_y, ws.width, ws.height, main_camera.viewMatrix(), main_camera.projectionMatrix());
 
 			// TODO modify stuff based on cursor position
 		});
 
 	// Toggled input
-	Input::instance().add_onRelease_callback(GLFW_KEY_ESCAPE  , [&]() { wdw.close(); });
+	Input::instance().add_onRelease_callback(GLFW_KEY_ESCAPE  , [&]() { wdw_ptr->close(); });
 	Input::instance().add_onRelease_callback(GLFW_KEY_LEFT_ALT, [&]() { capture_mouse = !capture_mouse; });
 	Input::instance().add_onRelease_callback(GLFW_KEY_SPACE   , [&]() { main_camera.toggle_fly(); });
 	Input::instance().add_onRelease_callback(GLFW_KEY_P, [&]() { spinning = !spinning; });

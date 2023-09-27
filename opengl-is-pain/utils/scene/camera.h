@@ -6,7 +6,7 @@
 namespace engine::scene
 {
 	class Camera
-	{
+	{ 
 		// input related
 		const float YAW = -90.f;
 		const float PITCH = 0.f;
@@ -23,7 +23,7 @@ namespace engine::scene
 
 		// vectors
 		glm::vec3 pos, front, up, right;
-		glm::vec3 world_front, world_up;
+		glm::vec3 world_front {0, 0, -1}, world_up{0, 1, 0};
 
 		// matrix related
 		float fov{ 45.f }, aspect_ratio{ 16.f / 9.f }, near_plane{ 0.1f }, far_plane { 100.f };
@@ -38,8 +38,8 @@ namespace engine::scene
 			FORWARD, BACKWARD, LEFT, RIGHT, UP, DOWN
 		};
 
-		Camera(glm::vec3 pos = {0,0,0}, bool on_ground = true) : pos{pos}, on_ground{on_ground},
-			world_up{ 0, 1, 0 }
+		Camera(glm::vec3 pos = {0,0,0}, bool on_ground = true) : 
+			pos{pos}, on_ground{on_ground}
 		{
 			updateCameraVectors();
 		}
@@ -149,6 +149,9 @@ namespace engine::scene
 			view_matrix = glm::lookAt(pos, pos + front, up);
 		}
 
+		void set_fov(float new_fov) { fov = new_fov; updateProjectionMatrix(); }
+		void set_aspect_ratio(float new_aspect_ratio) { aspect_ratio = new_aspect_ratio; updateProjectionMatrix(); }
+
 	private:
 		void updateCameraVectors()
 		{
@@ -168,6 +171,11 @@ namespace engine::scene
 			up    = glm::normalize(glm::cross(right, front));
 
 			view_matrix = glm::lookAt(pos, pos + front, up);
+		}
+
+		void updateProjectionMatrix()
+		{
+			proj_matrix = glm::perspective(fov, aspect_ratio, near_plane, far_plane);
 		}
 	};
 }

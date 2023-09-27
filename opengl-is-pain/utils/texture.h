@@ -68,15 +68,17 @@ namespace engine::resources
 		}
 
 		// Bind to OpenGL context
+		// N.B. we are only binding the texture to the context and NOT using glActiveTexture because that activates a specific texture unit for the shader, and the texture unit id is 
+		// used to sample in the shader, not the texture id!
+		// thus for any texture we can always use the same texture unit(e.g. TEXTURE0); 
+		// if we need more textures to sample in a shader (more sampler2ds) we activate different units, one for each texture. We do this in the material class
 		void bind() const noexcept
 		{
-			glActiveTexture(GL_TEXTURE0 + id); // this should be correct as of: https://stackoverflow.com/questions/8866904/differences-and-relationship-between-glactivetexture-and-glbindtexture
 			glBindTexture(GL_TEXTURE_2D, id);
 		}
 
 		void unbind() const noexcept
 		{
-			glActiveTexture(GL_TEXTURE0 + id);
 			glBindTexture(GL_TEXTURE_2D, 0);
 		}
 

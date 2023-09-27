@@ -39,11 +39,17 @@ namespace utils::graphics::opengl
 		void bind()
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, id);
+			//color_attachment.bind();
+			//depth_attachment.bind();
+			//glBindRenderbuffer(GL_RENDERBUFFER, depth_buffer);
 		}
 
 		void unbind()
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			//color_attachment.unbind();
+			//depth_attachment.unbind();
+			//glBindRenderbuffer(GL_RENDERBUFFER, 0);
 		}
 
 		const Texture& get_color_attachment()

@@ -95,7 +95,7 @@ namespace engine::resources
 		// Creates and returns a simple triangle mesh
 		static Mesh simple_quad_mesh()
 		{
-			float size = 0.5f;
+			float size = 1.f;
 			return Mesh
 			{
 				std::vector<Vertex>

@@ -34,11 +34,11 @@ namespace engine::resources
 			loadFromText(vertPath, fragPath, geomPath, utilPaths);
 		}
 		
-		Shader(const GLchar* vertSpirvPath, const GLchar* fragSpirvPath, const GLchar* geomSpirvPath = 0) :
+		/*Shader(const GLchar* vertSpirvPath, const GLchar* fragSpirvPath, const GLchar* geomSpirvPath = 0) :
 			program{ glCreateProgram() }, glMajorVersion{ 4 }, glMinorVersion{ 6 } // SpirV is core from version 4.6
 		{
 			loadFromSpirV(vertSpirvPath, fragSpirvPath, geomSpirvPath);
-		}
+		}*/
 
 		// this is necessary since we dont want to delete the program involuntarily after a move (which would call the destructor)
 		void dispose() const noexcept { glDeleteProgram(program); }
@@ -258,7 +258,7 @@ namespace engine::resources
 			return shader;
 		}
 #pragma endregion
-
+		/*
 #pragma region spirv
 		void loadFromSpirV(const GLchar* vertPath, const GLchar* fragPath, const GLchar* geomPath, std::vector<const GLchar*> utilPaths = {})
 		{
@@ -325,7 +325,7 @@ namespace engine::resources
 			checkCompileErrors(shader, shaderType);
 
 			return shader;
-		}
+		}*/
 #pragma endregion
 	};
 }
