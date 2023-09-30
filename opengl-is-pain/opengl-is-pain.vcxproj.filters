@@ -238,5 +238,14 @@
     <None Include="shaders\text\generic\textured.vert">
       <Filter>Shaders\text\generic</Filter>
     </None>
+    <None Include="shaders\text\generic\shadow_map.frag">
+      <Filter>Shaders\text\generic</Filter>
+    </None>
+    <None Include="shaders\text\generic\shadow_map.vert">
+      <Filter>Shaders\text\generic</Filter>
+    </None>
+    <None Include="shaders\text\generic\textured_depth.frag">
+      <Filter>Shaders\text\generic</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -63,9 +63,9 @@ namespace utils::strings
 
 namespace utils::math
 {
-	inline glm::vec4 unproject(float screen_x, float screen_y, float screen_width, float screen_height, glm::mat4 view, glm::mat4 proj)
+	inline glm::vec4 unproject(float screen_x, float screen_y, int screen_width, int screen_height, glm::mat4 view, glm::mat4 proj)
 	{
-		glm::vec4 ret;
+		glm::vec4 ret{1};
 		glm::mat4 unproject_mat;
 
 		// we must retro-project the coordinates of the mouse pointer, in order to have a point in world coordinate to be used to determine a vector from the camera (= direction and orientation of the bullet)

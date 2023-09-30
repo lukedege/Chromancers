@@ -9,9 +9,9 @@ namespace engine::scene
 {
 	struct SceneData
 	{
-		Camera* current_camera;
+		Camera* current_camera{ nullptr };
+		physics::PhysicsEngine* physics_engine{ nullptr };
 		std::vector<Light*> lights;
-		physics::PhysicsEngine* physics_engine;
 	};
 
 	/*

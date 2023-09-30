@@ -16,6 +16,7 @@ namespace engine::components // get a better namespace later because this is not
 
 	public:
 		Component(Entity& parent) : parent{ &parent }{}
+		~Component() { parent = nullptr; }
 
 		virtual void init() = 0;
 		virtual void update(float delta_time) = 0;

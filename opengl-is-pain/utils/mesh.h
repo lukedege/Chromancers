@@ -4,6 +4,8 @@
 #include <string>
 #include <iostream>
 
+#include <gsl/gsl>
+
 #include <glad.h>
 #include <glm/glm.hpp>
 
@@ -73,7 +75,7 @@ namespace engine::resources
 		void draw() const
 		{
 			glBindVertexArray(VAO);
-			glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, 0);
+			glDrawElements(GL_TRIANGLES, gsl::narrow<GLsizei>(indices.size()), GL_UNSIGNED_INT, 0);
 			glBindVertexArray(0);
 		}
 

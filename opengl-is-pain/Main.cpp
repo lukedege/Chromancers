@@ -2,6 +2,8 @@
 #include <string>
 #include <functional>
 
+#include <gsl/gsl>
+
 // GL libraries
 #ifdef _WIN32
 #define APIENTRY __stdcall
@@ -109,11 +111,8 @@ float capped_deltaTime;
 Entity* sphere_ptr;
 
 
-// TODOs
-// - FIX LIGHTING FOR THE BACK OF THE PLANES (somethings up with the normals in the backface)
-// - 
+// TODOs 
 // - Spawn multiple spheres with rigidbodies
-// - Make a "Physics_entity" class which is the same as entity but involves a rigidbody as default
 
 /////////////////// MAIN function ///////////////////////
 int main()
@@ -138,7 +137,7 @@ int main()
 
 	GLFWwindow* glfw_window = wdw.get();
 	window::window_size ws = wdw.get_size();
-	float width = static_cast<float>(ws.width), height = static_cast<float>(ws.height);	
+	float width = gsl::narrow<float>(ws.width), height = gsl::narrow<float>(ws.height);
 	
 	// Callbacks linking with glfw
 	glfwSetKeyCallback(glfw_window, key_callback);
@@ -188,6 +187,8 @@ int main()
 	Shader debug_shader     { "shaders/text/generic/mvp.vert", "shaders/text/generic/fullcolor.frag", 4, 3 };
 	Shader default_lit      { "shaders/text/default_lit.vert", "shaders/text/default_lit.frag", 4, 3, nullptr, utils_shaders };
 	Shader textured_shader  { "shaders/text/generic/textured.vert" , "shaders/text/generic/textured.frag", 4, 3 };
+	Shader tex_depth_shader { "shaders/text/generic/textured.vert" , "shaders/text/generic/textured_depth.frag", 4, 3 };
+	Shader shadowmap_shader { "shaders/text/generic/shadow_map.vert" , "shaders/text/generic/shadow_map.frag", 4, 3 };
 
 	std::vector <std::reference_wrapper<Shader>> lit_shaders, all_shaders;
 	lit_shaders.push_back(default_lit);
@@ -203,8 +204,8 @@ int main()
 	for (Shader& lit_shader : lit_shaders)
 	{
 		lit_shader.bind();
-		lit_shader.setUint("nPointLights", point_lights.size());
-		lit_shader.setUint("nDirLights", dir_lights.size());
+		lit_shader.setUint("nPointLights", gsl::narrow<unsigned int>(point_lights.size()));
+		lit_shader.setUint("nDirLights"  , gsl::narrow<unsigned int>(dir_lights.size()));
 	}
 #pragma endregion shader_setup
 
@@ -267,6 +268,7 @@ int main()
 
 		sphere.set_position(glm::vec3(0.0f, 0.0f, 0.0f));
 		sphere.set_rotation(glm::vec3(0.0f, 0.0f, 0.0f));
+		sphere.set_size(glm::vec3(0.25f));
 
 		bunny.set_position(glm::vec3(-5.0f, 3.0f, 0.0f));
 		bunny.set_size(glm::vec3(0.5f));
@@ -292,40 +294,16 @@ int main()
 	sphere     .components.push_back(&sph_rb);
 	bunny      .components.push_back(&bun_rb);
 
-	// Map setup
-	
-	Framebuffer framebuffer{ ws.width, ws.height };
-	/*while (wdw.is_open())
-	{
-		glfwPollEvents();
+	// Framebuffers
+	Framebuffer map_framebuffer { ws.width, ws.height };
+	Framebuffer shadows_framebuffer { 256, 256 };
 
-		framebuffer.bind();
-		glViewport(ws.width - framebuffer.width(), ws.height - framebuffer.height(), framebuffer.width(), framebuffer.height()); // we render now into the smaller map viewport
-		glClearColor(0.5f, 0.1f, 0.1f, 1.0f); //the "clear" color for the frame buffer
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		basic_shader.bind();
-		triangle_mesh.draw();
-		framebuffer.unbind();
-
-		glViewport(0, 0, ws.width, ws.height);
-		glClearColor(0.26f, 0.46f, 0.98f, 1.0f); //the "clear" color for the default frame buffer
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		textured_shader.bind();
-		// TODO SOMETHING WRONG WITH THE FRAMEBUFFERS, TEXTURE ATTACHMENTS DOESNT WORK
-		//redbricks_diffuse_tex.bind();
-		//textured_shader.setInt("tex", redbricks_diffuse_tex.id);
-		framebuffer.get_color_attachment().bind();
-		textured_shader.setInt("tex", framebuffer.get_color_attachment().id);
-		quad_mesh.draw();
-
-		glfwSwapBuffers(glfw_window);
-	}*/
 	// Rendering loop: this code is executed at each frame
 	while (wdw.is_open())
 	{
 		// we determine the time passed from the beginning
 		// and we calculate the time difference between current frame rendering and the previous one
-		float currentFrame = static_cast<float>(glfwGetTime());
+		float currentFrame = gsl::narrow_cast<float>(glfwGetTime());
 		deltaTime = currentFrame - lastFrame;
 		capped_deltaTime = deltaTime < maxSecPerFrame ? deltaTime : maxSecPerFrame;
 		lastFrame = currentFrame;
@@ -373,16 +351,53 @@ int main()
 
 		// Update physics simulation
 		physics_engine.step(capped_deltaTime);
+
+		// Update entities
 		for (Entity* o : scene_objects)
 		{
 			o->update(capped_deltaTime);
+		}
+
+		#pragma region shadow_pass
+		// Shadow pass
+		shadows_framebuffer.bind();
+		glClear(GL_DEPTH_BUFFER_BIT);
+
+		// set up (for now only the first dir light is a shadowcaster)
+		float near_plane = 1.0f, far_plane = 7.5f;
+		glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
+		glm::mat4 lightView = glm::lookAt(-dir_lights[0].direction, glm::vec3(0.f), glm::vec3(0.0f, 1.0f, 0.0f));
+		glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+
+		shadowmap_shader.bind();
+		shadowmap_shader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+
+		for (Entity* o : scene_objects)
+		{
+			shadowmap_shader.setMat4("modelMatrix", o->transform().world_matrix());
+			o->plain_draw();
+		}
+
+		shadows_framebuffer.unbind();
+
+		glViewport(0, 0, 256, 256);
+		tex_depth_shader.bind();
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, shadows_framebuffer.get_depth_attachment().id);
+		quad_mesh.draw();
+		textured_shader.unbind();
+		glViewport(0, 0, ws.width, ws.height);
+		#pragma endregion shadow_pass
+
+		// Render scene
+		for (Entity* o : scene_objects)
+		{
 			o->draw();
 		}
 		
 		#pragma region map_draw
 		// MAP
-		
-		framebuffer.bind();
+		map_framebuffer.bind();
 		glClearColor(0.5f, 0.1f, 0.1f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -414,14 +429,15 @@ int main()
 		cursor.update(deltaTime);
 		cursor.draw();
 
-		framebuffer.unbind();
+		map_framebuffer.unbind();
 
 		// we render now into the smaller map viewport
-		glViewport(ws.width - framebuffer.width() / 4 - 10, ws.height - framebuffer.height() / 4 - 10, framebuffer.width() / 4, framebuffer.height() / 4);
+		glViewport(ws.width - map_framebuffer.width() / 4 - 10, ws.height - map_framebuffer.height() / 4 - 10, map_framebuffer.width() / 4, map_framebuffer.height() / 4);
 		textured_shader.bind();
 		glActiveTexture(GL_TEXTURE0);
-		framebuffer.get_color_attachment().bind();
+		map_framebuffer.get_color_attachment().bind();
 		quad_mesh.draw();
+		textured_shader.unbind();
 		glViewport(0, 0, ws.width, ws.height);
 		#pragma endregion map_draw
 		
@@ -549,7 +565,7 @@ void setup_input_keys()
 		});
 	Input::instance().add_onRelease_callback(GLFW_KEY_X, [&]()
 		{
-			sphere_ptr->set_position(main_camera.position());
+			sphere_ptr->set_position(main_camera.position() + main_camera.forward());
 
 			float shootInitialSpeed = 20.f;
 			glm::vec3 shoot_dir = main_camera.forward() * shootInitialSpeed;
@@ -561,7 +577,7 @@ void setup_input_keys()
 
 void mouse_pos_callback(GLFWwindow* window, double x_pos, double y_pos)
 {
-	float x_posf = static_cast<float>(x_pos), y_posf = static_cast<float>(y_pos);
+	float x_posf = gsl::narrow<float>(x_pos), y_posf = gsl::narrow<float>(y_pos);
 	if (firstMouse)
 	{
 		cursor_x = x_posf;

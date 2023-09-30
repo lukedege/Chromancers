@@ -4,11 +4,17 @@
 #include <string>
 #include <iostream>
 
+#include <CodeAnalysis/Warnings.h>
+#pragma warning ( push )
+#pragma warning ( disable : ALL_CODE_ANALYSIS_WARNINGS )
+
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include <glad.h>
 #include <glm/glm.hpp>
+
+#pragma warning ( pop )
 
 #include "mesh.h"
 

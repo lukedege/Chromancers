@@ -10,6 +10,8 @@
 #include <iostream>
 #include <vector>
 
+#include <gsl/gsl>
+
 #include <glad.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -118,22 +120,22 @@ namespace engine::resources
 			return location;
 		}
 
-		void setInt  (const std::string& name, int value)                             const { glUniform1i (getUniformLocation(name), static_cast<GLint>(value)); }
-		void setBool (const std::string& name, bool value)                            const { glUniform1i (getUniformLocation(name), static_cast<GLint>(value)); }
-		void setUint (const std::string& name, unsigned int value)                    const { glUniform1ui(getUniformLocation(name), static_cast<GLuint>(value)); }
-		void setFloat(const std::string& name, float value)                           const { glUniform1f (getUniformLocation(name), static_cast<GLfloat>(value)); }
+		void setInt  (const std::string& name, int value)                             const { glUniform1i (getUniformLocation(name), gsl::narrow<GLint>(value)); }
+		void setBool (const std::string& name, bool value)                            const { glUniform1i (getUniformLocation(name), gsl::narrow<GLint>(value)); }
+		void setUint (const std::string& name, unsigned int value)                    const { glUniform1ui(getUniformLocation(name), gsl::narrow<GLuint>(value)); }
+		void setFloat(const std::string& name, float value)                           const { glUniform1f (getUniformLocation(name), gsl::narrow<GLfloat>(value)); }
 
 		void setVec2 (const std::string& name, const GLfloat value[])                 const { glUniform2fv(getUniformLocation(name), 1, &value[0]); }
 		void setVec2 (const std::string& name, const glm::vec2& value)                const { glUniform2fv(getUniformLocation(name), 1, glm::value_ptr(value)); }
-		void setVec2 (const std::string& name, float x, float y)                      const { glUniform2f (getUniformLocation(name), static_cast<GLfloat>(x), static_cast<GLfloat>(y)); }
+		void setVec2 (const std::string& name, float x, float y)                      const { glUniform2f (getUniformLocation(name), gsl::narrow<GLfloat>(x), gsl::narrow<GLfloat>(y)); }
 					 
 		void setVec3 (const std::string& name, const GLfloat value[])                 const { glUniform3fv(getUniformLocation(name), 1, &value[0]); }
 		void setVec3 (const std::string& name, const glm::vec3& value)                const { glUniform3fv(getUniformLocation(name), 1, glm::value_ptr(value)); }
-		void setVec3 (const std::string& name, float x, float y, float z)             const { glUniform3f (getUniformLocation(name), static_cast<GLfloat>(x), static_cast<GLfloat>(y), static_cast<GLfloat>(z)); }
+		void setVec3 (const std::string& name, float x, float y, float z)             const { glUniform3f (getUniformLocation(name), gsl::narrow<GLfloat>(x), gsl::narrow<GLfloat>(y), gsl::narrow<GLfloat>(z)); }
 					 
 		void setVec4 (const std::string& name, const GLfloat value[])                 const { glUniform4fv(getUniformLocation(name), 1, &value[0]); }
 		void setVec4 (const std::string& name, const glm::vec4& value)                const { glUniform4fv(getUniformLocation(name), 1, glm::value_ptr(value)); }
-		void setVec4 (const std::string& name, float x, float y, float z, float w)    const { glUniform4f (getUniformLocation(name), static_cast<GLfloat>(x), static_cast<GLfloat>(y), static_cast<GLfloat>(z), static_cast<GLfloat>(w)); }
+		void setVec4 (const std::string& name, float x, float y, float z, float w)    const { glUniform4f (getUniformLocation(name), gsl::narrow<GLfloat>(x), gsl::narrow<GLfloat>(y), gsl::narrow<GLfloat>(z), gsl::narrow<GLfloat>(w)); }
 					 
 		void setMat2 (const std::string& name, const glm::mat2& mat)                  const { glUniformMatrix2fv(getUniformLocation(name), 1, GL_FALSE, glm::value_ptr(mat)); }
 
@@ -315,7 +317,7 @@ namespace engine::resources
 			GLuint shader = glCreateShader(shaderType);
 
 			// Apply the shader SPIR-V to the shader object.
-			glShaderBinary(1, &shader, GL_SHADER_BINARY_FORMAT_SPIR_V, shaderSpirv.data(), static_cast<GLsizei>(shaderSpirv.size()));
+			glShaderBinary(1, &shader, GL_SHADER_BINARY_FORMAT_SPIR_V, shaderSpirv.data(), gsl::narrow<GLsizei>(shaderSpirv.size()));
 
 			// Specialize the shader.
 			//std::string entrypoint = "main"; // Get VS entry point name

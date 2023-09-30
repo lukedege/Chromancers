@@ -72,15 +72,17 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>..\..\..\Libraries\bullet\include;..\..\..\Libraries\imgui-1.88;..\..\..\Libraries\imgui-1.88\backends;..\..\..\Libraries\glfw\include;..\..\..\Libraries\glm;..\..\..\Libraries\glad;..\..\..\Libraries\assimp\include;..\..\..\Libraries\stb_image;$(VC_IncludePath)</IncludePath>
+    <IncludePath>..\..\..\Libraries\GSL-4.0.0\include;..\..\..\Libraries\bullet\include;..\..\..\Libraries\imgui-1.88;..\..\..\Libraries\imgui-1.88\backends;..\..\..\Libraries\glfw\include;..\..\..\Libraries\glm;..\..\..\Libraries\glad;..\..\..\Libraries\assimp\include;..\..\..\Libraries\stb_image;$(VC_IncludePath)</IncludePath>
     <LibraryPath>..\..\..\Libraries\bullet\lib\win;..\..\..\Libraries\glfw\lib-vc2022;..\..\..\Libraries\assimp\lib\Debug;..\..\..\Libraries\various;$(LibraryPath)</LibraryPath>
     <SourcePath>..\..\..\Libraries\glad;..\..\..\Libraries\bullet\include\bullet\BulletCollision\CollisionShapes;$(SourcePath)</SourcePath>
     <ReferencePath>$(ReferencePath)</ReferencePath>
+    <CodeAnalysisRuleSet>NativeRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>..\..\..\Libraries\bullet\include;..\..\..\Libraries\imgui-1.88;..\..\..\Libraries\imgui-1.88\backends;..\..\..\Libraries\glfw\include;..\..\..\Libraries\glm;..\..\..\Libraries\glad;..\..\..\Libraries\assimp\include;..\..\..\Libraries\stb_image;$(VC_IncludePath)</IncludePath>
+    <IncludePath>..\..\..\Libraries\GSL-4.0.0\include;..\..\..\Libraries\bullet\include;..\..\..\Libraries\imgui-1.88;..\..\..\Libraries\imgui-1.88\backends;..\..\..\Libraries\glfw\include;..\..\..\Libraries\glm;..\..\..\Libraries\glad;..\..\..\Libraries\assimp\include;..\..\..\Libraries\stb_image;$(VC_IncludePath)</IncludePath>
     <LibraryPath>..\..\..\Libraries\bullet\lib;..\..\..\Libraries\glfw\lib-vc2022;..\..\..\Libraries\assimp\build\lib\MinSizeRel;..\..\..\Libraries\various;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
     <SourcePath>..\..\..\Libraries\glad;$(VC_SourcePath);</SourcePath>
+    <CodeAnalysisRuleSet>NativeRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -205,8 +207,11 @@
     <None Include="shaders\text\generic\noise.frag" />
     <None Include="shaders\text\generic\normals.frag" />
     <None Include="shaders\text\generic\random_patterns.frag" />
+    <None Include="shaders\text\generic\shadow_map.frag" />
+    <None Include="shaders\text\generic\shadow_map.vert" />
     <None Include="shaders\text\generic\textured.frag" />
     <None Include="shaders\text\generic\textured.vert" />
+    <None Include="shaders\text\generic\textured_depth.frag" />
     <None Include="shaders\text\generic\uvs.frag" />
     <None Include="shaders\text\scene\cube.frag" />
     <None Include="shaders\text\scene\cube.vert" />

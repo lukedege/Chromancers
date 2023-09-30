@@ -42,6 +42,12 @@ namespace engine::scene
 			model{ &drawable }, material{ &material }, current_scene{ &scene }
 		{}
 
+		// only draws the mesh without considering the material
+		void plain_draw() const noexcept
+		{
+			model->draw();
+		}
+
 		void draw() const noexcept
 		{
 			prepare_draw();

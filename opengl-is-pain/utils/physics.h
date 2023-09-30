@@ -1,12 +1,12 @@
 #pragma once
 
+#include <bullet/btBulletDynamicsCommon.h>
+#include <bullet/LinearMath/btIDebugDraw.h>
+
 #include <glad.h>
 
 #include <glm/common.hpp>
 #include <glm/gtc/type_ptr.hpp>
-
-#include <bullet/btBulletDynamicsCommon.h>
-#include <bullet/LinearMath/btIDebugDraw.h>
 
 #include "utils.h"
 #include "shader.h"

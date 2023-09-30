@@ -1,5 +1,8 @@
 #pragma once
-#include <optional>
+
+#include <CodeAnalysis/Warnings.h>
+#pragma warning ( push )
+#pragma warning ( disable : ALL_CODE_ANALYSIS_WARNINGS )
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -9,6 +12,8 @@
 #include <glm/common.hpp>
 #include <glm/gtc/quaternion.hpp> 
 #include <glm/gtx/quaternion.hpp>
+
+#pragma warning ( pop )
 
 namespace engine
 {

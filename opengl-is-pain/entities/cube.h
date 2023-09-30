@@ -21,11 +21,11 @@ public:
 	{
 	}
 
-	void prepare_draw() const noexcept
+	void prepare_draw() const noexcept override
 	{
 	}
 
-	void child_update(float delta_time) noexcept
+	void child_update(float delta_time) noexcept override
 	{
 		if (spinning)
 			_transform.rotate(glm::vec3(0.0f, spin_speed * delta_time, 0.0f));

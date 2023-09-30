@@ -21,11 +21,11 @@ public:
 
 	}
 	
-	void prepare_draw() const noexcept
+	void prepare_draw() const noexcept override
 	{
 	}
 
-	void child_update(float delta_time) noexcept
+	void child_update(float delta_time) noexcept override
 	{
 		
 	}
