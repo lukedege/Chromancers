@@ -23,7 +23,7 @@ namespace utils::graphics::opengl
 			_height { height },
 			color_attachment { create_color_attachment() },
 			depth_attachment { create_depth_attachment() },
-			depth_buffer     { create_depth_buffer()     }
+			depth_buffer     { /*create_depth_buffer()*/}
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, id);
 			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
@@ -45,18 +45,12 @@ namespace utils::graphics::opengl
 
 			glViewport(0, 0, _width, _height);
 			glBindFramebuffer(GL_FRAMEBUFFER, id);
-			//color_attachment.bind();
-			//depth_attachment.bind();
-			//glBindRenderbuffer(GL_RENDERBUFFER, depth_buffer);
 		}
 
 		void unbind()
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 			glViewport(0, 0, old_width, old_height);
-			//color_attachment.unbind();
-			//depth_attachment.unbind();
-			//glBindRenderbuffer(GL_RENDERBUFFER, 0);
 		}
 
 		const Texture& get_color_attachment()
@@ -77,7 +71,7 @@ namespace utils::graphics::opengl
 		int old_width, old_height; // stores the glviewport values before binding
 		Texture color_attachment; // can/will be an array when supporting multiple color attachments, for now one is enough
 		Texture depth_attachment;
-		GLuint  depth_buffer;
+		GLuint  depth_buffer; // you need this only when not using a depth attachment
 
 		GLuint generate_framebuffer()
 		{
@@ -113,6 +107,10 @@ namespace utils::graphics::opengl
 			glBindTexture(GL_TEXTURE_2D, new_depth_attachment.id);
 
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, _width, _height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+			float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+			glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, new_depth_attachment.id, 0);
 
 			glBindTexture(GL_TEXTURE_2D, 0);
@@ -126,15 +124,14 @@ namespace utils::graphics::opengl
 			GLuint depth_buffer;
 			glGenRenderbuffers(1, &depth_buffer);
 
-			// TODO Temporary silenced until i figure out how to make it work with shadow mapping
-			//glBindFramebuffer(GL_FRAMEBUFFER, id);
-			//glBindRenderbuffer(GL_RENDERBUFFER, depth_buffer);
-			//
-			//glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, _width, _height); // maybe also only depth
-			//glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depth_buffer);
-			//
-			//glBindRenderbuffer(GL_RENDERBUFFER, 0);
-			//glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			glBindFramebuffer(GL_FRAMEBUFFER, id);
+			glBindRenderbuffer(GL_RENDERBUFFER, depth_buffer);
+			
+			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, _width, _height); // maybe also only depth
+			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depth_buffer);
+			
+			glBindRenderbuffer(GL_RENDERBUFFER, 0);
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 			return depth_buffer;
 		}

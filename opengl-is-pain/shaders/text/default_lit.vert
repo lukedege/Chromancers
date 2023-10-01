@@ -8,12 +8,21 @@ layout (location = 4) in vec3 bitangent; // bitangent axis in tangent space (ort
 
 out VS_OUT 
 {
+	// world space data
+	vec3 wFragPos;
+
+	// view space data
+	vec3 vwFragPos;
+
 	// tangent space data
 	vec3 twPointLightDir[MAX_POINT_LIGHTS];
 	vec3 twDirLightDir  [MAX_DIR_LIGHTS];
-	vec3 twFragPos; // Local -> World -> Tangent position of frag N.B. THE FIRST LETTER SPECIFIES THE FINAL SPACE 
+	vec3 twFragPos; // Local -> World (w) -> Tangent (t) position of frag N.B. THE FIRST LETTER SPECIFIES THE FINAL SPACE 
 	vec3 twCameraPos; 
 	vec3 twNormal;
+
+	// light space data (l = transformed by lightProjMatrix * lightViewMatrix)
+	vec4 lwFragPos;
 
 	// the output variable for UV coordinates
 	vec2 interp_UV;
@@ -24,9 +33,12 @@ uniform mat4 viewMatrix       = mat4(1);
 uniform mat4 projectionMatrix = mat4(1);
 
 //Lights
+// light space matrix is already lightProjMatrix * lightViewMatrix
+uniform mat4 lightSpaceMatrix = mat4(1); // for now only the first dir light
+
 uniform uint nPointLights;
-uniform uint nDirLights;
-uniform uint nSpotLights;
+uniform uint nDirLights  ;
+uniform uint nSpotLights ;
 
 uniform PointLight       pointLights      [MAX_POINT_LIGHTS];
 uniform DirectionalLight directionalLights[MAX_DIR_LIGHTS];
@@ -34,12 +46,11 @@ uniform SpotLight        spotLights       [MAX_SPOT_LIGHTS];
 
 uniform vec3 wCameraPos = vec3(0);
 
-vec3 wFragPos; // World fragment position
 mat3 invTBN; // Inverse TangentBitangentNormal space transformation matrix
 
 void calculatePointLightTangentDir(uint plIndex)
 {
-	vec3 curr_wPointLightDir = pointLights[plIndex].position - wFragPos; // Calculate light direction in world coordinates
+	vec3 curr_wPointLightDir = pointLights[plIndex].position - vs_out.wFragPos; // Calculate light direction in world coordinates
 	vs_out.twPointLightDir[plIndex] = invTBN * curr_wPointLightDir; // Convert light direction to tangent coordinates
 	// the direction vector is intended as directed from the fragment towards the light
 
@@ -78,13 +89,23 @@ void main()
 	mat3 worldNormalMatrix = transpose(inverse(mat3(modelMatrix))); // this matrix updates normals to follow world/model matrix transformations
 	invTBN = calculateInverseTBN(worldNormalMatrix, normal, tangent, bitangent); 
 
-	wFragPos = vec3(modelMatrix * vec4(position, 1));
+	// calculate world space output data
+	vs_out.wFragPos = vec3(modelMatrix * vec4(position, 1));
 
-	vs_out.twFragPos = invTBN * wFragPos;
-	vs_out.interp_UV = UV;
-	vec3 wN = worldNormalMatrix * normal;
-	vs_out.twNormal = normalize(invTBN * wN);
+	// calculate view space output data
+	vs_out.vwFragPos = vec3(viewMatrix * vec4(vs_out.wFragPos, 1));
+
+	// calculate tangent space output data
+	vs_out.twFragPos = invTBN * vs_out.wFragPos;
+	//vec3 wN = worldNormalMatrix * normal;
+	vs_out.twNormal = normalize(invTBN * worldNormalMatrix * normal);
 	vs_out.twCameraPos = invTBN * wCameraPos;
+
+	// calculate light space output data
+	vs_out.lwFragPos = lightSpaceMatrix * vec4(vs_out.wFragPos, 1);
+
+	vs_out.interp_UV = UV;
+	
 	
 	for(uint i = 0; i < nPointLights; i++)
 		calculatePointLightTangentDir(i);

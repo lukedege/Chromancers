@@ -62,7 +62,7 @@ namespace engine::resources
 				// activate a texture unit per map
 				glActiveTexture(GL_TEXTURE0);
 				diffuse_map->bind();
-				shader->setInt("diffuse_tex", 0);
+				shader->setInt("diffuse_map", 0);
 				shader->setInt("sample_diffuse_map", 1);
 			}
 
@@ -70,7 +70,7 @@ namespace engine::resources
 			{
 				glActiveTexture(GL_TEXTURE1);
 				normal_map->bind();
-				shader->setInt("normal_tex", 1);
+				shader->setInt("normal_map", 1);
 				shader->setInt("sample_normal_map", 1);
 			}
 			
@@ -78,7 +78,7 @@ namespace engine::resources
 			{
 				glActiveTexture(GL_TEXTURE2);
 				displacement_map->bind();
-				shader->setInt("displacement_tex", 2); 
+				shader->setInt("displacement_map", 2); 
 				shader->setInt("sample_displacement_map", 1);
 			}
 		}

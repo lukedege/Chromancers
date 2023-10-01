@@ -5,12 +5,21 @@ out vec4 colorFrag;
 
 in VS_OUT 
 {
+	// world space data
+	vec3 wFragPos;
+
+	// view space data
+	vec3 vwFragPos;
+
 	// tangent space data
 	vec3 twPointLightDir[MAX_POINT_LIGHTS];
 	vec3 twDirLightDir  [MAX_DIR_LIGHTS];
-	vec3 twFragPos; // Local -> World -> Tangent position of frag N.B. THE FIRST LETTER SPECIFIES THE FINAL SPACE 
+	vec3 twFragPos; // Local -> World (w) -> Tangent (t) position of frag N.B. THE FIRST LETTER SPECIFIES THE FINAL SPACE 
 	vec3 twCameraPos; 
 	vec3 twNormal;
+
+	// light space data
+	vec4 lwFragPos;
 
 	// the output variable for UV coordinates
 	vec2 interp_UV;
@@ -24,9 +33,11 @@ uniform PointLight       pointLights      [MAX_POINT_LIGHTS];
 uniform DirectionalLight directionalLights[MAX_DIR_LIGHTS];
 
 // Textures
-uniform sampler2D diffuse_tex; // texture samplers
-uniform sampler2D normal_tex;
-uniform sampler2D displacement_tex;
+uniform sampler2D diffuse_map     ; // texture samplers
+uniform sampler2D normal_map      ;
+uniform sampler2D displacement_map;
+
+uniform sampler2D shadow_map;
 
 uniform int sample_diffuse_map      = 0;
 uniform int sample_normal_map       = 0;
@@ -60,7 +71,7 @@ vec3 curr_twLightDir;
 vec2 CheapParallaxMapping(vec2 texCoords, vec3 viewDir)
 { 
 	// Sample the heightmap
-    float height = texture(displacement_tex, texCoords).r; 
+    float height = texture(displacement_map, texCoords).r; 
 	// Calculate vector towards approximate height
 	vec2 p = viewDir.xy * (height * parallax_heightscale);
 	// Return displacement
@@ -83,14 +94,14 @@ vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
   
     // get initial values
     vec2  currentTexCoords     = texCoords;
-    float currentDepthMapValue = texture(displacement_tex, currentTexCoords).r;
+    float currentDepthMapValue = texture(displacement_map, currentTexCoords).r;
       
     while(currentLayerDepth < currentDepthMapValue)
     {
         // shift texture coordinates along direction of P
         currentTexCoords -= deltaTexCoords;
         // get depthmap value at current texture coordinates
-        currentDepthMapValue = texture(displacement_tex, currentTexCoords).r;  
+        currentDepthMapValue = texture(displacement_map, currentTexCoords).r;  
         // get depth of next layer
         currentLayerDepth += layerDepth;  
     }
@@ -100,7 +111,7 @@ vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
 
     // get depth after and before collision for linear interpolation
     float afterDepth  = currentDepthMapValue - currentLayerDepth;
-    float beforeDepth = texture(displacement_tex, prevTexCoords).r - currentLayerDepth + layerDepth;
+    float beforeDepth = texture(displacement_map, prevTexCoords).r - currentLayerDepth + layerDepth;
  
     // interpolation of texture coordinates
     float weight = afterDepth / (afterDepth - beforeDepth);
@@ -125,7 +136,7 @@ vec4 calculateSurfaceColor(vec2 texCoords)
 {
 	// branchless condition to avoid divergence
 	vec4 surface_color = ((1 - sample_diffuse_map) * diffuse_color) + // use albedo (diffuse color)
-	                     ((sample_diffuse_map)     * texture(diffuse_tex, texCoords)); // use diffuse map
+	                     ((sample_diffuse_map)     * texture(diffuse_map, texCoords)); // use diffuse map
 
 	return surface_color;
 }
@@ -134,9 +145,35 @@ vec3 calculateNormal(vec2 texCoords)
 {
 	// branchless condition to avoid divergence
 	vec3 normal = ((1 - sample_normal_map) * normalize(fs_in.twNormal)) + // use vertex normal
-	              ((sample_normal_map)     * normalize(texture(normal_tex, texCoords).rgb * 2.0 - 1.0)); // use normal map
+	              ((sample_normal_map)     * normalize(texture(normal_map, texCoords).rgb * 2.0 - 1.0)); // use normal map
 
 	return normal;
+}
+
+float calculateShadow(vec4 lwFragPos)
+{
+	// perform perspective divide
+    vec3 projCoords = lwFragPos.xyz / lwFragPos.w;
+
+	// normalize coordinates to be within [0,1] instead of NDC range [-1,1]
+	projCoords = projCoords * 0.5 + 0.5; 
+
+	// sample the depthmap obtained from the light POV
+	float closestDepth = texture(shadow_map, projCoords.xy).r;
+
+	// get fragment depth
+	float currentDepth = projCoords.z;  
+
+	// calculate bias to solve shadow acne 
+	float bias = 0.01;
+
+	// if fragment has greater depth, then something occluded it from light POV, thus is in shadow
+	float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;  
+
+	if(projCoords.z > 1.0)
+        shadow = 0.0;
+
+	return shadow;
 }
 
 vec3 BlinnPhong()
@@ -177,10 +214,12 @@ vec3 BlinnPhong()
 		float spec = pow(specAngle, shininess);
 
 		vec3 specular_component = kS * spec * specular_color.rgb;
+
+		float shadow = calculateShadow(fs_in.lwFragPos);
 		
 		// We add diffusive and specular components to the final color
 		// N.B. ): in this implementation, the sum of the components can be different than 1
-		final_color += diffuse_component + specular_component;
+		final_color += (1 - shadow) * (diffuse_component + specular_component);
 	}
 	return final_color;
 }

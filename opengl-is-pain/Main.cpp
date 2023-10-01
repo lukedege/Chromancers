@@ -283,11 +283,11 @@ int main()
 	physics_engine.addDebugDrawer(&phy_debug_drawer);
 	physics_engine.set_debug_mode(1);
 
-	RigidBodyComponent fpl_rb{ floor_plane, physics_engine, PhysicsEngine::RigidBodyCreateInfo{ PhysicsEngine::ColliderShape::BOX,    glm::vec3{1}, 0.0f, 3.0f, 0.5f}, true };
+	RigidBodyComponent fpl_rb{ floor_plane, physics_engine, PhysicsEngine::RigidBodyCreateInfo{ PhysicsEngine::ColliderShape::BOX,    glm::vec3{100.0f, 0.01f, 100.0f}, 0.0f, 3.0f, 0.5f}, false };
 	RigidBodyComponent wpl_rb{ wall_plane , physics_engine, PhysicsEngine::RigidBodyCreateInfo{ PhysicsEngine::ColliderShape::BOX,    glm::vec3{1}, 0.0f, 3.0f, 0.5f}, true };
 	RigidBodyComponent cub_rb{ cube       , physics_engine, PhysicsEngine::RigidBodyCreateInfo{ PhysicsEngine::ColliderShape::BOX,    glm::vec3{1}, 1.0f, 0.1f, 0.1f}, true };
 	RigidBodyComponent sph_rb{ sphere     , physics_engine, PhysicsEngine::RigidBodyCreateInfo{ PhysicsEngine::ColliderShape::SPHERE, glm::vec3{1}, 1.0f, 1.0f, 1.0f}, true };
-	RigidBodyComponent bun_rb{ bunny      , physics_engine, PhysicsEngine::RigidBodyCreateInfo{ PhysicsEngine::ColliderShape::BOX, glm::vec3{2}, 1.0f, 1.0f, 1.0f}, false };
+	RigidBodyComponent bun_rb{ bunny      , physics_engine, PhysicsEngine::RigidBodyCreateInfo{ PhysicsEngine::ColliderShape::BOX,    glm::vec3{2}, 1.0f, 1.0f, 1.0f}, false };
 	floor_plane.components.push_back(&fpl_rb);
 	wall_plane .components.push_back(&wpl_rb);
 	cube       .components.push_back(&cub_rb);
@@ -296,8 +296,14 @@ int main()
 
 	// Framebuffers
 	Framebuffer map_framebuffer { ws.width, ws.height };
-	Framebuffer shadows_framebuffer { 256, 256 };
+	Framebuffer shadows_framebuffer { 1024, 1024 };
 
+	// Shadow map setup
+	// (for now only the first dir light is a shadowcaster)
+	float near_plane = 1.f, far_plane = 20.f, frustum_size = 20.f;
+	glm::mat4 lightProjection = glm::ortho(-frustum_size, frustum_size, -frustum_size, frustum_size, near_plane, far_plane);
+	glm::mat4 lightView = glm::lookAt(-dir_lights[0].direction * 5.f, glm::vec3(0.f), glm::vec3(0.0f, 1.0f, 0.0f));
+	glm::mat4 lightSpaceMatrix = lightProjection * lightView;
 	// Rendering loop: this code is executed at each frame
 	while (wdw.is_open())
 	{
@@ -347,6 +353,7 @@ int main()
 			{
 				dir_lights[i].setup(lit_shader, i);
 			}
+			lit_shader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
 		}
 
 		// Update physics simulation
@@ -363,12 +370,6 @@ int main()
 		shadows_framebuffer.bind();
 		glClear(GL_DEPTH_BUFFER_BIT);
 
-		// set up (for now only the first dir light is a shadowcaster)
-		float near_plane = 1.0f, far_plane = 7.5f;
-		glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
-		glm::mat4 lightView = glm::lookAt(-dir_lights[0].direction, glm::vec3(0.f), glm::vec3(0.0f, 1.0f, 0.0f));
-		glm::mat4 lightSpaceMatrix = lightProjection * lightView;
-
 		shadowmap_shader.bind();
 		shadowmap_shader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
 
@@ -380,18 +381,26 @@ int main()
 
 		shadows_framebuffer.unbind();
 
+		
+		//debug draw the depth texture
 		glViewport(0, 0, 256, 256);
 		tex_depth_shader.bind();
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, shadows_framebuffer.get_depth_attachment().id);
+		shadows_framebuffer.get_depth_attachment().bind();
 		quad_mesh.draw();
 		textured_shader.unbind();
 		glViewport(0, 0, ws.width, ws.height);
+		
+
 		#pragma endregion shadow_pass
 
 		// Render scene
 		for (Entity* o : scene_objects)
 		{
+			glActiveTexture(GL_TEXTURE4); // temp
+			o->material->shader->bind();
+			shadows_framebuffer.get_depth_attachment().bind();
+			o->material->shader->setInt("shadow_map", 4);
 			o->draw();
 		}
 		
