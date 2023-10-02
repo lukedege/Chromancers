@@ -52,6 +52,9 @@
     <Filter Include="Header Files\utils\components">
       <UniqueIdentifier>{85af7629-f612-4ce0-ade6-a7b5781f0615}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\utils">
+      <UniqueIdentifier>{6c8de759-7066-4173-8f1b-c3a0ede1535d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -247,5 +250,6 @@
     <None Include="shaders\text\generic\textured_depth.frag">
       <Filter>Shaders\text\generic</Filter>
     </None>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

@@ -13,7 +13,6 @@
 #include "../shader.h"
 #include "../material.h"
 #include "../scene/scene.h"
-#include "../physics.h"
 #include "../component.h"
 
 #include "../transform.h"
@@ -32,14 +31,14 @@ namespace engine::scene
 		Transform _transform;
 		Model* model; 
 		SceneData* current_scene; // an entity can concurrently exist in only one scene at a time
-	
+		std::string name;
 	public:
 		
 		Material* material;
 		std::vector<Component*> components; // map should be okay 
 
-		Entity(Model& drawable, Material& material, SceneData& scene) :
-			model{ &drawable }, material{ &material }, current_scene{ &scene }
+		Entity(std::string name, Model& drawable, Material& material, SceneData& scene) :
+			name { name }, model{ &drawable }, material{ &material }, current_scene{ &scene }
 		{}
 
 		// only draws the mesh without considering the material
@@ -71,6 +70,15 @@ namespace engine::scene
 			}
 		}
 
+		void on_collision(Entity& other, glm::vec3 contact_point)
+		{
+			//utils::io::log(name, " is colliding with ", other.name, " at coords ( ", contact_point.x, ", ", contact_point.y, ", ", contact_point.z, " )");
+			for (Component* c : components)
+			{
+				c->on_collision(other, contact_point);
+			}
+		}
+
 		void set_scene(SceneData& scene_data) noexcept
 		{
 			current_scene = &scene_data;
@@ -90,19 +98,6 @@ namespace engine::scene
 		void set_transform (const glm::mat4& matrix, bool trigger_update = true) noexcept { _transform.set(matrix); if(trigger_update) on_transform_update(); }
 #pragma endregion transform_stuff
 
-		//void draw(GLuint ubo_obj_matrices, const glm::mat4& view_matrix)
-		//{
-		//	glBindBuffer(GL_UNIFORM_BUFFER, ubo_obj_matrices);
-		//	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), glm::value_ptr(transform.world_matrix()));
-		//	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat3), glm::value_ptr(compute_normal(view_matrix)));
-		//	glBindBuffer(GL_UNIFORM_BUFFER, 0);
-		//
-		//	//opengl::update_buffer_object(ubo_obj_matrices, GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), 1, (void*)glm::value_ptr(transform));
-		//	//opengl::update_buffer_object(ubo_obj_matrices, GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat3), 1, (void*)glm::value_ptr(normal));
-		//
-		//	drawable.draw();
-		//}
-
 	protected:
 		virtual void prepare_draw() const noexcept {}
 		virtual void child_update(float delta_time) noexcept {}
@@ -114,8 +109,6 @@ namespace engine::scene
 				c->on_transform_update();
 			}
 		}
-
-	private:
 
 	};
 }

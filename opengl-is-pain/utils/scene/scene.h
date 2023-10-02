@@ -3,14 +3,12 @@
 #include <vector>
 #include "camera.h"
 #include "light.h"
-#include "../physics.h"
 
 namespace engine::scene
 {
 	struct SceneData
 	{
 		Camera* current_camera{ nullptr };
-		physics::PhysicsEngine* physics_engine{ nullptr };
 		std::vector<Light*> lights;
 	};
 

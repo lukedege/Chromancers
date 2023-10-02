@@ -11,6 +11,7 @@
 #include "utils.h"
 #include "shader.h"
 #include "scene/camera.h"
+#include "scene/entity.h"
 
 namespace
 {
@@ -36,7 +37,7 @@ namespace engine::physics
 
         virtual void   drawLine(const btVector3& from, const btVector3& to, const btVector3& color)
         {
-            GLfloat vertices[6];
+            GLfloat vertices[6]{};
             vertices[0] = from.x(); vertices[3] = to.x();
             vertices[1] = from.y(); vertices[4] = to.y();
             vertices[2] = from.z(); vertices[5] = to.z();
@@ -267,6 +268,46 @@ namespace engine::physics
             if (debugDrawer && debugDrawer->getDebugMode())
             {
                 dynamicsWorld->debugDrawWorld();
+            }
+        }
+
+        void detect_collisions()
+        {
+            // Iterate through all manifolds in the dispatcher
+            int numManifolds = dynamicsWorld->getDispatcher()->getNumManifolds();
+            for (int i = 0; i < numManifolds; i++)
+            {
+                // A contact manifold is a cache that contains all contact points between pairs of collision objects.
+                btPersistentManifold* contactManifold = dynamicsWorld->getDispatcher()->getManifoldByIndexInternal(i);
+                const btCollisionObject* obA = contactManifold->getBody0();
+                const btCollisionObject* obB = contactManifold->getBody1();
+
+                Entity* ent_a = static_cast<Entity*>(obA->getUserPointer());
+                Entity* ent_b = static_cast<Entity*>(obB->getUserPointer());
+                
+                int numContacts = contactManifold->getNumContacts();
+                for (int j = 0; j < numContacts; j++)
+                {
+                    btManifoldPoint& pt = contactManifold->getContactPoint(j);
+                    if (pt.getDistance() < 0.01f)
+                    {
+                        const btVector3& ptA = pt.getPositionWorldOnA();
+                        const btVector3& ptB = pt.getPositionWorldOnB();
+                        btVector3 normalOnB = pt.m_normalWorldOnB;
+                
+                        glm::vec3 glm_ptA  {ptA.x(), ptA.y(), ptA.z() };
+                        glm::vec3 glm_ptB  {ptB.x(), ptB.y(), ptB.z() };
+                        //glm::vec3 glm_norm {normalOnB.x(), normalOnB.y(), normalOnB.z() };
+                        
+                        // Check that user pointers are not null
+                        if (ent_a && ent_b)
+                        {
+                            ent_a->on_collision(*ent_b, glm_ptA);
+                            ent_b->on_collision(*ent_a, glm_ptB);
+                        }
+                    }
+                }
+                
             }
         }
     private:

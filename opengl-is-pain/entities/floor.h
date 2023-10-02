@@ -15,8 +15,8 @@ namespace
 class Floor : public Entity
 {
 public:
-	Floor(Model& drawable, Material& material, SceneData& current_scene) :
-		Entity{ drawable, material, current_scene }
+	Floor(std::string name, Model& drawable, Material& material, SceneData& current_scene) :
+		Entity{ name, drawable, material, current_scene }
 	{
 
 	}

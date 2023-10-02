@@ -27,7 +27,9 @@ namespace engine::components
 			physics_engine{&phy_engine},
 			rigid_body { create_rigidbody(rb_cinfo, use_transform_size) },
 			is_kinematic {false}
-		{}
+		{
+			rigid_body->setUserPointer(&parent); // sets user pointer used when resolving collisions
+		}
 
 		~RigidBodyComponent()
 		{

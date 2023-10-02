@@ -175,7 +175,7 @@ int main()
 	// Scene setup
 	SceneData scene_data;
 	scene_data.current_camera = &main_camera;
-	scene_data.physics_engine = &physics_engine;
+
 #pragma endregion shader_setup
 
 #pragma region shader_setup
@@ -237,16 +237,16 @@ int main()
 
 	// Entities setup
 	Model plane_model{ "models/quad.obj" }, cube_model{ "models/cube.obj" }, sphere_model{ "models/sphere.obj" }, bunny_model{ "models/bunny.obj" };
-	Entity cube{ cube_model, redbricks_mat, scene_data };
-	Entity floor_plane{ plane_model, floor_mat, scene_data };
-	Entity wall_plane{ plane_model, redbricks_mat_2, scene_data };
-	Entity sphere { sphere_model, sph_mat, scene_data };
-	Entity bunny { bunny_model, sph_mat, scene_data };
+	Entity cube        { "cube", cube_model , redbricks_mat, scene_data };
+	Entity floor_plane { "floor", plane_model, floor_mat, scene_data };
+	Entity wall_plane  { "wall", plane_model, redbricks_mat_2, scene_data };
+	Entity sphere      { "sphere", sphere_model, sph_mat, scene_data };
+	Entity bunny       { "bunny", bunny_model, sph_mat, scene_data };
 	sphere_ptr = &sphere;
 
 	Model triangle_mesh { Mesh::simple_triangle_mesh() };
 	Model quad_mesh{ Mesh::simple_quad_mesh() };
-	Entity cursor{ triangle_mesh, basic_mat, scene_data };
+	Entity cursor{ "cursor", triangle_mesh, basic_mat, scene_data};
 
 	std::vector<Entity*> scene_objects;
 	scene_objects.push_back(&floor_plane); scene_objects.push_back(&wall_plane);
@@ -354,10 +354,11 @@ int main()
 				dir_lights[i].setup(lit_shader, i);
 			}
 			lit_shader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
-		}
+		} 
 
 		// Update physics simulation
 		physics_engine.step(capped_deltaTime);
+		physics_engine.detect_collisions();
 
 		// Update entities
 		for (Entity* o : scene_objects)
