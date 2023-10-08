@@ -46,9 +46,6 @@
     <Filter Include="Header Files\utils\scene">
       <UniqueIdentifier>{34e2fd4a-248c-4f43-b37d-917ca88dfc0d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\entities">
-      <UniqueIdentifier>{b9040ea0-50f0-425a-907c-1ed55834d0c9}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\utils\components">
       <UniqueIdentifier>{85af7629-f612-4ce0-ade6-a7b5781f0615}</UniqueIdentifier>
     </Filter>
@@ -119,14 +116,8 @@
     <ClInclude Include="utils\window.h">
       <Filter>Header Files\utils</Filter>
     </ClInclude>
-    <ClInclude Include="entities\floor.h">
-      <Filter>Header Files\entities</Filter>
-    </ClInclude>
     <ClInclude Include="utils\scene\scene.h">
       <Filter>Header Files\utils\scene</Filter>
-    </ClInclude>
-    <ClInclude Include="entities\cube.h">
-      <Filter>Header Files\entities</Filter>
     </ClInclude>
     <ClInclude Include="utils\physics.h">
       <Filter>Header Files\utils</Filter>
@@ -250,6 +241,11 @@
     <None Include="shaders\text\generic\textured_depth.frag">
       <Filter>Shaders\text\generic</Filter>
     </None>
-    <None Include="packages.config" />
+    <None Include="shaders\text\generic\texpainter.frag">
+      <Filter>Shaders\text\generic</Filter>
+    </None>
+    <None Include="shaders\text\generic\texpainter.vert">
+      <Filter>Shaders\text\generic</Filter>
+    </None>
   </ItemGroup>
 </Project>

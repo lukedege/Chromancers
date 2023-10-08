@@ -16,13 +16,13 @@ namespace engine::components
 	class RigidBodyComponent : public Component
 	{
 	private:
-		PhysicsEngine* physics_engine;
+		PhysicsEngine<Entity>* physics_engine;
 
 	public:
 		btRigidBody* rigid_body;
 		bool is_kinematic; // TODO check if rigid body's mass needs to be set to zero or this is enough
 
-		RigidBodyComponent(Entity& parent, PhysicsEngine& phy_engine, PhysicsEngine::RigidBodyCreateInfo rb_cinfo, bool use_transform_size = false) :
+		RigidBodyComponent(Entity& parent, PhysicsEngine<Entity>& phy_engine, RigidBodyCreateInfo rb_cinfo, bool use_transform_size = false) :
 			Component(parent),
 			physics_engine{&phy_engine},
 			rigid_body { create_rigidbody(rb_cinfo, use_transform_size) },
@@ -68,9 +68,9 @@ namespace engine::components
 		}
 
 	private:
-		btRigidBody* create_rigidbody(PhysicsEngine::RigidBodyCreateInfo rb_cinfo, bool use_transform_size = false)
+		btRigidBody* create_rigidbody(RigidBodyCreateInfo rb_cinfo, bool use_transform_size = false)
 		{
-			if (use_transform_size) rb_cinfo.size = parent->transform().size();
+			if (use_transform_size) rb_cinfo.cs_info.size = parent->transform().size();
 
 			return physics_engine->createRigidBody(parent->transform().position(), parent->transform().orientation(), rb_cinfo);
 		}

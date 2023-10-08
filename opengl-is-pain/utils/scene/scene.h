@@ -1,26 +1,21 @@
 #pragma once
 
 #include <vector>
+
 #include "camera.h"
 #include "light.h"
+#include "entity.h"
 
 namespace engine::scene
 {
-	struct SceneData
-	{
-		Camera* current_camera{ nullptr };
-		std::vector<Light*> lights;
-	};
-
-	/*
 	class Scene
 	{
 	private:
-		std::vector<Entity*> entities;  //TODO for now vector is sufficient, a tree or a better container (e.g. unordered_map) would be optimal 
+		
 	public:
+		std::vector<Entity*> entities;  // TODO temporarily public //TODO2 for now vector is sufficient, a tree or another container (e.g. unordered_map) would be better 
 		Camera* current_camera;
 		std::vector<Light*> lights;
-		physics::PhysicsEngine* physics_engine;
 
 		void add_entity(Entity& entity)
 		{
@@ -35,14 +30,22 @@ namespace engine::scene
 			}
 		}
 
-		void draw()
+		void draw() const
 		{
 			for (Entity* o : entities)
 			{
 				o->draw();
 			}
 		}
+
+		void custom_draw(Shader& shader) const
+		{
+			for (Entity* o : entities)
+			{
+				o->custom_draw(shader);
+			}
+		}
 	
 		// TODO
-	};*/
+	};
 }

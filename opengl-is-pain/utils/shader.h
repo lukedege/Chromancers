@@ -157,7 +157,7 @@ namespace engine::resources
 				if (shaderType == GL_VERTEX_SHADER)        shader_type = "VERTEX";
 				else if (shaderType == GL_FRAGMENT_SHADER) shader_type = "FRAGMENT";
 				else if (shaderType == GL_GEOMETRY_SHADER) shader_type = "GEOMETRY";
-				std::cout << "ERROR::" << shader_type << " SHADER::COMPILATION_FAILED\n" << infoLog << std::endl;
+				utils::io::error("SHADER ", shader_type, " - compilation failed \n", infoLog);
 			}
 		}
 
@@ -167,7 +167,7 @@ namespace engine::resources
 			glGetProgramiv(program, GL_LINK_STATUS, &success);
 			if (!success) {
 				glGetProgramInfoLog(program, 512, NULL, infoLog);
-				std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
+				utils::io::error("SHADER LINKING - program linking failed\n", infoLog);
 			}
 		}
 

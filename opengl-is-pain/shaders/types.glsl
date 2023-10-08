@@ -5,6 +5,10 @@ struct PointLight
 {
 	vec4  color;
 	float intensity;
+
+	float attenuation_constant ;
+	float attenuation_linear   ;
+	float attenuation_quadratic;
 	
 	vec3  position;
 };

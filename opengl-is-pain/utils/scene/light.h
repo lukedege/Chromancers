@@ -49,14 +49,17 @@ namespace engine::scene
 			float intensity;
 
 			glm::vec3 position;
+			float attenuation_constant ;
+			float attenuation_linear   ;
+			float attenuation_quadratic;
 		};
 	public:
 		glm::vec3 position;
 
-		/* Decay values TODO LATER
-		float constant    = 1.f;
-		float linear      = 1.f;
-		float quadratic   = 1.f;*/
+		// Attenuation values 
+		float attenuation_constant    = 1.f;
+		float attenuation_linear      = 0.2f;
+		float attenuation_quadratic   = 0.01f;
 
 		PointLight(const glm::vec3& position, const glm::vec4& color = { 1.0f, 1.0f, 1.0f, 1.0f }, const float intensity = { 1.0f }) :
 			Light{ color, intensity }, position{ position } {}
@@ -65,7 +68,10 @@ namespace engine::scene
 		{
 			std::string prefix = "pointLights[" + std::to_string(index) + "].";
 			setLightAttributes(shader, prefix);
-			shader.setVec3(prefix + "position", position);
+			shader.setVec3 (prefix + "position", position);
+			shader.setFloat(prefix + "attenuation_constant" , attenuation_constant);
+			shader.setFloat(prefix + "attenuation_linear"   , attenuation_linear);
+			shader.setFloat(prefix + "attenuation_quadratic", attenuation_quadratic);
 		}
 
 		static size_t shader_sizeof() noexcept

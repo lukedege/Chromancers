@@ -165,8 +165,6 @@
     <ClCompile Include="stb_image.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="entities\cube.h" />
-    <ClInclude Include="entities\floor.h" />
     <ClInclude Include="utils\component.h" />
     <ClInclude Include="utils\components\rigidbody_component.h" />
     <ClInclude Include="utils\framebuffer.h" />
@@ -186,7 +184,6 @@
     <ClInclude Include="utils\window.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
     <None Include="shaders\constants.glsl" />
     <None Include="shaders\spv\buny_lights.frag" />
     <None Include="shaders\spv\buny_lights.vert" />
@@ -211,6 +208,8 @@
     <None Include="shaders\text\generic\random_patterns.frag" />
     <None Include="shaders\text\generic\shadow_map.frag" />
     <None Include="shaders\text\generic\shadow_map.vert" />
+    <None Include="shaders\text\generic\texpainter.frag" />
+    <None Include="shaders\text\generic\texpainter.vert" />
     <None Include="shaders\text\generic\textured.frag" />
     <None Include="shaders\text\generic\textured.vert" />
     <None Include="shaders\text\generic\textured_depth.frag" />

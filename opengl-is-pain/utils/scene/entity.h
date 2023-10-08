@@ -12,7 +12,6 @@
 #include "../model.h"
 #include "../shader.h"
 #include "../material.h"
-#include "../scene/scene.h"
 #include "../component.h"
 
 #include "../transform.h"
@@ -30,21 +29,26 @@ namespace engine::scene
 	protected:
 		Transform _transform;
 		Model* model; 
-		SceneData* current_scene; // an entity can concurrently exist in only one scene at a time
+		//Scene* current_scene; 
 		std::string name;
 	public:
 		
 		Material* material;
 		std::vector<Component*> components; // map should be okay 
 
-		Entity(std::string name, Model& drawable, Material& material, SceneData& scene) :
-			name { name }, model{ &drawable }, material{ &material }, current_scene{ &scene }
+		Entity(std::string name, Model& drawable, Material& material) :
+			name { name }, model{ &drawable }, material{ &material }
 		{}
 
-		// only draws the mesh without considering the material
-		void plain_draw() const noexcept
+		// draws using the provided shader instead of the material
+		void custom_draw(Shader& shader) const noexcept
 		{
+			shader.bind();
+
+			shader.setMat4("modelMatrix", _transform.world_matrix());
 			model->draw();
+			
+			shader.unbind();
 		}
 
 		void draw() const noexcept
@@ -77,11 +81,6 @@ namespace engine::scene
 			{
 				c->on_collision(other, contact_point);
 			}
-		}
-
-		void set_scene(SceneData& scene_data) noexcept
-		{
-			current_scene = &scene_data;
 		}
 
 #pragma region transform_stuff

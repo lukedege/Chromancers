@@ -61,6 +61,16 @@ namespace engine::resources
 			for (size_t i = 0; i < meshes.size(); i++) { meshes[i].draw(); }
 		}
 
+		std::vector<glm::vec3> get_vertices_positions() const 
+		{
+			std::vector<glm::vec3> vertices;
+
+			for (const Mesh& m : meshes)
+				for (const Vertex& v : m.vertices)
+					vertices.push_back(v.position);
+			return vertices;
+		}
+
 	private:
 		std::vector<Mesh> loadModel(const std::string& path)
 		{
@@ -69,7 +79,7 @@ namespace engine::resources
 			// Applying various mesh processing functions to the import by assimp
 			const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate |
 				aiProcess_JoinIdenticalVertices | aiProcess_FlipUVs |
-				aiProcess_GenSmoothNormals | aiProcess_CalcTangentSpace);
+				aiProcess_GenSmoothNormals | aiProcess_CalcTangentSpace );
 
 			if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
 			{

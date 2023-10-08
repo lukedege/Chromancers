@@ -33,15 +33,18 @@ uniform PointLight       pointLights      [MAX_POINT_LIGHTS];
 uniform DirectionalLight directionalLights[MAX_DIR_LIGHTS];
 
 // Textures
-uniform sampler2D diffuse_map     ; // texture samplers
-uniform sampler2D normal_map      ;
-uniform sampler2D displacement_map;
+// texture samplers
+uniform sampler2D diffuse_map     ; // main material color
+uniform sampler2D normal_map      ; // normals for detail and light computation
+uniform sampler2D displacement_map; // emulated vertex displacement (also known as height/depth map)
+uniform sampler2D detail_map      ; // secondary material color
 
 uniform sampler2D shadow_map;
 
 uniform int sample_diffuse_map      = 0;
 uniform int sample_normal_map       = 0;
 uniform int sample_displacement_map = 0;
+uniform int sample_detail_map       = 0;
 
 uniform float uv_repeat = 1; // texture repetitions
 
@@ -138,7 +141,10 @@ vec4 calculateSurfaceColor(vec2 texCoords)
 	vec4 surface_color = ((1 - sample_diffuse_map) * diffuse_color) + // use albedo (diffuse color)
 	                     ((sample_diffuse_map)     * texture(diffuse_map, texCoords)); // use diffuse map
 
-	return surface_color;
+	vec4 detail_color = ((1 - sample_detail_map) * 0) + // don't consider detail
+	                     ((sample_detail_map)     * texture(detail_map, texCoords)); // use detail map
+
+	return surface_color + detail_color;
 }
 
 vec3 calculateNormal(vec2 texCoords)
@@ -150,7 +156,7 @@ vec3 calculateNormal(vec2 texCoords)
 	return normal;
 }
 
-float calculateShadow(vec4 lwFragPos)
+float calculateShadow(vec4 lwFragPos, vec3 lightDir, vec3 normal)
 {
 	// perform perspective divide
     vec3 projCoords = lwFragPos.xyz / lwFragPos.w;
@@ -165,11 +171,13 @@ float calculateShadow(vec4 lwFragPos)
 	float currentDepth = projCoords.z;  
 
 	// calculate bias to solve shadow acne 
-	float bias = 0.01;
+	float shadow_factor = dot(normal, lightDir);
+	float bias = mix(0.005, 0.0, shadow_factor);
 
 	// if fragment has greater depth, then something occluded it from light POV, thus is in shadow
 	float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;  
 
+	// don't affect areas outside the shadow_map
 	if(projCoords.z > 1.0)
         shadow = 0.0;
 
@@ -215,7 +223,7 @@ vec3 BlinnPhong()
 
 		vec3 specular_component = kS * spec * specular_color.rgb;
 
-		float shadow = calculateShadow(fs_in.lwFragPos);
+		float shadow = calculateShadow(fs_in.lwFragPos, L, N);
 		
 		// We add diffusive and specular components to the final color
 		// N.B. ): in this implementation, the sum of the components can be different than 1
@@ -229,8 +237,14 @@ vec4 calculatePointLights()
 	vec4 color = vec4(0);
 	for(int i = 0; i < nPointLights; i++)
 	{
-		curr_twLightDir = fs_in.twPointLightDir[i];
-		color += vec4(BlinnPhong(), 1.0f) * pointLights[i].color * pointLights[i].intensity;
+		curr_twLightDir = fs_in.twPointLightDir[i];//maybe you need to check for twfragpos
+		float light_distance = length(curr_twLightDir);
+		float attenuation = 0.001f + // to avoid division by zero
+							pointLights[i].attenuation_constant +
+							pointLights[i].attenuation_linear * light_distance +
+							pointLights[i].attenuation_quadratic * light_distance * light_distance;
+
+		color += vec4(BlinnPhong(), 1.0f) * pointLights[i].color * pointLights[i].intensity * (1.f/attenuation);
 	}
 	//color = normalize(color);
 	return color;

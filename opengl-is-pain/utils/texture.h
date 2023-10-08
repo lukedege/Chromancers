@@ -9,6 +9,27 @@ namespace engine::resources
 {
 	class Texture
 	{
+	public:
+		enum class WrapMode
+		{
+			REPEAT = GL_REPEAT,
+			MIRRORED_REPEAT = GL_MIRRORED_REPEAT,
+			CLAMP_TO_EDGE = GL_CLAMP_TO_EDGE,
+			MIRROR_CLAMP_TO_EDGE = GL_MIRROR_CLAMP_TO_EDGE,
+			CLAMP_TO_BORDER = GL_CLAMP_TO_BORDER,
+		};
+		enum class MinFilter
+		{
+			NEAREST = GL_NEAREST,
+			LINEAR = GL_LINEAR,
+			NEAREST_WITH_MIPMAPS = GL_NEAREST_MIPMAP_NEAREST,
+			LINEAR_WITH_MIPMAPS = GL_LINEAR_MIPMAP_LINEAR,
+		};
+		enum class MaxFilter
+		{
+			NEAREST = GL_NEAREST,
+			LINEAR = GL_LINEAR,
+		};
 	private:
 		int _width;
 		int _height;
@@ -54,11 +75,10 @@ namespace engine::resources
 
 			glGenerateMipmap(GL_TEXTURE_2D);
 			// we set how to consider UVs outside [0,1] range
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+			set_wrap_mode(format == GL_RGBA ? WrapMode::CLAMP_TO_EDGE : WrapMode::REPEAT);
 			// we set the filtering for minification and magnification
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			set_min_filtering(MinFilter::LINEAR_WITH_MIPMAPS);
+			set_max_filtering(MaxFilter::NEAREST);
 
 			// we set the binding to 0 once we have finished
 			glBindTexture(GL_TEXTURE_2D, 0);
@@ -87,6 +107,28 @@ namespace engine::resources
 		int height()     const noexcept { return _height  ; }
 		int n_channels() const noexcept { return _channels; }
 
+		void set_wrap_mode(WrapMode mode) const noexcept
+		{
+			bind();
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, static_cast<GLint>(mode));
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, static_cast<GLint>(mode));
+			unbind();
+		}
+
+		void set_min_filtering(MinFilter filter) const noexcept
+		{
+			bind();
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, static_cast<GLint>(filter));
+			unbind();
+		}
+
+		void set_max_filtering(MaxFilter filter) const noexcept
+		{
+			bind();
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, static_cast<GLint>(filter));
+			unbind();
+		}
+
 		// extensible when needed, for now is enough
 	private:
 		GLuint generate_texture() const noexcept
@@ -94,9 +136,10 @@ namespace engine::resources
 			GLuint texture_id;
 			glGenTextures(1, &texture_id);
 			glBindTexture(GL_TEXTURE_2D, texture_id);
+
 			// setting default parameters for texture 
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 

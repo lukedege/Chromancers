@@ -2,6 +2,7 @@
 
 #include <bullet/btBulletDynamicsCommon.h>
 #include <bullet/LinearMath/btIDebugDraw.h>
+#include <bullet/BulletCollision/CollisionShapes/btShapeHull.h>
 
 #include <glad.h>
 
@@ -11,7 +12,6 @@
 #include "utils.h"
 #include "shader.h"
 #include "scene/camera.h"
-#include "scene/entity.h"
 
 namespace
 {
@@ -103,21 +103,28 @@ namespace engine::physics
 
     };
 
+    //enum to identify the 2 considered Collision Shapes
+    enum ColliderShape { SPHERE, BOX, HULL };
+
+    struct ColliderShapeCreateInfo
+    {
+        ColliderShape                 type          { ColliderShape::BOX };
+        glm::vec3                     size          { 1.0f, 1.0f, 1.0f }; // Used whole if ColliderShape::BOX, only .x if ColliderShape::SPHERE
+        const std::vector<glm::vec3>* hull_vertices {nullptr};            // Used if ColliderShape::HULL
+    };
+
+    struct RigidBodyCreateInfo
+    {
+        float mass         { 1.0f };
+        float friction     { 0.1f };
+        float restitution  { 0.1f };
+        ColliderShapeCreateInfo cs_info;
+    };
+
+    template<typename GameObject>
     class PhysicsEngine
     {
     public:
-        //enum to identify the 2 considered Collision Shapes
-        enum ColliderShape { BOX, SPHERE };
-
-        struct RigidBodyCreateInfo
-        {
-            ColliderShape type{ ColliderShape::BOX };
-            glm::vec3 size {1.0f, 1.0f, 1.0f};
-            float mass{ 1.0f };
-            float friction{ 0.1f };
-            float restitution{ 0.1f };
-        };
-
         btDiscreteDynamicsWorld* dynamicsWorld; // the main physical simulation class
         btAlignedObjectArray<btCollisionShape*> collisionShapes; // a vector for all the Collision Shapes of the scene
         btDefaultCollisionConfiguration* collisionConfiguration; // setup for the collision manager
@@ -159,13 +166,65 @@ namespace engine::physics
             clear();
         }
 
-        //////////////////////////////////////////
+        // Creates an approximate convex hull given a set of vertices (e.g. a mesh). The "hi_res" parameter, if true, builds a more accurate hull.
+        btConvexHullShape* createConvexHull(const std::vector<glm::vec3>& vertices, bool hi_res = false) const
+        {
+            // We create a hull from the provided vertices
+            btConvexHullShape initial_convexHullShape;
+            for (glm::vec3 v : vertices)
+            {
+                btVector3 bt_v{ v.x, v.y, v.z };
+                initial_convexHullShape.addPoint(bt_v);
+            }
+
+            //Create a hull approximation
+            initial_convexHullShape.setMargin(0);  // this is to compensate for a bug in bullet
+            btShapeHull simpler_hull{ &initial_convexHullShape };
+            simpler_hull.buildHull(0, hi_res);    
+
+            // Build a convex hull shape from the approximate one
+            btConvexHullShape* convex_hull_shape = new btConvexHullShape(
+                (const btScalar*)simpler_hull.getVertexPointer(), simpler_hull.numVertices(), sizeof(btVector3));
+            return convex_hull_shape;
+        }
+
+        btCollisionShape* createCollisionShape(ColliderShapeCreateInfo cs_info)
+        {
+            btCollisionShape* collision_shape;
+
+            // Box Collision shape
+            if (cs_info.type == BOX)
+            {
+                // we convert the glm vector to a Bullet vector
+                btVector3 dim = btVector3(cs_info.size.x, cs_info.size.y, cs_info.size.z);
+                // BoxShape
+                collision_shape = new btBoxShape(dim);
+            }
+            // Sphere Collision Shape (in this case we consider only the first component)
+            else if (cs_info.type == SPHERE)
+            {
+                collision_shape = new btSphereShape(cs_info.size.x);
+            }
+            else if (cs_info.type == HULL)
+            {
+                if (cs_info.hull_vertices)
+                    collision_shape = createConvexHull(*cs_info.hull_vertices); 
+                else
+                    utils::io::error("PHYSICS - no vertices provided for convex hull construction!");
+            }
+            else
+                collision_shape = new btSphereShape(cs_info.size.x); // If nothing, use sphere collider
+
+            // we add this Collision Shape to the vector
+            this->collisionShapes.push_back(collision_shape);
+
+            return collision_shape;
+        }
+
         // Method for the creation of a rigid body, based on a Box or Sphere Collision Shape
         // The Collision Shape is a reference solid that approximates the shape of the actual object of the scene. The Physical simulation is applied to these solids, and the rotations and positions of these solids are used on the real models.
-        btRigidBody* createRigidBody(glm::vec3 pos, glm::vec3 rot, RigidBodyCreateInfo rb_info)
+        btRigidBody* createRigidBody(const glm::vec3 pos, const glm::vec3 rot, const RigidBodyCreateInfo rb_info)
         {
-            btCollisionShape* collision_shape = NULL;
-
             // we convert the glm vector to a Bullet vector
             btVector3 position = btVector3(pos.x, pos.y, pos.z);
 
@@ -177,29 +236,15 @@ namespace engine::physics
             
             rotation.setEuler(rot_radians.y, rot_radians.x, rot_radians.z);
 
-            // Box Collision shape
-            if (rb_info.type == BOX)
-            {
-                // we convert the glm vector to a Bullet vector
-                btVector3 dim = btVector3(rb_info.size.x, rb_info.size.y, rb_info.size.z);
-                // BoxShape
-                collision_shape = new btBoxShape(dim);
-            }
-            // Sphere Collision Shape (in this case we consider only the first component)
-            else if (rb_info.type == SPHERE)
-                collision_shape = new btSphereShape(rb_info.size.x);
-            else
-                collision_shape = new btSphereShape(rb_info.size.x); // If nothing, use sphere collider
-
-            // we add this Collision Shape to the vector
-            this->collisionShapes.push_back(collision_shape);
-
             // We set the initial transformations
             btTransform objTransform;
             objTransform.setIdentity();
             objTransform.setRotation(rotation);
             // we set the initial position (it must be equal to the position of the corresponding model of the scene)
             objTransform.setOrigin(position);
+
+            // We create the collision shape
+            btCollisionShape* collision_shape = createCollisionShape(rb_info.cs_info);
 
             // if objects has mass = 0 -> then it is static (it does not move and it is not subject to forces)
             btScalar mass = rb_info.mass;
@@ -221,7 +266,7 @@ namespace engine::physics
             rbInfo.m_restitution = rb_info.restitution;
 
             // if the Collision Shape is a sphere
-            if (rb_info.type == SPHERE) {
+            if (rb_info.cs_info.type == SPHERE) {
                 // the sphere touches the plane on the plane on a single point, and thus the friction between sphere and the plane does not work -> the sphere does not stop
                 // to avoid the problem, we apply the rolling friction together with an angular damping (which applies a resistence during the rolling movement), in order to make the sphere to stop after a while
                 rbInfo.m_angularDamping = 0.3f;
@@ -282,8 +327,8 @@ namespace engine::physics
                 const btCollisionObject* obA = contactManifold->getBody0();
                 const btCollisionObject* obB = contactManifold->getBody1();
 
-                Entity* ent_a = static_cast<Entity*>(obA->getUserPointer());
-                Entity* ent_b = static_cast<Entity*>(obB->getUserPointer());
+                GameObject* ent_a = static_cast<GameObject*>(obA->getUserPointer());
+                GameObject* ent_b = static_cast<GameObject*>(obB->getUserPointer());
                 
                 int numContacts = contactManifold->getNumContacts();
                 for (int j = 0; j < numContacts; j++)

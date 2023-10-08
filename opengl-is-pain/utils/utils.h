@@ -13,6 +13,14 @@ namespace utils::io
 		(std::cout << ... << args);
 		std::cout << std::endl;
 	}
+
+	template<typename ...Args>
+	void error(Args && ...args)
+	{
+		std::cout << "ERROR: ";
+		(std::cout << ... << args);
+		std::cout << std::endl;
+	}
 }
 
 namespace utils::strings

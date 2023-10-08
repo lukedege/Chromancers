@@ -27,7 +27,7 @@ namespace utils::graphics::opengl
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, id);
 			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-				std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+				utils::io::error("FRAMEBUFFER - Framebuffer is not complete!");
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		}
 

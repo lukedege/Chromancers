@@ -79,6 +79,15 @@ namespace engine::resources
 			glBindVertexArray(0);
 		}
 
+		std::vector<glm::vec3> get_vertices_positions() const
+		{
+			std::vector<glm::vec3> ret_vertices;
+
+			for (const Vertex& v : vertices)
+				ret_vertices.push_back(v.position);
+			return ret_vertices;
+		}
+
 		// Creates and returns a simple triangle mesh
 		static Mesh simple_triangle_mesh()
 		{
