@@ -5,6 +5,8 @@
 #include <glad.h> // OpenGL loader
 #include <glfw/glfw3.h> // GLFW library to create window and to manage I/O
 
+#include <gsl/gsl>
+
 // Debug callbacks in a debug context are available from OpenGL 4.3+
 inline void GLAPIENTRY debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* param)
 {
@@ -67,8 +69,8 @@ namespace utils::graphics::opengl
 
 		struct window_size
 		{
-			int width;
-			int height;
+			unsigned int width;
+			unsigned int height;
 		};
 
 
@@ -87,7 +89,7 @@ namespace utils::graphics::opengl
 		{
 			int width, height;
 			glfwGetWindowSize(glfw_window, &width, &height);
-			return { width, height };
+			return { gsl::narrow_cast<unsigned int>(width), gsl::narrow_cast<unsigned int>(height) };
 		}
 
 		bool is_open()

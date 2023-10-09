@@ -166,6 +166,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="utils\component.h" />
+    <ClInclude Include="utils\components\paintable_component.h" />
     <ClInclude Include="utils\components\rigidbody_component.h" />
     <ClInclude Include="utils\framebuffer.h" />
     <ClInclude Include="utils\input.h" />

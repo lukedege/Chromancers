@@ -43,6 +43,7 @@
 #include "utils/scene/scene.h "
 
 #include "utils/components/rigidbody_component.h"
+#include "utils/components/paintable_component.h"
 
 #include "utils/window.h"
 
@@ -358,13 +359,10 @@ int main()
 	};
 	scene_setup();
 
-
 	// Physics setup
 	GLDebugDrawer phy_debug_drawer{ main_camera, debug_shader };
 	physics_engine.addDebugDrawer(&phy_debug_drawer);
 	physics_engine.set_debug_mode(1);
-
-
 
 	RigidBodyComponent fpl_rb{ floor_plane, physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{100.0f, 0.01f, 100.0f}}}, false };
 	RigidBodyComponent wpl_rb{ wall_plane , physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{1}}}, true };
@@ -374,6 +372,8 @@ int main()
 	std::vector<glm::vec3> bunny_mesh_vertices = bunny_model.get_vertices_positions();
 	RigidBodyComponent bun_rb{ bunny      , physics_engine, RigidBodyCreateInfo{ 10.0f, 1.0f, 1.0f, ColliderShapeCreateInfo{ ColliderShape::HULL, glm::vec3{1}, &bunny_mesh_vertices } }, false };
 
+	//PaintableComponent p{ wall_plane, basic_shader, redbricks_diffuse_tex, {1.f, 1.f, 1.f, 1.f}, 256, 256 };
+
 	floor_plane.components.push_back(&fpl_rb);
 	wall_plane.components.push_back(&wpl_rb);
 	cube.components.push_back(&cub_rb);
@@ -381,8 +381,8 @@ int main()
 	bunny.components.push_back(&bun_rb);
 
 	// Framebuffers
-	Framebuffer map_framebuffer{ ws.width, ws.height };
-	Framebuffer shadows_framebuffer{ 1024, 1024 };
+	Framebuffer map_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGB, GL_RGB, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
+	Framebuffer shadows_framebuffer{ 1024, 1024, Texture::FormatInfo{GL_RGB, GL_RGB, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
 
 	// Shadow map setup
 	// (for now only the first dir light is a shadowcaster)

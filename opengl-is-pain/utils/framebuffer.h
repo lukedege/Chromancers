@@ -17,15 +17,16 @@ namespace utils::graphics::opengl
 	public:
 		GLuint id;
 
-		Framebuffer(int width, int height) :
+		Framebuffer(unsigned int width, unsigned int height, Texture::FormatInfo color_att_format_info, Texture::FormatInfo depth_att_format_info) :
 			id{ generate_framebuffer() },
 			_width  { width  }, 
 			_height { height },
-			color_attachment { create_color_attachment() },
-			depth_attachment { create_depth_attachment() },
-			depth_buffer     { /*create_depth_buffer()*/}
+			color_attachment { create_color_attachment(width, height, color_att_format_info) },
+			depth_attachment { create_depth_attachment(width, height, depth_att_format_info) },
+			depth_buffer     { /*create_depth_buffer()*/} // you need this only when not using a depth attachment
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, id);
+
 			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 				utils::io::error("FRAMEBUFFER - Framebuffer is not complete!");
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -63,13 +64,13 @@ namespace utils::graphics::opengl
 			return depth_attachment;
 		}
 
-		int width () const noexcept { return _width;  }
-		int height() const noexcept { return _height; }
+		unsigned int width () const noexcept { return _width;  }
+		unsigned int height() const noexcept { return _height; }
 
 	private:
-		int _width, _height;
-		int old_width, old_height; // stores the glviewport values before binding
-		Texture color_attachment; // can/will be an array when supporting multiple color attachments, for now one is enough
+		unsigned int _width, _height;
+		unsigned int old_width, old_height; // stores the glviewport values before binding
+		Texture color_attachment; // can/will be an array when supporting multiple color attachments, for now one is enough (and necessary for framebuffer completion)
 		Texture depth_attachment;
 		GLuint  depth_buffer; // you need this only when not using a depth attachment
 
@@ -80,17 +81,15 @@ namespace utils::graphics::opengl
 			return framebuffer;
 		}
 
-		Texture create_color_attachment()
+		Texture create_color_attachment(unsigned int width, unsigned int height, Texture::FormatInfo color_att_format_info)
 		{
-			GLenum format = GL_RGB;
 			GLuint attachment_number = 0; // for when multiple attachments are implemented
 
-			Texture new_color_attachment{ _width, _height, 3 };
+			Texture new_color_attachment{ width, height, color_att_format_info };
 
 			glBindFramebuffer(GL_FRAMEBUFFER, id);
 			glBindTexture(GL_TEXTURE_2D, new_color_attachment.id);
 
-			glTexImage2D(GL_TEXTURE_2D, 0, format, _width, _height, 0, format, GL_UNSIGNED_BYTE, nullptr);
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachment_number, GL_TEXTURE_2D, new_color_attachment.id, 0);
 			
 			glBindTexture(GL_TEXTURE_2D, 0);
@@ -99,18 +98,18 @@ namespace utils::graphics::opengl
 			return new_color_attachment;
 		}
 
-		Texture create_depth_attachment()
+		Texture create_depth_attachment(unsigned int width, unsigned int height, Texture::FormatInfo depth_att_format_info)
 		{
-			Texture new_depth_attachment{ _width, _height, 1 };
+			Texture new_depth_attachment{ width, height, depth_att_format_info };
 
 			glBindFramebuffer(GL_FRAMEBUFFER, id);
 			glBindTexture(GL_TEXTURE_2D, new_depth_attachment.id);
 
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, _width, _height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 			float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 			glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, new_depth_attachment.id, 0);
 
 			glBindTexture(GL_TEXTURE_2D, 0);

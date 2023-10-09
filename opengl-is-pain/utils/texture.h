@@ -1,51 +1,45 @@
 #pragma once
 
 #include <string>
+#include <array>
 
 #include <glad.h>
 #include <stb_image.h>
+
+#include <gsl/gsl>
 
 namespace engine::resources
 {
 	class Texture
 	{
 	public:
-		enum class WrapMode
+		struct FormatInfo
 		{
-			REPEAT = GL_REPEAT,
-			MIRRORED_REPEAT = GL_MIRRORED_REPEAT,
-			CLAMP_TO_EDGE = GL_CLAMP_TO_EDGE,
-			MIRROR_CLAMP_TO_EDGE = GL_MIRROR_CLAMP_TO_EDGE,
-			CLAMP_TO_BORDER = GL_CLAMP_TO_BORDER,
+			GLenum internal_format;
+			GLenum format;
+			GLenum data_type;
 		};
-		enum class MinFilter
-		{
-			NEAREST = GL_NEAREST,
-			LINEAR = GL_LINEAR,
-			NEAREST_WITH_MIPMAPS = GL_NEAREST_MIPMAP_NEAREST,
-			LINEAR_WITH_MIPMAPS = GL_LINEAR_MIPMAP_LINEAR,
-		};
-		enum class MaxFilter
-		{
-			NEAREST = GL_NEAREST,
-			LINEAR = GL_LINEAR,
-		};
+		
+
 	private:
-		int _width;
-		int _height;
-		int _channels;
+		unsigned int _width;
+		unsigned int _height;
+		FormatInfo _format_info;
 
 	public:
 		GLuint id;
 
-		Texture(int width, int height, int channels) : 
-			id{ generate_texture() },
-			_width   { width    },
-			_height  { height   },
-			_channels{ channels }
-		{}
+		Texture(unsigned int width, unsigned int height, Texture::FormatInfo tx_format_info) :
+			id          { generate_texture() },
+			_width      { width  },
+			_height     { height },
+			_format_info{ tx_format_info }
+		{
+			create_texture();
+		}
 
-		Texture(const std::string& path) : id{ generate_texture() }
+		Texture(const std::string& path) : 
+			id{ generate_texture() }
 		{
 			load_texture(path);
 		}
@@ -60,7 +54,9 @@ namespace engine::resources
 			//stbi_set_flip_vertically_on_load(1);
 			unsigned char* image;
 
-			image = stbi_load(path.c_str(), &_width, &_height, &_channels, 0);
+			int w, h, c;
+
+			image = stbi_load(path.c_str(), &w, &h, &c, 0);
 
 			if (image == nullptr)
 			{
@@ -68,17 +64,31 @@ namespace engine::resources
 				return;
 			}
 
-			GLenum format = choose_color_format(_channels);
+			_width    = gsl::narrow_cast<unsigned int>(w);
+			_height   = gsl::narrow_cast<unsigned int>(h);
 
+			GLenum format = choose_color_format(gsl::narrow_cast<unsigned int>(c));
+
+			_format_info.format = format;
+			_format_info.internal_format = format;
+			_format_info.data_type = GL_UNSIGNED_BYTE;
+
+			// bind
 			glBindTexture(GL_TEXTURE_2D, id);
-			glTexImage2D(GL_TEXTURE_2D, 0, format, _width, _height, 0, format, GL_UNSIGNED_BYTE, image);
 
+			// create texture
+			glTexImage2D(GL_TEXTURE_2D, 0, format, w, h, 0, format, _format_info.data_type, image);
+			
+			// generate mipmaps
 			glGenerateMipmap(GL_TEXTURE_2D);
+
 			// we set how to consider UVs outside [0,1] range
-			set_wrap_mode(format == GL_RGBA ? WrapMode::CLAMP_TO_EDGE : WrapMode::REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+
 			// we set the filtering for minification and magnification
-			set_min_filtering(MinFilter::LINEAR_WITH_MIPMAPS);
-			set_max_filtering(MaxFilter::NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
 			// we set the binding to 0 once we have finished
 			glBindTexture(GL_TEXTURE_2D, 0);
@@ -101,11 +111,32 @@ namespace engine::resources
 		{
 			glBindTexture(GL_TEXTURE_2D, 0);
 		}
-
 		
-		int width ()     const noexcept { return _width   ; }
-		int height()     const noexcept { return _height  ; }
-		int n_channels() const noexcept { return _channels; }
+		unsigned int width ()                    const noexcept { return _width; }
+		unsigned int height()                    const noexcept { return _height; }
+		const Texture::FormatInfo& format_info() const noexcept { return _format_info; }
+
+		/*
+		enum class WrapMode
+		{
+			REPEAT = GL_REPEAT,
+			MIRRORED_REPEAT = GL_MIRRORED_REPEAT,
+			CLAMP_TO_EDGE = GL_CLAMP_TO_EDGE,
+			MIRROR_CLAMP_TO_EDGE = GL_MIRROR_CLAMP_TO_EDGE,
+			CLAMP_TO_BORDER = GL_CLAMP_TO_BORDER,
+		};
+		enum class MinFilter
+		{
+			NEAREST = GL_NEAREST,
+			LINEAR = GL_LINEAR,
+			NEAREST_WITH_MIPMAPS = GL_NEAREST_MIPMAP_NEAREST,
+			LINEAR_WITH_MIPMAPS = GL_LINEAR_MIPMAP_LINEAR,
+		};
+		enum class MaxFilter
+		{
+			NEAREST = GL_NEAREST,
+			LINEAR = GL_LINEAR,
+		};
 
 		void set_wrap_mode(WrapMode mode) const noexcept
 		{
@@ -129,22 +160,42 @@ namespace engine::resources
 			unbind();
 		}
 
+		void set_border_color(const std::array<GLuint, 4>& borderColor)
+		{
+			bind();
+			glTexParameterIuiv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor.data());
+			unbind();
+		}
+
+		void create_texture(GLenum internal_format, GLenum format, GLenum data_type, const void* data)
+		{
+			bind();
+			glTexImage2D(GL_TEXTURE_2D, 0, internal_format, _width, _height, 0, format, data_type, data);
+			unbind();
+		}*/
+
 		// extensible when needed, for now is enough
 	private:
 		GLuint generate_texture() const noexcept
 		{
 			GLuint texture_id;
 			glGenTextures(1, &texture_id);
-			glBindTexture(GL_TEXTURE_2D, texture_id);
+			
+			return texture_id;
+		}
 
-			// setting default parameters for texture 
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		void create_texture()
+		{
+			glBindTexture(GL_TEXTURE_2D, id);
+			glTexImage2D(GL_TEXTURE_2D, 0, _format_info.internal_format, _width, _height, 0, _format_info.format, _format_info.data_type, nullptr);
+
+			// Must be setup as default values 
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); 
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
 			glBindTexture(GL_TEXTURE_2D, 0);
-			return texture_id;
 		}
 
 		void dispose() noexcept
@@ -153,7 +204,7 @@ namespace engine::resources
 		}
 
 
-		GLenum choose_color_format(int channels) const noexcept
+		GLenum choose_color_format(unsigned int channels) const noexcept
 		{
 			GLenum format;
 			if (channels == 1)
