@@ -17,6 +17,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "utils.h"
+#include "io.h"
 
 namespace engine::resources
 {

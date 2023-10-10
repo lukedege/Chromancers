@@ -9,6 +9,8 @@
 #include <glad.h>
 #include <glm/glm.hpp>
 
+#include "oop.h"
+
 namespace engine::resources
 {
 	//unifica con model, funzione statica per caricare obj con più sottomesh
@@ -19,7 +21,7 @@ namespace engine::resources
 		glm::vec3 normal, tangent, bitangent;
 	};
 
-	class Mesh
+	class Mesh : utils::oop::non_copyable
 	{
 	public:
 		std::vector<Vertex> vertices;
@@ -35,9 +37,6 @@ namespace engine::resources
 			vertices(std::move(v)), indices(std::move(i)) {
 			setupMesh();
 		}
-
-		Mesh(const Mesh& copy) = delete;
-		Mesh& operator=(const Mesh& copy) = delete;
 
 		Mesh(Mesh&& move) noexcept :
 			vertices(std::move(move.vertices)), indices(std::move(move.indices)),

@@ -52,6 +52,9 @@
     <Filter Include="Source Files\utils">
       <UniqueIdentifier>{6c8de759-7066-4173-8f1b-c3a0ede1535d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\utils\scene">
+      <UniqueIdentifier>{40570fbc-c4c6-4956-a6fb-a21fb5fc9e2d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -86,6 +89,12 @@
     </ClCompile>
     <ClCompile Include="Main_spv.cpp">
       <Filter>Source Files\old</Filter>
+    </ClCompile>
+    <ClCompile Include="utils\scene\scene.cpp">
+      <Filter>Source Files\utils\scene</Filter>
+    </ClCompile>
+    <ClCompile Include="utils\scene\entity.cpp">
+      <Filter>Source Files\utils\scene</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -142,6 +151,12 @@
     </ClInclude>
     <ClInclude Include="utils\components\paintable_component.h">
       <Filter>Header Files\utils\components</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\oop.h">
+      <Filter>Header Files\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\io.h">
+      <Filter>Header Files\utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -93,7 +93,7 @@ namespace engine::physics
 
         virtual void   drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& color) {}
 
-        virtual void   reportErrorWarning(const char* warningString) { utils::io::log(warningString); }
+        virtual void   reportErrorWarning(const char* warningString) { utils::io::error(warningString); }
 
         virtual void   draw3dText(const btVector3& location, const char* textString) {}
 
@@ -339,16 +339,18 @@ namespace engine::physics
                         const btVector3& ptA = pt.getPositionWorldOnA();
                         const btVector3& ptB = pt.getPositionWorldOnB();
                         btVector3 normalOnB = pt.m_normalWorldOnB;
+                        btVector3 impulse{ pt.m_appliedImpulse, pt.m_appliedImpulseLateral1, pt.m_appliedImpulseLateral2 };
                 
-                        glm::vec3 glm_ptA  {ptA.x(), ptA.y(), ptA.z() };
-                        glm::vec3 glm_ptB  {ptB.x(), ptB.y(), ptB.z() };
-                        //glm::vec3 glm_norm {normalOnB.x(), normalOnB.y(), normalOnB.z() };
+                        glm::vec3 glm_ptA   { ptA.x(), ptA.y(), ptA.z() };
+                        glm::vec3 glm_ptB   { ptB.x(), ptB.y(), ptB.z() };
+                        glm::vec3 glm_norm  { normalOnB.x(), normalOnB.y(), normalOnB.z() };
+                        glm::vec3 glm_impls { impulse.x(), impulse.y(), impulse.z()};
                         
                         // Check that user pointers are not null
                         if (ent_a && ent_b)
                         {
-                            ent_a->on_collision(*ent_b, glm_ptA);
-                            ent_b->on_collision(*ent_a, glm_ptB);
+                            ent_a->on_collision(*ent_b, glm_ptA, glm_norm, glm_impls);
+                            ent_b->on_collision(*ent_a, glm_ptB, glm_norm, glm_impls);
                         }
                     }
                 }

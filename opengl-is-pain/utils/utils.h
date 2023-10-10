@@ -1,27 +1,8 @@
 #pragma once
 #include <string>
-#include <iostream>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_inverse.hpp>
-
-namespace utils::io
-{
-	template<typename ...Args>
-	void log(Args && ...args)
-	{
-		(std::cout << ... << args);
-		std::cout << std::endl;
-	}
-
-	template<typename ...Args>
-	void error(Args && ...args)
-	{
-		std::cout << "ERROR: ";
-		(std::cout << ... << args);
-		std::cout << std::endl;
-	}
-}
 
 namespace utils::strings
 {

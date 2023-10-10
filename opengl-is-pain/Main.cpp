@@ -4,6 +4,7 @@
 
 #include <gsl/gsl>
 
+
 // GL libraries
 #ifdef _WIN32
 #define APIENTRY __stdcall
@@ -173,8 +174,15 @@ void setup_input_keys()
 			float shootInitialSpeed = 20.f;
 			glm::vec3 shoot_dir = main_scene.current_camera->forward() * shootInitialSpeed;
 			btVector3 impulse = btVector3(shoot_dir.x, shoot_dir.y, shoot_dir.z);
-			btRigidBody* rb = static_cast<RigidBodyComponent*>(sphere_ptr->components[0])->rigid_body;// temp
-			rb->applyCentralImpulse(impulse); // temp
+			for (Component* c : sphere_ptr->components)
+			{
+				if (c->type() == engine::components::RIGIDBODY_COMPONENT)
+				{
+					btRigidBody* rb = static_cast<RigidBodyComponent*>(c)->rigid_body;// temp
+					rb->applyCentralImpulse(impulse); // temp
+				}
+			}
+			
 		});
 }
 
@@ -572,7 +580,7 @@ int main()
 				ImGui::SliderFloat3("Pos", glm::value_ptr(point_lights[i].position), -10, 10, "%.2f", 1);
 				ImGui::SliderFloat("Att_const", &point_lights[i].attenuation_constant, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 				ImGui::SliderFloat("Att_lin"  , &point_lights[i].attenuation_linear, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-				ImGui::SliderFloat("Att_quad" , &point_lights[i].attenuation_quadratic, 0, 0.1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("Att_quad" , &point_lights[i].attenuation_quadratic, 0, 0.1f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 
 				ImGui::PopID();
 			}
@@ -601,6 +609,7 @@ int main()
 #pragma endregion imgui_draw
 
 		// Swap buffers
+		main_scene.remove_marked();
 		glfwSwapBuffers(glfw_window);
 	}
 

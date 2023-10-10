@@ -13,6 +13,8 @@ namespace
 
 namespace engine::components
 {
+	constexpr auto RIGIDBODY_COMPONENT = 0;
+
 	class RigidBodyComponent : public Component
 	{
 	private:
@@ -59,6 +61,11 @@ namespace engine::components
 				// Bullet matrix provides rotations and translations: it does not consider scale
 				parent->set_transform(glm::make_mat4(matrix) * glm::scale(glm::mat4{ 1.0f }, size), false);
 			}
+		}
+
+		int type()
+		{
+			return RIGIDBODY_COMPONENT;
 		}
 
 		// Syncs physics position with parent entity transform

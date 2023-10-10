@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <unordered_map>
 
 #include "camera.h"
 #include "light.h"
@@ -11,41 +12,22 @@ namespace engine::scene
 	class Scene
 	{
 	private:
-		
+		std::unordered_map<std::string, Entity*> entities;           
+		std::vector<std::string> marked_for_removal;
 	public:
-		std::vector<Entity*> entities;  // TODO temporarily public //TODO2 for now vector is sufficient, a tree or another container (e.g. unordered_map) would be better 
 		Camera* current_camera;
 		std::vector<Light*> lights;
 
-		void add_entity(Entity& entity)
-		{
-			entities.push_back(&entity);
-		}
+		void add_entity(Entity& entity);
 
-		void update(float deltaTime)
-		{
-			for (Entity* o : entities)
-			{
-				o->update(deltaTime);
-			}
-		}
+		void mark_for_removal(std::string entity_name);
 
-		void draw() const
-		{
-			for (Entity* o : entities)
-			{
-				o->draw();
-			}
-		}
+		void remove_marked();
 
-		void custom_draw(Shader& shader) const
-		{
-			for (Entity* o : entities)
-			{
-				o->custom_draw(shader);
-			}
-		}
-	
-		// TODO
+		void update(float deltaTime);
+
+		void draw() const;
+
+		void custom_draw(Shader& shader) const;
 	};
 }

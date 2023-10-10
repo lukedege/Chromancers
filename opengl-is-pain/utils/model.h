@@ -17,6 +17,7 @@
 #pragma warning ( pop )
 
 #include "mesh.h"
+#include "oop.h"
 
 // Model class purpose:
 // 1. Open file from disk
@@ -26,18 +27,11 @@
 
 namespace engine::resources
 {
-	class Model
+	class Model : utils::oop::non_copyable
 	{
 	public:
 		std::vector<Mesh> meshes;
 
-		// To enforce the RAII, we need to avoid copy operations
-		// by explicitly removing them (they're created by default)
-		Model(const Model& copy) = delete;
-		Model& operator=(const Model& copy) = delete;
-
-		// Then we have to define the move semantics which replaces
-		// the copy ones we just deleted
 		Model(Model&& move) = default;
 		Model& operator=(Model&& move) noexcept = default;
 
