@@ -105,6 +105,8 @@ float capped_deltaTime;
 
 // Temporary 
 Entity* sphere_ptr;
+Model* sphere_model_ptr;
+Material* sphere_material_ptr;
 
 
 // TODOs 
@@ -169,20 +171,14 @@ void setup_input_keys()
 		});
 	Input::instance().add_onRelease_callback(GLFW_KEY_X, [&]()
 		{
-			sphere_ptr->set_position(main_scene.current_camera->position() + main_scene.current_camera->forward());
-
-			float shootInitialSpeed = 20.f;
-			glm::vec3 shoot_dir = main_scene.current_camera->forward() * shootInitialSpeed;
-			btVector3 impulse = btVector3(shoot_dir.x, shoot_dir.y, shoot_dir.z);
-			for (Component* c : sphere_ptr->components)
-			{
-				if (c->type() == engine::components::RIGIDBODY_COMPONENT)
-				{
-					btRigidBody* rb = static_cast<RigidBodyComponent*>(c)->rigid_body;// temp
-					rb->applyCentralImpulse(impulse); // temp
-				}
-			}
-			
+			// TODO make scene own its entities before
+			//Entity bullet{ "bullet", *sphere_model_ptr, *sphere_material_ptr };
+			//bullet.set_position(main_scene.current_camera->position() + main_scene.current_camera->forward());
+			//
+			//float shootInitialSpeed = 20.f;
+			//glm::vec3 shoot_dir = main_scene.current_camera->forward() * shootInitialSpeed;
+			//btVector3 impulse = btVector3(shoot_dir.x, shoot_dir.y, shoot_dir.z);
+			//sphere_ptr->get_component<RigidBodyComponent>()->rigid_body->applyCentralImpulse(impulse);
 		});
 }
 
@@ -328,6 +324,7 @@ int main()
 
 	// Entities setup
 	Model plane_model{ "models/quad.obj" }, cube_model{ "models/cube.obj" }, sphere_model{ "models/sphere.obj" }, bunny_model{ "models/bunny.obj" };
+
 	Entity cube{ "cube", cube_model , redbricks_mat };
 	Entity floor_plane{ "floor", plane_model, floor_mat };
 	Entity wall_plane{ "wall", plane_model, redbricks_mat_2 };
@@ -372,21 +369,16 @@ int main()
 	physics_engine.addDebugDrawer(&phy_debug_drawer);
 	physics_engine.set_debug_mode(1);
 
-	RigidBodyComponent fpl_rb{ floor_plane, physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{100.0f, 0.01f, 100.0f}}}, false };
-	RigidBodyComponent wpl_rb{ wall_plane , physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{1}}}, true };
-	RigidBodyComponent cub_rb{ cube       , physics_engine, RigidBodyCreateInfo{ 1.0f, 0.1f, 0.1f, {ColliderShape::BOX,    glm::vec3{1}}}, true };
-	RigidBodyComponent sph_rb{ sphere     , physics_engine, RigidBodyCreateInfo{ 1.0f, 1.0f, 1.0f, {ColliderShape::SPHERE, glm::vec3{1}}}, true };
-	//RigidBodyComponent bun_rb{ bunny      , physics_engine, RigidBodyCreateInfo{ 1.0f, 1.0f, 1.0f, ColliderShapeCreateInfo{ ColliderShape::BOX, glm::vec3{2}}}, false };
-	std::vector<glm::vec3> bunny_mesh_vertices = bunny_model.get_vertices_positions();
-	RigidBodyComponent bun_rb{ bunny      , physics_engine, RigidBodyCreateInfo{ 10.0f, 1.0f, 1.0f, ColliderShapeCreateInfo{ ColliderShape::HULL, glm::vec3{1}, &bunny_mesh_vertices } }, false };
-
 	//PaintableComponent p{ wall_plane, basic_shader, redbricks_diffuse_tex, {1.f, 1.f, 1.f, 1.f}, 256, 256 };
 
-	floor_plane.components.push_back(&fpl_rb);
-	wall_plane.components.push_back(&wpl_rb);
-	cube.components.push_back(&cub_rb);
-	sphere.components.push_back(&sph_rb);
-	bunny.components.push_back(&bun_rb);
+	floor_plane.add_component<RigidBodyComponent>(floor_plane, physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{100.0f, 0.01f, 100.0f}}}, false );
+	wall_plane .add_component<RigidBodyComponent>(wall_plane , physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
+	cube       .add_component<RigidBodyComponent>(cube       , physics_engine, RigidBodyCreateInfo{ 1.0f, 0.1f, 0.1f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
+	sphere     .add_component<RigidBodyComponent>(sphere     , physics_engine, RigidBodyCreateInfo{ 1.0f, 1.0f, 1.0f, {ColliderShape::SPHERE, glm::vec3{1}} }, true);
+
+	std::vector<glm::vec3> bunny_mesh_vertices = bunny_model.get_vertices_positions();
+	bunny      .add_component<RigidBodyComponent>(bunny, physics_engine, RigidBodyCreateInfo{ 10.0f, 1.0f, 1.0f,
+		ColliderShapeCreateInfo{ ColliderShape::HULL, glm::vec3{1}, &bunny_mesh_vertices } }, false);
 
 	// Framebuffers
 	Framebuffer map_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGB, GL_RGB, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
@@ -395,10 +387,11 @@ int main()
 	// Shadow map setup
 	// (for now only the first dir light is a shadowcaster)
 	float light_near_plane = 1.f, light_far_plane = 20.f, frustum_size = 20.f, distance_bias = 5.f;
-	//glm::mat4 lightProjection = glm::ortho(-frustum_size, frustum_size, -frustum_size, frustum_size, light_near_plane, light_far_plane);
-	//glm::mat4 lightView = glm::lookAt(-dir_lights[0].direction * distance_bias, glm::vec3(0.f), glm::vec3(0.0f, 1.0f, 0.0f));
-	//glm::mat4 lightSpaceMatrix = lightProjection * lightView;
-	// Rendering loop: this code is executed at each frame
+
+	// Temp
+	sphere_model_ptr = &sphere_model;
+	sphere_material_ptr = &sph_mat;
+
 	while (wdw.is_open())
 	{
 #pragma region setup_loop

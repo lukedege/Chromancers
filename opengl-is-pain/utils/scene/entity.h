@@ -36,10 +36,11 @@ namespace engine::scene
 		Transform _transform;
 		Model* model; 
 		Scene* current_scene; 
+		std::vector<std::unique_ptr<Component>> components; // map should be okay 
 	public:
 		std::string name;
 		Material* material;
-		std::vector<Component*> components; // map should be okay 
+		
 
 		Entity(std::string name, Model& drawable, Material& material);
 
@@ -51,6 +52,28 @@ namespace engine::scene
 		void update(float delta_time) noexcept;
 
 		void on_collision(Entity& other, glm::vec3 contact_point, glm::vec3 norm, glm::vec3 impulse);
+
+		template <typename ComponentType, typename ...Args>
+		void add_component(Args&&... args)
+		{
+			components.emplace_back(std::make_unique<ComponentType>(args...));
+		}
+
+		// Returns a raw ptr to the first component matching the type provided, nullptr otherwise
+		template <typename ComponentType>
+		ComponentType* get_component()
+		{
+			ComponentType* to_find = nullptr;
+			for (auto& c : components)
+			{
+				if (c->type() == ComponentType::COMPONENT_ID)
+				{
+					to_find = static_cast<ComponentType*>(c.get());
+					break;
+				}
+			}
+			return to_find;
+		}
 
 #pragma region transform_stuff
 		const Transform& transform() const noexcept;

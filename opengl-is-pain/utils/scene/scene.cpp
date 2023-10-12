@@ -8,6 +8,7 @@ namespace engine::scene
 		auto add_result = entities.emplace(entity.name, &entity);
 		if (!add_result.second)
 			utils::io::warn("SCENE - The scene already contains an entity with that name");
+		// TODO handle better when trying to add an entity with the same name (add a -001 at the end maybe?)
 	}
 
 	void Scene::mark_for_removal(std::string entity_name)

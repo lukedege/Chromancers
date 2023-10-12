@@ -13,10 +13,10 @@ namespace
 
 namespace engine::components
 {
-	constexpr auto RIGIDBODY_COMPONENT = 0;
-
 	class RigidBodyComponent : public Component
 	{
+	public:
+		constexpr static auto COMPONENT_ID = 0;
 	private:
 		PhysicsEngine<Entity>* physics_engine;
 
@@ -65,7 +65,7 @@ namespace engine::components
 
 		int type()
 		{
-			return RIGIDBODY_COMPONENT;
+			return COMPONENT_ID;
 		}
 
 		// Syncs physics position with parent entity transform

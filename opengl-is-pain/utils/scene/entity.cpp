@@ -41,7 +41,7 @@ namespace engine::scene
 		child_update(delta_time);
 
 		// TODO check order of updates (components or child first?)
-		for (Component* c : components)
+		for (auto& c : components)
 		{
 			c->update(delta_time);
 		}
@@ -57,7 +57,7 @@ namespace engine::scene
 			utils::io::info("--------------------------------------------------------------------------");
 			current_scene->mark_for_removal(name);
 		}
-		for (Component* c : components)
+		for (auto& c : components)
 		{
 			c->on_collision(other, contact_point, norm, impulse);
 		}
@@ -82,7 +82,7 @@ namespace engine::scene
 
 	void Entity::on_transform_update()
 	{
-		for (Component* c : components)
+		for (auto& c : components)
 		{
 			c->on_transform_update();
 		}
