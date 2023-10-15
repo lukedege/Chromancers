@@ -1,5 +1,7 @@
 #pragma once
 
+#include <glm/glm.hpp>
+
 namespace engine::scene
 { 
 	class Entity; // Forward declaration to avoid cyclical include
@@ -14,7 +16,7 @@ namespace engine::components
 
 	public:
 		Component(scene::Entity& parent) : parent{ &parent }{}
-		~Component() { parent = nullptr; }
+		virtual ~Component() { parent = nullptr; }
 
 		virtual void init() = 0;
 		virtual void update(float delta_time) = 0;

@@ -45,6 +45,7 @@
 
 #include "utils/components/rigidbody_component.h"
 #include "utils/components/paintable_component.h"
+#include "utils/components/bullet_component.h"
 
 #include "utils/window.h"
 
@@ -171,14 +172,17 @@ void setup_input_keys()
 		});
 	Input::instance().add_onRelease_callback(GLFW_KEY_X, [&]()
 		{
-			// TODO make scene own its entities before
-			//Entity bullet{ "bullet", *sphere_model_ptr, *sphere_material_ptr };
-			//bullet.set_position(main_scene.current_camera->position() + main_scene.current_camera->forward());
-			//
-			//float shootInitialSpeed = 20.f;
-			//glm::vec3 shoot_dir = main_scene.current_camera->forward() * shootInitialSpeed;
-			//btVector3 impulse = btVector3(shoot_dir.x, shoot_dir.y, shoot_dir.z);
-			//sphere_ptr->get_component<RigidBodyComponent>()->rigid_body->applyCentralImpulse(impulse);
+			Entity* bullet = main_scene.emplace_entity("bullet", "bullet", *sphere_model_ptr, *sphere_material_ptr );
+			bullet->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1.0f, 1.0f, 1.0f, {ColliderShape::SPHERE, glm::vec3{1}} }, true);
+			bullet->emplace_component<BulletComponent>();
+			//Entity* bullet = sphere_ptr;
+			bullet->set_position(main_scene.current_camera->position() + main_scene.current_camera->forward());
+			bullet->set_size(glm::vec3(0.25f));
+			
+			float shootInitialSpeed = 20.f;
+			glm::vec3 shoot_dir = main_scene.current_camera->forward() * shootInitialSpeed;
+			btVector3 impulse = btVector3(shoot_dir.x, shoot_dir.y, shoot_dir.z);
+			bullet->get_component<RigidBodyComponent>()->rigid_body->applyCentralImpulse(impulse);
 		});
 }
 
@@ -269,11 +273,11 @@ int main()
 	// Shader setup
 	std::vector<const GLchar*> utils_shaders { "shaders/types.glsl", "shaders/constants.glsl" };
 
-	Shader basic_shader{ "shaders/text/generic/basic.vert" ,"shaders/text/generic/basic.frag", 4, 3 };
+	Shader basic_shader    { "shaders/text/generic/basic.vert" ,"shaders/text/generic/basic.frag", 4, 3 };
 	Shader basic_mvp_shader{ "shaders/text/generic/mvp.vert", "shaders/text/generic/basic.frag", 4, 3 };
-	Shader debug_shader{ "shaders/text/generic/mvp.vert", "shaders/text/generic/fullcolor.frag", 4, 3 };
-	Shader default_lit{ "shaders/text/default_lit.vert", "shaders/text/default_lit.frag", 4, 3, nullptr, utils_shaders };
-	Shader textured_shader{ "shaders/text/generic/textured.vert" , "shaders/text/generic/textured.frag", 4, 3 };
+	Shader debug_shader    { "shaders/text/generic/mvp.vert", "shaders/text/generic/fullcolor.frag", 4, 3 };
+	Shader default_lit     { "shaders/text/default_lit.vert", "shaders/text/default_lit.frag", 4, 3, nullptr, utils_shaders };
+	Shader textured_shader { "shaders/text/generic/textured.vert" , "shaders/text/generic/textured.frag", 4, 3 };
 	Shader tex_depth_shader{ "shaders/text/generic/textured.vert" , "shaders/text/generic/textured_depth.frag", 4, 3 };
 	Shader shadowmap_shader{ "shaders/text/generic/shadow_map.vert" , "shaders/text/generic/shadow_map.frag", 4, 3 };
 
@@ -325,40 +329,38 @@ int main()
 	// Entities setup
 	Model plane_model{ "models/quad.obj" }, cube_model{ "models/cube.obj" }, sphere_model{ "models/sphere.obj" }, bunny_model{ "models/bunny.obj" };
 
-	Entity cube{ "cube", cube_model , redbricks_mat };
-	Entity floor_plane{ "floor", plane_model, floor_mat };
-	Entity wall_plane{ "wall", plane_model, redbricks_mat_2 };
-	Entity sphere{ "sphere", sphere_model, sph_mat };
-	Entity bunny{ "bunny", bunny_model, sph_mat };
-	sphere_ptr = &sphere;
+	Entity* cube        = main_scene.emplace_entity("cube", "wallcube", cube_model, redbricks_mat);
+	Entity* floor_plane = main_scene.emplace_entity("floor", "floorplane", plane_model, floor_mat);
+	Entity* wall_plane  = main_scene.emplace_entity("wall", "wallplane", plane_model, redbricks_mat_2);
+	Entity* sphere      = main_scene.emplace_entity("sphere", "sphere", sphere_model, sph_mat);
+	Entity* bunny       = main_scene.emplace_entity("bunny", "buny", bunny_model, sph_mat);
+
+	sphere_ptr = sphere;
 
 	Model triangle_mesh{ Mesh::simple_triangle_mesh() };
 	Model quad_mesh{ Mesh::simple_quad_mesh() };
 	Entity cursor{ "cursor", triangle_mesh, basic_mat };
 
-	main_scene.add_entity(floor_plane); main_scene.add_entity(wall_plane);
-	main_scene.add_entity(cube); main_scene.add_entity(sphere);
-	main_scene.add_entity(bunny);
 
 	// Entities setup in scene
 	scene_setup = [&]()
 	{
-		floor_plane.set_position(glm::vec3(0.0f, -1.0f, 0.0f));
-		floor_plane.set_size(glm::vec3(100.0f, 0.1f, 100.0f));
+		floor_plane->set_position(glm::vec3(0.0f, -1.0f, 0.0f));
+		floor_plane->set_size(glm::vec3(100.0f, 0.1f, 100.0f));
 
-		wall_plane.set_position(glm::vec3(0.0f, 4.0f, -10.0f));
-		wall_plane.set_rotation(glm::vec3(90.0f, 0.0f, 0.f));
-		wall_plane.set_size(glm::vec3(10.0f, 0.1f, 5.0f));
+		wall_plane->set_position(glm::vec3(0.0f, 4.0f, -10.0f));
+		wall_plane->set_rotation(glm::vec3(90.0f, 0.0f, 0.f));
+		wall_plane->set_size(glm::vec3(10.0f, 0.1f, 5.0f));
 
-		cube.set_position(glm::vec3(0.0f, 3.0f, 0.0f));
-		cube.set_rotation(glm::vec3(0.0f, 0.0f, 0.0f));
+		cube->set_position(glm::vec3(0.0f, 3.0f, 0.0f));
+		cube->set_rotation(glm::vec3(0.0f, 0.0f, 0.0f));
 
-		sphere.set_position(glm::vec3(0.0f, 0.0f, 0.0f));
-		sphere.set_rotation(glm::vec3(0.0f, 0.0f, 0.0f));
-		sphere.set_size(glm::vec3(0.25f));
+		sphere->set_position(glm::vec3(0.0f, 0.0f, 0.0f));
+		sphere->set_rotation(glm::vec3(0.0f, 0.0f, 0.0f));
+		sphere->set_size(glm::vec3(0.25f));
 
-		bunny.set_position(glm::vec3(-5.0f, 3.0f, 0.0f));
-		bunny.set_size(glm::vec3(1.f));
+		bunny->set_position(glm::vec3(-5.0f, 3.0f, 0.0f));
+		bunny->set_size(glm::vec3(1.f));
 
 		cursor.set_size(glm::vec3(3.0f));
 	};
@@ -367,17 +369,17 @@ int main()
 	// Physics setup
 	GLDebugDrawer phy_debug_drawer{ main_camera, debug_shader };
 	physics_engine.addDebugDrawer(&phy_debug_drawer);
-	physics_engine.set_debug_mode(1);
+	physics_engine.set_debug_mode(0);
 
 	//PaintableComponent p{ wall_plane, basic_shader, redbricks_diffuse_tex, {1.f, 1.f, 1.f, 1.f}, 256, 256 };
 
-	floor_plane.add_component<RigidBodyComponent>(floor_plane, physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{100.0f, 0.01f, 100.0f}}}, false );
-	wall_plane .add_component<RigidBodyComponent>(wall_plane , physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
-	cube       .add_component<RigidBodyComponent>(cube       , physics_engine, RigidBodyCreateInfo{ 1.0f, 0.1f, 0.1f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
-	sphere     .add_component<RigidBodyComponent>(sphere     , physics_engine, RigidBodyCreateInfo{ 1.0f, 1.0f, 1.0f, {ColliderShape::SPHERE, glm::vec3{1}} }, true);
+	floor_plane->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{100.0f, 0.01f, 100.0f}}}, false );
+	wall_plane ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
+	cube       ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1.0f, 0.1f, 0.1f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
+	sphere     ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1.0f, 1.0f, 1.0f, {ColliderShape::SPHERE, glm::vec3{1}} }, true);
 
 	std::vector<glm::vec3> bunny_mesh_vertices = bunny_model.get_vertices_positions();
-	bunny      .add_component<RigidBodyComponent>(bunny, physics_engine, RigidBodyCreateInfo{ 10.0f, 1.0f, 1.0f,
+	bunny      ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 10.0f, 1.0f, 1.0f,
 		ColliderShapeCreateInfo{ ColliderShape::HULL, glm::vec3{1}, &bunny_mesh_vertices } }, false);
 
 	// Framebuffers
@@ -555,10 +557,10 @@ int main()
 		if (ImGui::CollapsingHeader("Coefficients and scales"))
 		{
 			ImGui::Separator(); ImGui::Text("Normal");
-			ImGui::SliderFloat("Repeat tex##norm", &floor_plane.material->uv_repeat, 0, 3000, " % .1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Repeat tex##norm", &floor_plane->material->uv_repeat, 0, 3000, " % .1f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::Separator(); ImGui::Text("Parallax");
-			ImGui::SliderFloat("Height Scale", &cube.material->parallax_heightscale, 0, 0.5, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Repeat tex##prlx", &cube.material->uv_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Height Scale", &cube->material->parallax_heightscale, 0, 0.5, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Repeat tex##prlx", &cube->material->uv_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
 		}
 		if (ImGui::CollapsingHeader("Lights"))
 		{

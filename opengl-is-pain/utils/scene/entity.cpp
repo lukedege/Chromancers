@@ -9,9 +9,15 @@ namespace engine::scene
 {
 	// Object in scene
 	
-	Entity::Entity(std::string name, Model& drawable, Material& material) :
-		name { name }, model{ &drawable }, material{ &material }
+	Entity::Entity(std::string display_name, Model& drawable, Material& material) :
+		display_name { display_name }, model{ &drawable }, material{ &material }
 	{}
+
+	Entity::~Entity()
+	{
+		//utils::io::log(utils::io::INFO, "Deleting " + display_name);
+		components.clear();
+	}
 
 	// draws using the provided shader instead of the material
 	void Entity::custom_draw(Shader& shader) const noexcept
@@ -49,18 +55,15 @@ namespace engine::scene
 
 	void Entity::on_collision(Entity& other, glm::vec3 contact_point, glm::vec3 norm, glm::vec3 impulse)
 	{
-		if (name == "sphere")
-		{
-			utils::io::info(name, " is colliding with ", other.name, " at coords ", glm::to_string(contact_point));
-			utils::io::info("Normal is: ", glm::to_string(norm));
-			utils::io::info("Impulse is: ", glm::to_string(impulse));
-			utils::io::info("--------------------------------------------------------------------------");
-			current_scene->mark_for_removal(name);
-		}
 		for (auto& c : components)
 		{
 			c->on_collision(other, contact_point, norm, impulse);
 		}
+	}
+
+	const SceneState& Entity::scene_state() const
+	{
+		return _scene_state;
 	}
 
 #pragma region transform_stuff

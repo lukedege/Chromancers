@@ -28,6 +28,13 @@ namespace
 
 namespace engine::scene
 {
+	class Scene; 
+	struct SceneState
+	{
+		Scene* current_scene;
+		std::string id;
+	};
+
 	// Object in scene
 	class Entity : utils::oop::non_movable
 	{
@@ -35,14 +42,15 @@ namespace engine::scene
 	protected:
 		Transform _transform;
 		Model* model; 
-		Scene* current_scene; 
-		std::vector<std::unique_ptr<Component>> components; // map should be okay 
+		SceneState _scene_state;
+		std::vector<std::unique_ptr<Component>> components; // map should be okay also
 	public:
-		std::string name;
+		std::string display_name; 
 		Material* material;
-		
 
-		Entity(std::string name, Model& drawable, Material& material);
+		Entity(std::string display_name, Model& drawable, Material& material);
+
+		~Entity();
 
 		// draws using the provided shader instead of the material
 		void custom_draw(Shader& shader) const noexcept;
@@ -53,10 +61,11 @@ namespace engine::scene
 
 		void on_collision(Entity& other, glm::vec3 contact_point, glm::vec3 norm, glm::vec3 impulse);
 
+		// N.B. no need to pass the entity as arg
 		template <typename ComponentType, typename ...Args>
-		void add_component(Args&&... args)
+		void emplace_component(Args&&... args)
 		{
-			components.emplace_back(std::make_unique<ComponentType>(args...));
+			components.emplace_back(std::make_unique<ComponentType>(*this, args...));
 		}
 
 		// Returns a raw ptr to the first component matching the type provided, nullptr otherwise
@@ -74,6 +83,8 @@ namespace engine::scene
 			}
 			return to_find;
 		}
+
+		const SceneState& scene_state() const;
 
 #pragma region transform_stuff
 		const Transform& transform() const noexcept;

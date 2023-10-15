@@ -126,7 +126,7 @@ namespace engine::physics
     {
     public:
         btDiscreteDynamicsWorld* dynamicsWorld; // the main physical simulation class
-        btAlignedObjectArray<btCollisionShape*> collisionShapes; // a vector for all the Collision Shapes of the scene
+        //btAlignedObjectArray<btCollisionShape*> collisionShapes; // a vector for all the Collision Shapes of the scene
         btDefaultCollisionConfiguration* collisionConfiguration; // setup for the collision manager
         btCollisionDispatcher* dispatcher; // collision manager
         btBroadphaseInterface* overlappingPairCache; // method for the broadphase collision detection
@@ -190,7 +190,7 @@ namespace engine::physics
 
         btCollisionShape* createCollisionShape(ColliderShapeCreateInfo cs_info)
         {
-            btCollisionShape* collision_shape;
+            btCollisionShape* collision_shape{ nullptr };
 
             // Box Collision shape
             if (cs_info.type == BOX)
@@ -216,7 +216,7 @@ namespace engine::physics
                 collision_shape = new btSphereShape(cs_info.size.x); // If nothing, use sphere collider
 
             // we add this Collision Shape to the vector
-            this->collisionShapes.push_back(collision_shape);
+            //collisionShapes.push_back(collision_shape);
 
             return collision_shape;
         }
@@ -277,7 +277,7 @@ namespace engine::physics
             btRigidBody* body = new btRigidBody(rbInfo);
 
             //add the body to the dynamics world
-            this->dynamicsWorld->addRigidBody(body);
+            dynamicsWorld->addRigidBody(body);
 
             // the function returns a pointer to the created rigid body
             // in a standard simulation (e.g., only objects falling), it is not needed to have a reference to a single rigid body, but in some cases (e.g., the application of an impulse), it is needed.
@@ -287,7 +287,7 @@ namespace engine::physics
         void deleteRigidBody(btRigidBody* body)
         {
             // as of https://github.com/bulletphysics/bullet3/blob/master/examples/CommonInterfaces/CommonRigidBodyBase.h
-            if (body)
+            if (dynamicsWorld && body) // we need to check if dynamic world wasnt already destroyed (destroying all the rigid bodies itself with it)
             {
                 dynamicsWorld->removeRigidBody(body);
                 btMotionState* ms = body->getMotionState();
@@ -334,18 +334,18 @@ namespace engine::physics
                 for (int j = 0; j < numContacts; j++)
                 {
                     btManifoldPoint& pt = contactManifold->getContactPoint(j);
-                    if (pt.getDistance() < 0.01f)
+                    if (pt.getDistance() < 0.1f) // TODO if a bullet bounces instead of exploding, remove this check or increase the distance
                     {
                         const btVector3& ptA = pt.getPositionWorldOnA();
                         const btVector3& ptB = pt.getPositionWorldOnB();
                         btVector3 normalOnB = pt.m_normalWorldOnB;
                         btVector3 impulse{ pt.m_appliedImpulse, pt.m_appliedImpulseLateral1, pt.m_appliedImpulseLateral2 };
-                
+
                         glm::vec3 glm_ptA   { ptA.x(), ptA.y(), ptA.z() };
                         glm::vec3 glm_ptB   { ptB.x(), ptB.y(), ptB.z() };
                         glm::vec3 glm_norm  { normalOnB.x(), normalOnB.y(), normalOnB.z() };
                         glm::vec3 glm_impls { impulse.x(), impulse.y(), impulse.z()};
-                        
+
                         // Check that user pointers are not null
                         if (ent_a && ent_b)
                         {
@@ -353,6 +353,7 @@ namespace engine::physics
                             ent_b->on_collision(*ent_a, glm_ptB, glm_norm, glm_impls);
                         }
                     }
+                    
                 }
                 
             }
@@ -363,7 +364,7 @@ namespace engine::physics
         void clear()
         {
             //we remove the rigid bodies from the dynamics world and delete them
-            for (int i=this->dynamicsWorld->getNumCollisionObjects()-1; i>=0 ;i--)
+            for (int i=dynamicsWorld->getNumCollisionObjects()-1; i>=0 ;i--)
             {
                 // we remove all the Motion States
                 btCollisionObject* obj = this->dynamicsWorld->getCollisionObjectArray()[i];
@@ -373,25 +374,30 @@ namespace engine::physics
                 {
                     delete body->getMotionState();
                 }
-                this->dynamicsWorld->removeCollisionObject( obj );
+                dynamicsWorld->removeCollisionObject( obj );
                 delete obj;
             }
 
             //delete dynamics world
-            delete this->dynamicsWorld;
+            delete dynamicsWorld;
+            dynamicsWorld = nullptr;
 
             //delete solver
-            delete this->solver;
+            delete solver;
+            solver = nullptr;
 
             //delete broadphase
-            delete this->overlappingPairCache;
+            delete overlappingPairCache;
+            overlappingPairCache = nullptr;
 
             //delete dispatcher
-            delete this->dispatcher;
+            delete dispatcher;
+            dispatcher = nullptr;
 
-            delete this->collisionConfiguration;
+            delete collisionConfiguration;
+            collisionConfiguration = nullptr;
 
-            this->collisionShapes.clear();
+            //collisionShapes.clear();
         }
     };
 
