@@ -45,7 +45,7 @@
 
 #include "utils/components/rigidbody_component.h"
 #include "utils/components/paintable_component.h"
-#include "utils/components/bullet_component.h"
+#include "utils/components/paintball_component.h"
 
 #include "utils/window.h"
 
@@ -173,11 +173,12 @@ void setup_input_keys()
 	Input::instance().add_onRelease_callback(GLFW_KEY_X, [&]()
 		{
 			Entity* bullet = main_scene.emplace_entity("bullet", "bullet", *sphere_model_ptr, *sphere_material_ptr );
-			bullet->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1.0f, 1.0f, 1.0f, {ColliderShape::SPHERE, glm::vec3{1}} }, true);
-			bullet->emplace_component<BulletComponent>();
-			//Entity* bullet = sphere_ptr;
 			bullet->set_position(main_scene.current_camera->position() + main_scene.current_camera->forward());
 			bullet->set_size(glm::vec3(0.25f));
+
+			bullet->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1.0f, 1.0f, 1.0f, {ColliderShape::SPHERE, glm::vec3{1}} }, true);
+			bullet->emplace_component<PaintballComponent>();
+			//Entity* bullet = sphere_ptr;
 			
 			float shootInitialSpeed = 20.f;
 			glm::vec3 shoot_dir = main_scene.current_camera->forward() * shootInitialSpeed;
@@ -280,6 +281,7 @@ int main()
 	Shader textured_shader { "shaders/text/generic/textured.vert" , "shaders/text/generic/textured.frag", 4, 3 };
 	Shader tex_depth_shader{ "shaders/text/generic/textured.vert" , "shaders/text/generic/textured_depth.frag", 4, 3 };
 	Shader shadowmap_shader{ "shaders/text/generic/shadow_map.vert" , "shaders/text/generic/shadow_map.frag", 4, 3 };
+	Shader painter_shader  { "shaders/text/generic/texpainter.vert" , "shaders/text/generic/texpainter.frag", 4, 3 };
 
 	std::vector <std::reference_wrapper<Shader>> lit_shaders, all_shaders;
 	lit_shaders.push_back(default_lit);
@@ -302,36 +304,41 @@ int main()
 
 #pragma region materials_setup
 	// Textures setup
-	Texture floor_diffuse_tex{ "textures/brickwall.jpg" }, floor_normal_tex{ "textures/brickwall_normal.jpg" };
+	Texture greybricks_diffuse_tex{ "textures/brickwall.jpg" }, greybricks_normal_tex{ "textures/brickwall_normal.jpg" };
 	Texture redbricks_diffuse_tex{ "textures/bricks2.jpg" },
 		redbricks_normal_tex{ "textures/bricks2_normal.jpg" },
 		redbricks_depth_tex{ "textures/bricks2_disp.jpg" };
 
-	// Materials
+	// Shared materials
 	Material redbricks_mat{ default_lit };
 	redbricks_mat.diffuse_map = &redbricks_diffuse_tex; redbricks_mat.normal_map = &redbricks_normal_tex; redbricks_mat.displacement_map = &redbricks_depth_tex;
-	redbricks_mat.uv_repeat = 3.f; redbricks_mat.parallax_heightscale = 0.05f;
+	redbricks_mat.parallax_heightscale = 0.05f;
 
-	Material redbricks_mat_2{ default_lit };
-	redbricks_mat_2.diffuse_map = &redbricks_diffuse_tex; redbricks_mat_2.normal_map = &redbricks_normal_tex; redbricks_mat_2.displacement_map = &redbricks_depth_tex;
-	redbricks_mat_2.uv_repeat = 20.f; redbricks_mat_2.parallax_heightscale = 0.05f;
-
-	Material floor_mat{ default_lit };
-	floor_mat.diffuse_map = &floor_diffuse_tex; floor_mat.normal_map = &floor_normal_tex;
-	// LA UV REPEAT E I SUOI ESTREMI DEVONO DIPENDERE DALLA DIMENSIONE DELLA TEXTURE E/O DALLA SIZE DELLA TRANSFORM?
-	floor_mat.uv_repeat = 0.75f * std::max(floor_mat.diffuse_map->width(), floor_mat.diffuse_map->height());
+	Material grey_bricks{ default_lit };
+	grey_bricks.diffuse_map = &greybricks_diffuse_tex; grey_bricks.normal_map = &greybricks_normal_tex;
 
 	Material sph_mat{ default_lit };
 
 	Material basic_mat{ basic_mvp_shader };
+
+	// Specific materials (ad hoc)
+	Material wall_material { redbricks_mat };
+	wall_material.uv_repeat = 20.f;
+
+	Material floor_material{ grey_bricks }; //TODO LA UV REPEAT E I SUOI ESTREMI DEVONO DIPENDERE DALLA DIMENSIONE DELLA TEXTURE E/O DALLA SIZE DELLA TRANSFORM?
+	floor_material.uv_repeat = 0.75f * std::max(floor_material.diffuse_map->width(), floor_material.diffuse_map->height());
+
+	Material cube_material { redbricks_mat };
+	cube_material.uv_repeat = 3.f;
+
 #pragma endregion materials_setup
 
 	// Entities setup
 	Model plane_model{ "models/quad.obj" }, cube_model{ "models/cube.obj" }, sphere_model{ "models/sphere.obj" }, bunny_model{ "models/bunny.obj" };
 
-	Entity* cube        = main_scene.emplace_entity("cube", "wallcube", cube_model, redbricks_mat);
-	Entity* floor_plane = main_scene.emplace_entity("floor", "floorplane", plane_model, floor_mat);
-	Entity* wall_plane  = main_scene.emplace_entity("wall", "wallplane", plane_model, redbricks_mat_2);
+	Entity* cube        = main_scene.emplace_entity("cube", "wallcube", cube_model, cube_material);
+	Entity* floor_plane = main_scene.emplace_entity("floor", "floorplane", plane_model, floor_material);
+	Entity* wall_plane  = main_scene.emplace_entity("wall", "wallplane", plane_model, wall_material);
 	Entity* sphere      = main_scene.emplace_entity("sphere", "sphere", sphere_model, sph_mat);
 	Entity* bunny       = main_scene.emplace_entity("bunny", "buny", bunny_model, sph_mat);
 
@@ -381,6 +388,8 @@ int main()
 	std::vector<glm::vec3> bunny_mesh_vertices = bunny_model.get_vertices_positions();
 	bunny      ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 10.0f, 1.0f, 1.0f,
 		ColliderShapeCreateInfo{ ColliderShape::HULL, glm::vec3{1}, &bunny_mesh_vertices } }, false);
+
+	wall_plane->emplace_component<PaintableComponent>(painter_shader, greybricks_diffuse_tex, glm::vec4{1,1,1,1}, 512, 512);
 
 	// Framebuffers
 	Framebuffer map_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGB, GL_RGB, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
@@ -485,12 +494,12 @@ int main()
 		glViewport(0, 0, ws.width, ws.height);
 
 		// Update lit shaders to add the computed shadowmap
-		glActiveTexture(GL_TEXTURE3);
+		glActiveTexture(GL_TEXTURE4);
 		shadows_framebuffer.get_depth_attachment().bind();
 		for (Shader& lit_shader : lit_shaders)
 		{
 			lit_shader.bind();
-			lit_shader.setInt("shadow_map", 3);
+			lit_shader.setInt("shadow_map", 4);
 			lit_shader.unbind();
 		}
 

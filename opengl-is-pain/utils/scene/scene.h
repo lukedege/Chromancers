@@ -40,7 +40,7 @@ namespace engine::scene
 
 			// (pair <iterator, bool>) -> (pair <key, value>) -> value -> field
 			add_result.first->second->_scene_state.current_scene = this; // setting this scene as current
-			add_result.first->second->_scene_state.id = final_key; // setting the id in this scene
+			add_result.first->second->_scene_state.entity_id = final_key; // setting the id in this scene
 
 			return add_result.first->second.get(); // return the raw pointer
 		}

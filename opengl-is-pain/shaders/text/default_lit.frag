@@ -34,12 +34,12 @@ uniform DirectionalLight directionalLights[MAX_DIR_LIGHTS];
 
 // Textures
 // texture samplers
-uniform sampler2D diffuse_map     ; // main material color
-uniform sampler2D normal_map      ; // normals for detail and light computation
-uniform sampler2D displacement_map; // emulated vertex displacement (also known as height/depth map)
-uniform sampler2D detail_map      ; // secondary material color
+uniform sampler2D diffuse_map     ; // TexUnit0 Main material color
+uniform sampler2D normal_map      ; // TexUnit1 Normals for detail and light computation
+uniform sampler2D displacement_map; // TexUnit2 Emulated vertex displacement (also known as height/depth map)
+uniform sampler2D detail_map      ; // TexUnit3 Secondary material color
 
-uniform sampler2D shadow_map;
+uniform sampler2D shadow_map;       // TexUnit4 Shadow map
 
 uniform int sample_diffuse_map      = 0;
 uniform int sample_normal_map       = 0;

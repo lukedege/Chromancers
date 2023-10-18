@@ -16,6 +16,7 @@ namespace engine::resources
 		Texture* diffuse_map      { nullptr };
 		Texture* normal_map       { nullptr };
 		Texture* displacement_map { nullptr };
+		Texture* detail_map       { nullptr };
 
 		// "Fake" lighting parameters
 		float kA{ 0.1f }, kD{ 0.5f }, kS{ 0.4f };
@@ -81,6 +82,14 @@ namespace engine::resources
 				shader->setInt("displacement_map", 2); 
 				shader->setInt("sample_displacement_map", 1);
 			}
+
+			if (detail_map)
+			{
+				glActiveTexture(GL_TEXTURE3);
+				detail_map->bind();
+				shader->setInt("detail_map", 3);
+				shader->setInt("sample_detail_map", 1);
+			}
 		}
 
 		void unbind()
@@ -89,23 +98,31 @@ namespace engine::resources
 			if (diffuse_map)
 			{
 				shader->setInt("sample_diffuse_map", 0);
-				shader->setInt("diffuse_tex", 0);
+				shader->setInt("diffuse_map", 0);
 				diffuse_map->unbind();
 			}
 
 			if (normal_map)
 			{
 				shader->setInt("sample_normal_map", 0);
-				shader->setInt("normal_tex", 0);
+				shader->setInt("normal_map", 0);
 				normal_map->unbind();
 			}
 
 			if (displacement_map)
 			{
 				shader->setInt("sample_displacement_map", 0);
-				shader->setInt("displacement_tex", 0); 
+				shader->setInt("displacement_map", 0); 
 				displacement_map->unbind();
 			}
+
+			if (detail_map)
+			{
+				shader->setInt("sample_detail_map", 0);
+				shader->setInt("detail_map", 0);
+				detail_map->unbind();
+			}
+
 			shader->unbind();
 		}
 

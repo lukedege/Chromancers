@@ -4,6 +4,7 @@ opengl-is-pain/textures/cubemaps
 opengl-is-pain/shaders/temp
 opengl-is-pain/models
 opengl-is-pain/temp
+*.bmp
 
 ## CUSTOM END ##
 

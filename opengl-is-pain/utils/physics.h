@@ -401,5 +401,13 @@ namespace engine::physics
         }
     };
 
-   
+    glm::vec3 to_glm_vec3(const btVector3& bt_vec)
+    {
+        return { bt_vec.x(), bt_vec.y(), bt_vec.z()};
+    }
+
+    glm::vec4 to_glm_vec4(const btVector4& bt_vec)
+    {
+        return { bt_vec.x(), bt_vec.y(), bt_vec.z(), bt_vec.w() };
+    }
 }

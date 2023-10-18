@@ -158,7 +158,7 @@
     <ClInclude Include="utils\io.h">
       <Filter>Header Files\utils</Filter>
     </ClInclude>
-    <ClInclude Include="utils\components\bullet_component.h">
+    <ClInclude Include="utils\components\paintball_component.h">
       <Filter>Header Files\utils\components</Filter>
     </ClInclude>
   </ItemGroup>

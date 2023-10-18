@@ -32,7 +32,7 @@ namespace engine::scene
 	struct SceneState
 	{
 		Scene* current_scene;
-		std::string id;
+		std::string entity_id;
 	};
 
 	// Object in scene

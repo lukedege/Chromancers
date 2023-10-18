@@ -54,12 +54,12 @@ namespace utils::graphics::opengl
 			glViewport(0, 0, old_width, old_height);
 		}
 
-		const Texture& get_color_attachment()
+		Texture& get_color_attachment()
 		{
 			return color_attachment;
 		}
 
-		const Texture& get_depth_attachment()
+		Texture& get_depth_attachment()
 		{
 			return depth_attachment;
 		}

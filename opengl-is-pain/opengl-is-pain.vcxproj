@@ -73,14 +73,14 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>..\..\..\Libraries\magic_enum\include;..\..\..\Libraries\GSL-4.0.0\include;..\..\..\Libraries\bullet\include;..\..\..\Libraries\imgui-1.88;..\..\..\Libraries\imgui-1.88\backends;..\..\..\Libraries\glfw\include;..\..\..\Libraries\glm;..\..\..\Libraries\glad;..\..\..\Libraries\assimp\include;..\..\..\Libraries\stb_image;$(VC_IncludePath)</IncludePath>
+    <IncludePath>..\..\..\Libraries\bitmap_image\include;..\..\..\Libraries\magic_enum\include;..\..\..\Libraries\GSL-4.0.0\include;..\..\..\Libraries\bullet\include;..\..\..\Libraries\imgui-1.88;..\..\..\Libraries\imgui-1.88\backends;..\..\..\Libraries\glfw\include;..\..\..\Libraries\glm;..\..\..\Libraries\glad;..\..\..\Libraries\assimp\include;..\..\..\Libraries\stb_image;$(VC_IncludePath)</IncludePath>
     <LibraryPath>..\..\..\Libraries\bullet\lib\win;..\..\..\Libraries\glfw\lib-vc2022;..\..\..\Libraries\assimp\lib\Debug;..\..\..\Libraries\various;$(LibraryPath)</LibraryPath>
     <SourcePath>..\..\..\Libraries\glad;..\..\..\Libraries\bullet\include\bullet\BulletCollision\CollisionShapes;$(SourcePath)</SourcePath>
     <ReferencePath>$(ReferencePath)</ReferencePath>
     <CodeAnalysisRuleSet>NativeRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>..\..\..\Libraries\magic_enum\include;..\..\..\Libraries\GSL-4.0.0\include;..\..\..\Libraries\bullet\include;..\..\..\Libraries\imgui-1.88;..\..\..\Libraries\imgui-1.88\backends;..\..\..\Libraries\glfw\include;..\..\..\Libraries\glm;..\..\..\Libraries\glad;..\..\..\Libraries\assimp\include;..\..\..\Libraries\stb_image;$(VC_IncludePath)</IncludePath>
+    <IncludePath>..\..\..\Libraries\bitmap_image\include;..\..\..\Libraries\magic_enum\include;..\..\..\Libraries\GSL-4.0.0\include;..\..\..\Libraries\bullet\include;..\..\..\Libraries\imgui-1.88;..\..\..\Libraries\imgui-1.88\backends;..\..\..\Libraries\glfw\include;..\..\..\Libraries\glm;..\..\..\Libraries\glad;..\..\..\Libraries\assimp\include;..\..\..\Libraries\stb_image;$(VC_IncludePath)</IncludePath>
     <LibraryPath>..\..\..\Libraries\bullet\lib;..\..\..\Libraries\glfw\lib-vc2022;..\..\..\Libraries\assimp\build\lib\MinSizeRel;..\..\..\Libraries\various;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
     <SourcePath>..\..\..\Libraries\glad;$(VC_SourcePath);</SourcePath>
     <CodeAnalysisRuleSet>NativeRecommendedRules.ruleset</CodeAnalysisRuleSet>
@@ -168,7 +168,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="utils\component.h" />
-    <ClInclude Include="utils\components\bullet_component.h" />
+    <ClInclude Include="utils\components\paintball_component.h" />
     <ClInclude Include="utils\components\paintable_component.h" />
     <ClInclude Include="utils\components\rigidbody_component.h" />
     <ClInclude Include="utils\framebuffer.h" />
