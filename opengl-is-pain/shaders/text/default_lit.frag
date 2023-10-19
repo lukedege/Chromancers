@@ -37,7 +37,7 @@ uniform DirectionalLight directionalLights[MAX_DIR_LIGHTS];
 uniform sampler2D diffuse_map     ; // TexUnit0 Main material color
 uniform sampler2D normal_map      ; // TexUnit1 Normals for detail and light computation
 uniform sampler2D displacement_map; // TexUnit2 Emulated vertex displacement (also known as height/depth map)
-uniform sampler2D detail_map      ; // TexUnit3 Secondary material color
+uniform usampler2D detail_map      ; // TexUnit3 Secondary material color
 
 uniform sampler2D shadow_map;       // TexUnit4 Shadow map
 
@@ -141,10 +141,16 @@ vec4 calculateSurfaceColor(vec2 texCoords)
 	vec4 surface_color = ((1 - sample_diffuse_map) * diffuse_color) + // use albedo (diffuse color)
 	                     ((sample_diffuse_map)     * texture(diffuse_map, texCoords)); // use diffuse map
 
-	vec4 detail_color = ((1 - sample_detail_map) * 0) + // don't consider detail
-	                     ((sample_detail_map)     * texture(detail_map, texCoords)); // use detail map
+	return surface_color;
+}
 
-	return surface_color + detail_color;
+vec4 calculateDetailColor(vec2 texCoords)
+{
+	// branchless condition to avoid divergence
+	vec4 detail_color = ((1 - sample_detail_map) * 0) + // don't consider detail
+	                    ((sample_detail_map)     * texture(detail_map, texCoords)); // use detail map
+
+	return detail_color;
 }
 
 vec3 calculateNormal(vec2 texCoords)
@@ -210,6 +216,15 @@ vec3 BlinnPhong()
 	{
 		// calculate surface color
 		vec4 surface_color = calculateSurfaceColor(final_texCoords);
+
+		// Temp
+		if(sample_detail_map == 1)
+		{
+			float paint_alpha = float(texture(detail_map, fs_in.interp_UV).r) / 255; // 0 -> 255
+			vec4 paint_color = vec4(1,0,1,1);
+			//final_color = vec3(paint_alpha);
+			surface_color = (1 - paint_alpha) * paint_color;
+		}
 
 		// calculate diffuse component
 		vec3 diffuse_component = kD * lambertian * surface_color.rgb;

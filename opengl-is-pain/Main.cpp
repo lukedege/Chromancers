@@ -65,6 +65,7 @@ window* wdw_ptr;
 // callback function for keyboard events
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
 void mouse_pos_callback(GLFWwindow* window, double xPos, double yPos);
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void setup_input_keys();
 
 // input related parameters
@@ -118,7 +119,7 @@ Material* sphere_material_ptr;
 // HELPERS
 
 // INPUT
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
 	if (action == GLFW_PRESS)
 	{
@@ -127,6 +128,18 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	else if (action == GLFW_RELEASE)
 	{
 		Input::instance().release_key(key);
+	}
+}
+
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+	if (action == GLFW_PRESS)
+	{
+		Input::instance().press_key(button);
+	}
+	else if (action == GLFW_RELEASE)
+	{
+		Input::instance().release_key(button);
 	}
 }
 
@@ -170,7 +183,7 @@ void setup_input_keys()
 			else
 				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);// Fill in fragments
 		});
-	Input::instance().add_onRelease_callback(GLFW_KEY_X, [&]()
+	Input::instance().add_onRelease_callback(GLFW_MOUSE_BUTTON_RIGHT, [&]()
 		{
 			Entity* bullet = main_scene.emplace_entity("bullet", "bullet", *sphere_model_ptr, *sphere_material_ptr );
 			bullet->set_position(main_scene.current_camera->position() + main_scene.current_camera->forward());
@@ -235,6 +248,7 @@ int main()
 	// Callbacks linking with glfw
 	glfwSetKeyCallback(glfw_window, key_callback);
 	glfwSetCursorPosCallback(glfw_window, mouse_pos_callback);
+	glfwSetMouseButtonCallback(glfw_window, mouse_button_callback);
 
 	// Setup keys
 	setup_input_keys();
@@ -308,6 +322,7 @@ int main()
 	Texture redbricks_diffuse_tex{ "textures/bricks2.jpg" },
 		redbricks_normal_tex{ "textures/bricks2_normal.jpg" },
 		redbricks_depth_tex{ "textures/bricks2_disp.jpg" };
+	Texture splat_tex{ "textures/splat.png" };
 
 	// Shared materials
 	Material redbricks_mat{ default_lit };
@@ -331,12 +346,15 @@ int main()
 	Material cube_material { redbricks_mat };
 	cube_material.uv_repeat = 3.f;
 
+	Material test_cube_material{ sph_mat };
+
 #pragma endregion materials_setup
 
 	// Entities setup
 	Model plane_model{ "models/quad.obj" }, cube_model{ "models/cube.obj" }, sphere_model{ "models/sphere.obj" }, bunny_model{ "models/bunny.obj" };
 
-	Entity* cube        = main_scene.emplace_entity("cube", "wallcube", cube_model, cube_material);
+	Entity* cube        = main_scene.emplace_entity("cube", "brick_cube", cube_model, cube_material);
+	Entity* test_cube   = main_scene.emplace_entity("test_cube", "test_cube", cube_model, test_cube_material);
 	Entity* floor_plane = main_scene.emplace_entity("floor", "floorplane", plane_model, floor_material);
 	Entity* wall_plane  = main_scene.emplace_entity("wall", "wallplane", plane_model, wall_material);
 	Entity* sphere      = main_scene.emplace_entity("sphere", "sphere", sphere_model, sph_mat);
@@ -362,6 +380,8 @@ int main()
 		cube->set_position(glm::vec3(0.0f, 3.0f, 0.0f));
 		cube->set_rotation(glm::vec3(0.0f, 0.0f, 0.0f));
 
+		test_cube->set_position(glm::vec3(7.0f, 0.0f, 0.0f));
+
 		sphere->set_position(glm::vec3(0.0f, 0.0f, 0.0f));
 		sphere->set_rotation(glm::vec3(0.0f, 0.0f, 0.0f));
 		sphere->set_size(glm::vec3(0.25f));
@@ -378,10 +398,9 @@ int main()
 	physics_engine.addDebugDrawer(&phy_debug_drawer);
 	physics_engine.set_debug_mode(0);
 
-	//PaintableComponent p{ wall_plane, basic_shader, redbricks_diffuse_tex, {1.f, 1.f, 1.f, 1.f}, 256, 256 };
-
 	floor_plane->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{100.0f, 0.01f, 100.0f}}}, false );
 	wall_plane ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
+	test_cube  ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 0.1f, 0.1f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
 	cube       ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1.0f, 0.1f, 0.1f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
 	sphere     ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1.0f, 1.0f, 1.0f, {ColliderShape::SPHERE, glm::vec3{1}} }, true);
 
@@ -389,7 +408,8 @@ int main()
 	bunny      ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 10.0f, 1.0f, 1.0f,
 		ColliderShapeCreateInfo{ ColliderShape::HULL, glm::vec3{1}, &bunny_mesh_vertices } }, false);
 
-	wall_plane->emplace_component<PaintableComponent>(painter_shader, greybricks_diffuse_tex, glm::vec4{1,1,1,1}, 512, 512);
+	test_cube->emplace_component<PaintableComponent>(painter_shader, splat_tex, glm::vec4{1,1,1,1}, 512, 512);
+	test_cube->material->detail_map = &greybricks_diffuse_tex;
 
 	// Framebuffers
 	Framebuffer map_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGB, GL_RGB, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
@@ -581,7 +601,7 @@ int main()
 
 				ImGui::SliderFloat("Intensity", &point_lights[i].intensity, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 				ImGui::ColorEdit4 ("Color", glm::value_ptr(point_lights[i].color));
-				ImGui::SliderFloat3("Pos", glm::value_ptr(point_lights[i].position), -10, 10, "%.2f", 1);
+				ImGui::SliderFloat3("Pos", glm::value_ptr(point_lights[i].position), -20, 20, "%.2f", 1);
 				ImGui::SliderFloat("Att_const", &point_lights[i].attenuation_constant, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 				ImGui::SliderFloat("Att_lin"  , &point_lights[i].attenuation_linear, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 				ImGui::SliderFloat("Att_quad" , &point_lights[i].attenuation_quadratic, 0, 0.1f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
