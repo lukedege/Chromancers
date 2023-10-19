@@ -15,17 +15,16 @@ namespace utils::graphics::opengl
 	class Framebuffer
 	{
 	public:
-		GLuint id;
 
 		Framebuffer(unsigned int width, unsigned int height, Texture::FormatInfo color_att_format_info, Texture::FormatInfo depth_att_format_info) :
-			id{ generate_framebuffer() },
+			_id{ generate_framebuffer() },
 			_width  { width  }, 
 			_height { height },
 			color_attachment { create_color_attachment(width, height, color_att_format_info) },
 			depth_attachment { create_depth_attachment(width, height, depth_att_format_info) },
 			depth_buffer     { /*create_depth_buffer()*/} // you need this only when not using a depth attachment
 		{
-			glBindFramebuffer(GL_FRAMEBUFFER, id);
+			glBindFramebuffer(GL_FRAMEBUFFER, _id);
 
 			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 				utils::io::error("FRAMEBUFFER - Framebuffer is not complete!");
@@ -45,7 +44,7 @@ namespace utils::graphics::opengl
 			old_height = viewport_size_data[3];
 
 			glViewport(0, 0, _width, _height);
-			glBindFramebuffer(GL_FRAMEBUFFER, id);
+			glBindFramebuffer(GL_FRAMEBUFFER, _id);
 		}
 
 		void unbind()
@@ -66,8 +65,9 @@ namespace utils::graphics::opengl
 
 		unsigned int width () const noexcept { return _width;  }
 		unsigned int height() const noexcept { return _height; }
-
+		unsigned int id()     const noexcept { return _id; }
 	private:
+		GLuint _id;
 		unsigned int _width, _height;
 		unsigned int old_width, old_height; // stores the glviewport values before binding
 		Texture color_attachment; // can/will be an array when supporting multiple color attachments, for now one is enough (and necessary for framebuffer completion)
@@ -87,10 +87,10 @@ namespace utils::graphics::opengl
 
 			Texture new_color_attachment{ width, height, color_att_format_info };
 
-			glBindFramebuffer(GL_FRAMEBUFFER, id);
-			glBindTexture(GL_TEXTURE_2D, new_color_attachment.id);
+			glBindFramebuffer(GL_FRAMEBUFFER, _id);
+			glBindTexture(GL_TEXTURE_2D, new_color_attachment.id());
 
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachment_number, GL_TEXTURE_2D, new_color_attachment.id, 0);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachment_number, GL_TEXTURE_2D, new_color_attachment.id(), 0);
 			
 			glBindTexture(GL_TEXTURE_2D, 0);
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -102,15 +102,15 @@ namespace utils::graphics::opengl
 		{
 			Texture new_depth_attachment{ width, height, depth_att_format_info };
 
-			glBindFramebuffer(GL_FRAMEBUFFER, id);
-			glBindTexture(GL_TEXTURE_2D, new_depth_attachment.id);
+			glBindFramebuffer(GL_FRAMEBUFFER, _id);
+			glBindTexture(GL_TEXTURE_2D, new_depth_attachment.id());
 
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 			float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 			glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, new_depth_attachment.id, 0);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, new_depth_attachment.id(), 0);
 
 			glBindTexture(GL_TEXTURE_2D, 0);
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -123,7 +123,7 @@ namespace utils::graphics::opengl
 			GLuint depth_buffer;
 			glGenRenderbuffers(1, &depth_buffer);
 
-			glBindFramebuffer(GL_FRAMEBUFFER, id);
+			glBindFramebuffer(GL_FRAMEBUFFER, _id);
 			glBindRenderbuffer(GL_RENDERBUFFER, depth_buffer);
 			
 			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, _width, _height); // maybe also only depth
@@ -137,7 +137,7 @@ namespace utils::graphics::opengl
 
 		void dispose()
 		{
-			glDeleteFramebuffers(1, &id);
+			glDeleteFramebuffers(1, &_id);
 			glDeleteRenderbuffers(1, &depth_buffer);
 		}
 	};

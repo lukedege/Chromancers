@@ -26,11 +26,11 @@ namespace engine::resources
 		unsigned int _height;
 		FormatInfo _format_info;
 
+		GLuint _id;
 	public:
-		GLuint id;
 
 		Texture(unsigned int width, unsigned int height, Texture::FormatInfo tx_format_info) :
-			id          { generate_texture() },
+			_id{ generate_texture() },
 			_width      { width  },
 			_height     { height },
 			_format_info{ tx_format_info }
@@ -39,7 +39,7 @@ namespace engine::resources
 		}
 
 		Texture(const std::string& path) : 
-			id{ generate_texture() }
+			_id{ generate_texture() }
 		{
 			load_texture(path);
 		}
@@ -74,7 +74,7 @@ namespace engine::resources
 			_format_info.data_type = GL_UNSIGNED_BYTE;
 
 			// bind
-			glBindTexture(GL_TEXTURE_2D, id);
+			glBindTexture(GL_TEXTURE_2D, _id);
 
 			// create texture
 			glTexImage2D(GL_TEXTURE_2D, 0, format, w, h, 0, format, _format_info.data_type, image);
@@ -104,7 +104,7 @@ namespace engine::resources
 		// if we need more textures to sample in a shader (more sampler2ds) we activate different units, one for each texture. We do this in the material class
 		void bind() const noexcept
 		{
-			glBindTexture(GL_TEXTURE_2D, id);
+			glBindTexture(GL_TEXTURE_2D, _id);
 		}
 
 		void unbind() const noexcept
@@ -115,6 +115,7 @@ namespace engine::resources
 		unsigned int width ()                    const noexcept { return _width; }
 		unsigned int height()                    const noexcept { return _height; }
 		const Texture::FormatInfo& format_info() const noexcept { return _format_info; }
+		int id()                                 const noexcept { return _id; }
 
 		/*
 		enum class WrapMode
@@ -186,7 +187,7 @@ namespace engine::resources
 
 		void create_texture()
 		{
-			glBindTexture(GL_TEXTURE_2D, id);
+			glBindTexture(GL_TEXTURE_2D, _id);
 			glTexImage2D(GL_TEXTURE_2D, 0, _format_info.internal_format, _width, _height, 0, _format_info.format, _format_info.data_type, nullptr);
 
 			// Must be setup as default values 
@@ -200,7 +201,7 @@ namespace engine::resources
 
 		void dispose() noexcept
 		{
-			glDeleteTextures(1, &id);
+			glDeleteTextures(1, &_id);
 		}
 
 
