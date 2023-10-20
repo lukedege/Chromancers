@@ -7,6 +7,8 @@
 
 #include <gsl/gsl>
 
+#include "oop.h"
+
 // Debug callbacks in a debug context are available from OpenGL 4.3+
 inline void GLAPIENTRY debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* param)
 {
@@ -51,7 +53,7 @@ inline void GLAPIENTRY debugCallback(GLenum source, GLenum type, GLuint id, GLen
 
 namespace utils::graphics::opengl
 {
-	class window
+	class Window
 	{
 	public:
 		struct window_create_info
@@ -74,11 +76,17 @@ namespace utils::graphics::opengl
 		};
 
 
-		window(window_create_info create_info) : glfw_window{ init(create_info) } {}
+		Window(window_create_info create_info) : glfw_window{ init(create_info) } {}
 
-		window(GLFWwindow* window) : glfw_window{ window } {}
+		Window(GLFWwindow* window) : glfw_window{ window } {}
 
-		~window() { glfwTerminate(); }
+		           Window(const Window&  copy) = delete;
+		Window& operator=(const Window&  copy) = delete;
+
+		           Window(      Window&& move) noexcept = delete;
+		Window& operator=(      Window&& move) noexcept = delete;
+
+		~Window() { glfwTerminate(); }
 
 		GLFWwindow* get()
 		{

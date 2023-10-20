@@ -38,7 +38,7 @@ namespace
 	{
 	}
 
-	void setup_keys(window& wdw)
+	void setup_keys(Window& wdw)
 	{
 		Input::instance().add_onRelease_callback(GLFW_KEY_ESCAPE, [&]() { wdw.close(); });
 	}
@@ -46,9 +46,9 @@ namespace
 
 int mainz()
 {
-	window wdw
+	Window wdw
 	{
-		window::window_create_info
+		Window::window_create_info
 		{
 			{ "Lighting test" }, //.title
 			{ 4 }, //.gl_version_major
@@ -63,7 +63,7 @@ int mainz()
 	};
 
 	GLFWwindow* glfw_window = wdw.get();
-	window::window_size ws = wdw.get_size();
+	Window::window_size ws = wdw.get_size();
 	float width = gsl::narrow<float>(ws.width), height = gsl::narrow<float>(ws.height);
 
 	// Callbacks linking with glfw

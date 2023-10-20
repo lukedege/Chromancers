@@ -160,7 +160,7 @@ namespace engine::components
 		//};
 		
 		// TODO temp
-		void ExportMaskTexture(GLint mask_texture, GLint width, GLint height, std::string filename)
+		void ExportMaskTexture(GLint mask_texture, unsigned int width, unsigned int height, std::string filename)
 		{
 			// Image Writing
 			std::unique_ptr<GLubyte[]> imageData = std::make_unique<GLubyte[]>(width * height);

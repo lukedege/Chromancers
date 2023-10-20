@@ -60,7 +60,7 @@ namespace
 }
 
 // window
-window* wdw_ptr;
+Window* wdw_ptr;
 
 // callback function for keyboard events
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
@@ -112,7 +112,6 @@ Material* sphere_material_ptr;
 
 
 // TODOs 
-// - Spawn multiple spheres with rigidbodies
 
 //////////////////////////////////////////
 
@@ -162,7 +161,7 @@ void setup_input_keys()
 
 	Input::instance().add_onPressed_callback(GLFW_KEY_F, [&]()
 		{
-			window::window_size ws = wdw_ptr->get_size();
+			Window::window_size ws = wdw_ptr->get_size();
 			glm::vec4 wCursorPosition = utils::math::unproject(cursor_x, cursor_y, ws.width, ws.height, 
 				main_scene.current_camera->viewMatrix(), main_scene.current_camera->projectionMatrix());
 
@@ -223,9 +222,9 @@ void mouse_pos_callback(GLFWwindow* window, double x_pos, double y_pos)
 /////////////////// MAIN function ///////////////////////
 int main()
 {
-	window wdw
+	Window wdw
 	{
-		window::window_create_info
+		Window::window_create_info
 		{
 			{ "Lighting test" }, //.title
 			{ 4 }, //.gl_version_major
@@ -242,7 +241,7 @@ int main()
 	wdw_ptr = &wdw;
 
 	GLFWwindow* glfw_window = wdw.get();
-	window::window_size ws = wdw.get_size();
+	Window::window_size ws = wdw.get_size();
 	float width = gsl::narrow<float>(ws.width), height = gsl::narrow<float>(ws.height);
 
 	// Callbacks linking with glfw
@@ -635,12 +634,6 @@ int main()
 		// Swap buffers
 		main_scene.remove_marked();
 		glfwSwapBuffers(glfw_window);
-	}
-
-	// Cleanup
-	for (Shader& shader : all_shaders)
-	{
-		shader.dispose();
 	}
 
 	ImGui_ImplOpenGL3_Shutdown();

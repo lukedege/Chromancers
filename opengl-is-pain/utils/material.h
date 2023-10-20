@@ -35,11 +35,6 @@ namespace engine::resources
 
 		Material(Shader& shader) : shader { &shader } {}
 
-		// TODO are setters really necessary?
-		//void set_diffuse_map     (Texture& diff_map) { diffuse_map      = &diff_map; }
-		//void set_normal_map      (Texture& norm_map) { normal_map       = &norm_map; }
-		//void set_displacement_map(Texture& disp_map) { displacement_map = &disp_map; }
-
 		void bind()
 		{
 			shader->bind();

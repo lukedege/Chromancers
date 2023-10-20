@@ -44,8 +44,8 @@ namespace engine::scene
 			updateCameraVectors();
 		}
 
-		Camera(const Camera& copy) = delete;
-		Camera& operator=(const Camera& copy) = delete;
+		Camera           (const Camera& copy) = default;
+		Camera& operator=(const Camera& copy) = default;
 
 		Camera(Camera&& move) noexcept
 			: pos{ move.pos }, on_ground{ move.on_ground }, world_up{ move.world_up }

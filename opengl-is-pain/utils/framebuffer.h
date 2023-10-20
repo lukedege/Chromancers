@@ -21,14 +21,50 @@ namespace utils::graphics::opengl
 			_width  { width  }, 
 			_height { height },
 			color_attachment { create_color_attachment(width, height, color_att_format_info) },
-			depth_attachment { create_depth_attachment(width, height, depth_att_format_info) },
-			depth_buffer     { /*create_depth_buffer()*/} // you need this only when not using a depth attachment
+			depth_attachment { create_depth_attachment(width, height, depth_att_format_info) }
+			//depth_buffer     { /*create_depth_buffer()*/} // you need this only when not using a depth attachment
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, _id);
 
 			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 				utils::io::error("FRAMEBUFFER - Framebuffer is not complete!");
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		}
+
+		           Framebuffer(const Framebuffer& copy) = delete;
+		Framebuffer& operator=(const Framebuffer& copy) = delete;
+
+		Framebuffer(Framebuffer&& move) :
+			_id     { move._id },
+			_width  { move._width  }, 
+			_height { move._height },
+			color_attachment { std::move(move.color_attachment) },
+			depth_attachment { std::move(move.depth_attachment) }
+		{
+			move._id = 0;
+		}
+
+		Framebuffer& operator=(Framebuffer&& move)
+		{
+			dispose();
+
+			// Check if it exists
+			if (move._id)
+			{
+				_id = move._id;
+				_width  = move._width ; 
+				_height = move._height;
+				color_attachment = std::move(move.color_attachment);
+				depth_attachment = std::move(move.depth_attachment);
+
+				move._id = 0;
+			}
+			else
+			{
+				_id = 0;
+			}
+
+			return *this;
 		}
 
 		~Framebuffer()
@@ -72,7 +108,7 @@ namespace utils::graphics::opengl
 		unsigned int old_width, old_height; // stores the glviewport values before binding
 		Texture color_attachment; // can/will be an array when supporting multiple color attachments, for now one is enough (and necessary for framebuffer completion)
 		Texture depth_attachment;
-		GLuint  depth_buffer; // you need this only when not using a depth attachment
+		//GLuint  depth_buffer; // you need this only when not using a depth attachment
 
 		GLuint generate_framebuffer()
 		{
@@ -138,7 +174,7 @@ namespace utils::graphics::opengl
 		void dispose()
 		{
 			glDeleteFramebuffers(1, &_id);
-			glDeleteRenderbuffers(1, &depth_buffer);
+			//glDeleteRenderbuffers(1, &depth_buffer);
 		}
 	};
 }

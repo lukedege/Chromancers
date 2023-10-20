@@ -27,11 +27,11 @@ namespace engine::resources
 		GLuint glMajorVersion;
 		GLuint glMinorVersion;
 		std::string vertPath, fragPath;
-	public:
-		GLuint program;
+		GLuint _program;
 
+	public:
 		Shader(const GLchar* vertPath, const GLchar* fragPath, GLuint glMajor, GLuint glMinor, const GLchar* geomPath = 0, std::vector<const GLchar*> utilPaths = {}) :
-			program{ glCreateProgram() }, glMajorVersion{ glMajor }, glMinorVersion{ glMinor },
+			_program{ glCreateProgram() }, glMajorVersion{ glMajor }, glMinorVersion{ glMinor },
 			vertPath{ vertPath }, fragPath{ fragPath }
 		{
 			loadFromText(vertPath, fragPath, geomPath, utilPaths);
@@ -43,11 +43,48 @@ namespace engine::resources
 			loadFromSpirV(vertSpirvPath, fragSpirvPath, geomSpirvPath);
 		}*/
 
-		// this is necessary since we dont want to delete the program involuntarily after a move (which would call the destructor)
-		void dispose() const noexcept { glDeleteProgram(program); }
+		           Shader(const Shader& copy) = delete;
+		Shader& operator=(const Shader& copy) = delete;
 
-		void bind()   const noexcept { glUseProgram(program); }
+		Shader(Shader&& move) noexcept :
+			_program{ move._program }, glMajorVersion{ move.glMajorVersion }, glMinorVersion{ move.glMinorVersion },
+			vertPath{ std::move(move.vertPath) }, fragPath{ std::move(move.fragPath) }
+		{
+			// invalidate other's program since it has moved
+			move._program = 0;
+		}
+
+		Shader& operator=(Shader&& move) noexcept
+		{
+			// Free up our resources to receive the new ones from the move
+			dispose();
+
+			if (move._program)
+			{
+				_program = move._program; 
+				glMajorVersion = move.glMajorVersion; glMinorVersion = move.glMinorVersion;
+				vertPath = std::move(move.vertPath); fragPath = std::move(move.fragPath);
+
+				// invalidate other's texture id since it has moved
+				move._program = 0;
+			}
+			else
+			{
+				_program = 0;
+			}
+
+			return *this;
+		}
+
+		~Shader()
+		{
+			dispose();
+		}
+
+		void bind()   const noexcept { glUseProgram(_program); }
 		void unbind() const noexcept { glUseProgram(0); }
+
+		GLint program() const noexcept { return _program; };
 
 		std::vector<std::string> findSubroutines(GLenum shaderType)
 		{
@@ -64,36 +101,36 @@ namespace engine::resources
 			std::cout << "Max Subroutines:" << maxSubsAmount << " - Max Subroutine Uniforms:" << maxSubsUniforms << std::endl;
 
 			// get the number of Subroutine uniforms for the kind of shader used
-			glGetProgramStageiv(program, shaderType, GL_ACTIVE_SUBROUTINE_UNIFORMS, &activeSubUniforms);
+			glGetProgramStageiv(_program, shaderType, GL_ACTIVE_SUBROUTINE_UNIFORMS, &activeSubUniforms);
 
 			// print info for every Subroutine uniform
 			for (int i = 0; i < activeSubUniforms; i++) {
 
 				// get the name of the Subroutine uniform (in this example, we have only one)
-				glGetActiveSubroutineUniformName(program, shaderType, i, 256, &nameLength, activeSubUniformName);
+				glGetActiveSubroutineUniformName(_program, shaderType, i, 256, &nameLength, activeSubUniformName);
 				// print index and name of the Subroutine uniform
 				std::cout << "Subroutine Uniform: " << i << " - name: " << activeSubUniformName << std::endl;
 
 				// get the number of subroutines for the current active subroutine uniform
-				glGetActiveSubroutineUniformiv(program, shaderType, i, GL_NUM_COMPATIBLE_SUBROUTINES, &compatibleSubsAmount);
+				glGetActiveSubroutineUniformiv(_program, shaderType, i, GL_NUM_COMPATIBLE_SUBROUTINES, &compatibleSubsAmount);
 
 				// get the indices of the active subroutines info and write into the array 
 				// TODO check why there's a mismatch in indices
 				std::cout << "glGetSubroutineIndex call" << std::endl;
-				std::cout << "\t" << glGetSubroutineIndex(program, shaderType, "Lambert") << " - " << "Lambert" << std::endl;
-				std::cout << "\t" << glGetSubroutineIndex(program, shaderType, "Phong") << " - " << "Phong" << std::endl;
-				std::cout << "\t" << glGetSubroutineIndex(program, shaderType, "BlinnPhong") << " - " << "BlinnPhong" << std::endl;
-				std::cout << "\t" << glGetSubroutineIndex(program, shaderType, "GGX") << " - " << "GGX" << std::endl;
+				std::cout << "\t" << glGetSubroutineIndex(_program, shaderType, "Lambert") << " - " << "Lambert" << std::endl;
+				std::cout << "\t" << glGetSubroutineIndex(_program, shaderType, "Phong") << " - " << "Phong" << std::endl;
+				std::cout << "\t" << glGetSubroutineIndex(_program, shaderType, "BlinnPhong") << " - " << "BlinnPhong" << std::endl;
+				std::cout << "\t" << glGetSubroutineIndex(_program, shaderType, "GGX") << " - " << "GGX" << std::endl;
 
 				std::vector<int> compatibleSubs(compatibleSubsAmount);
-				glGetActiveSubroutineUniformiv(program, shaderType, i, GL_COMPATIBLE_SUBROUTINES, compatibleSubs.data());
+				glGetActiveSubroutineUniformiv(_program, shaderType, i, GL_COMPATIBLE_SUBROUTINES, compatibleSubs.data());
 				std::cout << "Compatible Subroutines:" << std::endl;
 
 				// for each index, get the name of the subroutines, print info, and save the name in the shaders vector
 				std::cout << "glGetActiveSubroutineName call on glGetActiveSubroutineUniformiv returned array values" << std::endl;
 				for (int j = 0; j < compatibleSubsAmount; j++) {
 					
-					glGetActiveSubroutineName(program, shaderType, compatibleSubs[j], 256, &nameLength, activeSubUniformName);
+					glGetActiveSubroutineName(_program, shaderType, compatibleSubs[j], 256, &nameLength, activeSubUniformName);
 					std::cout << "\t" << compatibleSubs[j] << " - " << activeSubUniformName << "\n";
 					ret.push_back(activeSubUniformName);
 				}
@@ -105,13 +142,13 @@ namespace engine::resources
 
 		GLuint getSubroutineIndex(GLenum shaderType, const char* subroutineName)
 		{
-			return glGetSubroutineIndex(program, shaderType, subroutineName);
+			return glGetSubroutineIndex(_program, shaderType, subroutineName);
 		}
 
 #pragma region utility_uniform_functions
 		GLint getUniformLocation(const std::string& name) const
 		{
-			GLint location = glGetUniformLocation(program, name.c_str());
+			GLint location = glGetUniformLocation(_program, name.c_str());
 			#ifdef DEBUG_UNIFORM
 			if (location == -1)
 			{
@@ -146,6 +183,8 @@ namespace engine::resources
 #pragma endregion 
 
 	private:	
+		void dispose() const noexcept { glDeleteProgram(_program); }
+
 		void checkCompileErrors(GLuint shader, GLenum shaderType) const noexcept
 		{
 			// Check for compile time errors TODO
@@ -165,9 +204,9 @@ namespace engine::resources
 		void checkLinkingErrors() const noexcept
 		{
 			GLint success; GLchar infoLog[512];
-			glGetProgramiv(program, GL_LINK_STATUS, &success);
+			glGetProgramiv(_program, GL_LINK_STATUS, &success);
 			if (!success) {
-				glGetProgramInfoLog(program, 512, NULL, infoLog);
+				glGetProgramInfoLog(_program, 512, NULL, infoLog);
 				utils::io::error("SHADER LINKING - program linking failed\n", infoLog);
 			}
 		}
@@ -190,18 +229,18 @@ namespace engine::resources
 			vertexShader = compileShaderText(vertSource, GL_VERTEX_SHADER, utilsSource);
 			fragmentShader = compileShaderText(fragSource, GL_FRAGMENT_SHADER, utilsSource);
 
-			glAttachShader(program, vertexShader);
-			glAttachShader(program, fragmentShader);
+			glAttachShader(_program, vertexShader);
+			glAttachShader(_program, fragmentShader);
 
 			if (geomPath)
 			{
 				const std::string geomSource = loadSourceText(geomPath);
 				geometryShader = compileShaderText(geomSource, GL_GEOMETRY_SHADER, utilsSource);
-				glAttachShader(program, geometryShader);
+				glAttachShader(_program, geometryShader);
 			}
 
 			try {
-				glLinkProgram(program);
+				glLinkProgram(_program);
 			}
 			catch (std::exception e) { auto x = glGetError(); checkLinkingErrors(); std::cout << e.what(); }
 			checkLinkingErrors();
@@ -261,9 +300,9 @@ namespace engine::resources
 			return shader;
 		}
 #pragma endregion
-		/*
+		
 #pragma region spirv
-		void loadFromSpirV(const GLchar* vertPath, const GLchar* fragPath, const GLchar* geomPath, std::vector<const GLchar*> utilPaths = {})
+		/*void loadFromSpirV(const GLchar* vertPath, const GLchar* fragPath, const GLchar* geomPath, std::vector<const GLchar*> utilPaths = {})
 		{
 			//TODO from example code at https://www.khronos.org/opengl/wiki/SPIR-V
 			GLuint vertexShader, fragmentShader;

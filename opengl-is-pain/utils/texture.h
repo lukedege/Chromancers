@@ -44,9 +44,45 @@ namespace engine::resources
 			load_texture(path);
 		}
 
+		           Texture(const Texture& copy) = delete;
+		Texture& operator=(const Texture& copy) = delete;
+
+		Texture(Texture&& move) noexcept :
+			_id         { move._id },
+			_width      { move._width  },
+			_height     { move._height },
+			_format_info{ move._format_info }
+		{
+			// invalidate other's texture id since it has moved
+			move._id = 0;
+		};
+
+		Texture& operator=(Texture&& move) noexcept
+		{
+			// Free up our resources to receive the new ones from the move
+			dispose();
+
+			if (move._id)
+			{
+				_id = move._id;
+				_width = move._width;
+				_height = move._height;
+				_format_info = std::move(move._format_info);
+
+				// invalidate other's texture id since it has moved
+				move._id = 0;
+			}
+			else
+			{
+				_id = 0;
+			}
+
+			return *this;
+		};
+
 		~Texture()
 		{
-			dispose(); //TODO idk if this is the right thing to do looking at shader...
+			dispose();
 		}
 
 		void load_texture(const std::string& path) noexcept

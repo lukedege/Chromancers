@@ -9,8 +9,6 @@
 #include <glad.h>
 #include <glm/glm.hpp>
 
-#include "oop.h"
-
 namespace engine::resources
 {
 	//unifica con model, funzione statica per caricare obj con più sottomesh
@@ -21,7 +19,7 @@ namespace engine::resources
 		glm::vec3 normal, tangent, bitangent;
 	};
 
-	class Mesh : utils::oop::non_copyable
+	class Mesh
 	{
 	public:
 		std::vector<Vertex> vertices;
@@ -38,6 +36,9 @@ namespace engine::resources
 			setupMesh();
 		}
 
+		           Mesh(const Mesh& copy) = delete;
+		Mesh& operator=(const Mesh& copy) = delete;
+
 		Mesh(Mesh&& move) noexcept :
 			vertices(std::move(move.vertices)), indices(std::move(move.indices)),
 			VAO(move.VAO), VBO(move.VBO), EBO(move.EBO)
@@ -47,7 +48,7 @@ namespace engine::resources
 
 		Mesh& operator=(Mesh&& move) noexcept
 		{
-			freeGPU();
+			dispose();
 
 			// Check if it exists
 			if (move.VAO)
@@ -68,7 +69,7 @@ namespace engine::resources
 
 		~Mesh()
 		{
-			freeGPU();
+			dispose();
 		}
 
 		void draw() const
@@ -166,7 +167,7 @@ namespace engine::resources
 
 		}
 
-		void freeGPU()
+		void dispose()
 		{
 			// Check if we have something in GPU
 			if (VAO)

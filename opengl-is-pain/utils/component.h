@@ -16,7 +16,7 @@ namespace engine::components
 
 	public:
 		Component(scene::Entity& parent) : parent{ &parent }{}
-		virtual ~Component() { parent = nullptr; }
+		virtual ~Component() {}
 
 		virtual void init() = 0;
 		virtual void update(float delta_time) = 0;

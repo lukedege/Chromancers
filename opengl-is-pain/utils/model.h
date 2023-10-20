@@ -17,7 +17,6 @@
 #pragma warning ( pop )
 
 #include "mesh.h"
-#include "oop.h"
 
 // Model class purpose:
 // 1. Open file from disk
@@ -27,16 +26,13 @@
 
 namespace engine::resources
 {
-	class Model : utils::oop::non_copyable
+	class Model
 	{
 	public:
 		std::vector<Mesh> meshes;
 
-		Model(Model&& move) = default;
-		Model& operator=(Model&& move) noexcept = default;
-
 		// Create model from file
-		Model(const std::string& path) : meshes{ std::move(loadModel(path)) }
+		Model(const std::string& path) : meshes{ loadModel(path) }
 		{}
 
 		// Create model with an inital existing mesh
@@ -49,6 +45,12 @@ namespace engine::resources
 		{
 			meshes.push_back(std::move(mesh));
 		}
+
+		Model(const Model& copy) = delete;
+		Model& operator=(const Model& copy) noexcept = delete;
+		
+		Model(Model&& move) = default;
+		Model& operator=(Model&& move) noexcept = default;
 
 		void draw() const
 		{
