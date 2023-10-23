@@ -32,7 +32,6 @@ out VS_OUT
 
 void main()
 {
-    
     vs_out.interp_UV = UV;
     vs_out.normal = normalize(normal);
     vs_out.wPaintDir = normalize(paintBallDirection);

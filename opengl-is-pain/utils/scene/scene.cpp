@@ -16,6 +16,14 @@ namespace engine::scene
 		marked_for_removal.clear();
 	}
 
+	void Scene::init()
+	{
+		for (auto& [id, entity] : entities)
+		{
+			entity->init();
+		}
+	}
+
 	void Scene::update(float deltaTime)
 	{
 		for (auto& [id, entity] : entities)

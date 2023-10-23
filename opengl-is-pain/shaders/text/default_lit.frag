@@ -220,10 +220,15 @@ vec3 BlinnPhong()
 		// Temp
 		if(sample_detail_map == 1)
 		{
-			float paint_alpha = float(texture(detail_map, fs_in.interp_UV).r) / 255; // 0 -> 255
-			vec4 paint_color = vec4(1,0,1,1);
+			//int pmap_size = 512;
+			//int max_uval = 255;
+			//ivec2 uv_pixels = ivec2(fs_in.interp_UV * pmap_size);
+			//uv_pixels.x = clamp(uv_pixels.x, 0, pmap_size - 1);
+			//uv_pixels.y = clamp(uv_pixels.y, 0, pmap_size - 1);
+			//float paint_alpha = float(texture(detail_map, uv_pixels).r) / max_uval; // 0 -> 255
+			//vec4 paint_color = vec4(1,0,1,1);
 			//final_color = vec3(paint_alpha);
-			surface_color = (1 - paint_alpha) * paint_color;
+			//surface_color = (1 - paint_alpha) * paint_color;
 		}
 
 		// calculate diffuse component
@@ -285,5 +290,22 @@ void main()
 	color += calculatePointLights();
 	color += calculateDirLights();
 	
+	if(sample_detail_map == 1)
+	{
+		vec4 paint_color = vec4(1,1,1,1);
+
+		//color = (1 - paint_alpha) * paint_color;
+		float paint = texture(detail_map, vec2(0.0019, 0.0019)).r;
+		color = vec4(paint);
+
+		float paintAlpha = 0.0;
+		float texelSize = 1.0 / textureSize(detail_map, 0).x;
+		for (int x = -1; x <= 1; x++)
+			for (int y = -1; y <= 1; y++)
+				paintAlpha += float(texture(detail_map, fs_in.interp_UV + texelSize * vec2(x, y)).r)/255; 
+		paintAlpha = (9.0 - paintAlpha) / 9.0;
+		color = (1 - paintAlpha) * paint_color + paintAlpha * vec4(0.1,0.1,0,0);
+	}
+
 	colorFrag = color;
 }

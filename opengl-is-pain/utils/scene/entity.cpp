@@ -30,6 +30,14 @@ namespace engine::scene
 		shader.unbind();
 	}
 
+	void Entity::init() noexcept
+	{
+		for (auto& c : components)
+		{
+			c->init();
+		}
+	}
+
 	void Entity::draw() const noexcept
 	{
 		prepare_draw();

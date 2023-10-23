@@ -55,6 +55,8 @@ namespace engine::scene
 		// draws using the provided shader instead of the material
 		void custom_draw(Shader& shader) const noexcept;
 
+		void init() noexcept;
+
 		void draw() const noexcept;
 
 		void update(float delta_time) noexcept;

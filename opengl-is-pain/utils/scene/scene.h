@@ -49,6 +49,8 @@ namespace engine::scene
 
 		void remove_marked();
 
+		void init();
+
 		void update(float deltaTime);
 
 		void draw() const;

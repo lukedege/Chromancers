@@ -192,6 +192,8 @@ void setup_input_keys()
 			bullet->emplace_component<PaintballComponent>();
 			//Entity* bullet = sphere_ptr;
 			
+			bullet->init();
+
 			float shootInitialSpeed = 20.f;
 			glm::vec3 shoot_dir = main_scene.current_camera->forward() * shootInitialSpeed;
 			btVector3 impulse = btVector3(shoot_dir.x, shoot_dir.y, shoot_dir.z);
@@ -357,7 +359,7 @@ int main()
 	Entity* floor_plane = main_scene.emplace_entity("floor", "floorplane", plane_model, floor_material);
 	Entity* wall_plane  = main_scene.emplace_entity("wall", "wallplane", plane_model, wall_material);
 	Entity* sphere      = main_scene.emplace_entity("sphere", "sphere", sphere_model, sph_mat);
-	Entity* bunny       = main_scene.emplace_entity("bunny", "buny", bunny_model, sph_mat);
+	//Entity* bunny       = main_scene.emplace_entity("bunny", "buny", bunny_model, sph_mat);
 
 	sphere_ptr = sphere;
 
@@ -385,8 +387,8 @@ int main()
 		sphere->set_rotation(glm::vec3(0.0f, 0.0f, 0.0f));
 		sphere->set_size(glm::vec3(0.25f));
 
-		bunny->set_position(glm::vec3(-5.0f, 3.0f, 0.0f));
-		bunny->set_size(glm::vec3(1.f));
+		//bunny->set_position(glm::vec3(-5.0f, 3.0f, 0.0f));
+		//bunny->set_size(glm::vec3(1.f));
 
 		cursor.set_size(glm::vec3(3.0f));
 	};
@@ -404,11 +406,10 @@ int main()
 	sphere     ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1.0f, 1.0f, 1.0f, {ColliderShape::SPHERE, glm::vec3{1}} }, true);
 
 	std::vector<glm::vec3> bunny_mesh_vertices = bunny_model.get_vertices_positions();
-	bunny      ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 10.0f, 1.0f, 1.0f,
-		ColliderShapeCreateInfo{ ColliderShape::HULL, glm::vec3{1}, &bunny_mesh_vertices } }, false);
+	//bunny      ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 10.0f, 1.0f, 1.0f,
+	//	ColliderShapeCreateInfo{ ColliderShape::HULL, glm::vec3{1}, &bunny_mesh_vertices } }, false);
 
 	test_cube->emplace_component<PaintableComponent>(painter_shader, splat_tex, glm::vec4{1,1,1,1}, 512, 512);
-	test_cube->material->detail_map = &greybricks_diffuse_tex;
 
 	// Framebuffers
 	Framebuffer map_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGB, GL_RGB, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
@@ -421,6 +422,8 @@ int main()
 	// Temp
 	sphere_model_ptr = &sphere_model;
 	sphere_material_ptr = &sph_mat;
+
+	main_scene.init();
 
 	while (wdw.is_open())
 	{

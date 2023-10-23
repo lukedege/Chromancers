@@ -8,21 +8,28 @@ namespace engine::components
 {
 	class PaintballComponent : public Component
 	{
+		btRigidBody* parent_rb;
+		glm::vec3 prev_velocity, current_velocity; // we need this as current velocity when collision happens factors in the bounce...
 	public:
 		constexpr static auto COMPONENT_ID = 1;
 
 		PaintballComponent(scene::Entity& parent) :
-			Component(parent)
+			Component(parent),
+			prev_velocity    { 0 },
+			current_velocity { 0 }
 		{}
 
 		void init()
 		{
-
+			parent_rb = parent->get_component<RigidBodyComponent>()->rigid_body;
+			if (!parent_rb) utils::io::warn("BULLET - RigidBody component not found. Something went wrong...");
 		}
 
 		void update(float delta_time)
 		{
-
+			prev_velocity = current_velocity;
+			current_velocity = physics::to_glm_vec3(parent_rb->getLinearVelocity());
+			utils::io::info("Curr. lin. vel. : ", current_velocity.x, ", ", current_velocity.y, ", ", current_velocity.z);
 		}
 
 		int type()
@@ -36,21 +43,13 @@ namespace engine::components
 
 			if (other_paintable)
 			{
-				RigidBodyComponent* parent_rb = parent->get_component<RigidBodyComponent>();
-
-				glm::vec3 bullet_direction {0};
-				glm::vec3 bullet_up {0};
 				glm::vec3 bullet_position = parent->transform().position();
-			
-				if (parent_rb) { 
-					bullet_direction = glm::normalize(physics::to_glm_vec3(parent_rb->rigid_body->getLinearVelocity()));
-					glm::vec3 bullet_lateral = glm::normalize(glm::cross(bullet_direction, glm::vec3{0, 1, 0})); 
-					bullet_up = glm::normalize(glm::cross(bullet_direction, bullet_lateral));
-				}
-				else { utils::io::warn("BULLET - RigidBody component not found. Something went wrong..."); } // TODO temp
-
+				glm::vec3 bullet_direction = glm::normalize(prev_velocity);
+				glm::vec3 bullet_lateral = glm::normalize(glm::cross(bullet_direction, glm::vec3{0, 1, 0})); 
+				glm::vec3 bullet_up = glm::normalize(glm::cross(bullet_direction, bullet_lateral));
+				
 				// Create paintspace viewprojection
-				float paint_near_plane = 0.05f, paint_far_plane = 3.f, frustum_size = 1.f, distance_bias = 2.f;
+				float paint_near_plane = 0.05f, paint_far_plane = 2.f, frustum_size = 1.f, distance_bias = 1.f;
 				glm::mat4 paintProjection = glm::ortho(-frustum_size, frustum_size, -frustum_size, frustum_size, paint_near_plane, paint_far_plane);
 				glm::mat4 paintView = glm::lookAt(bullet_position - bullet_direction * distance_bias, bullet_position + bullet_direction, bullet_up);
 

@@ -34,7 +34,7 @@ void main()
     uv_pixels.x = clamp(uv_pixels.x, 0, paint_map_size - 1);
     uv_pixels.y = clamp(uv_pixels.y, 0, paint_map_size - 1);
     uint previous_paint_color = imageLoad(previous_paint_map, uv_pixels).r;
-
+    
     // Retrieves paint color added to the fragment with the current splat.
     vec3 projCoords = fs_in.pwFragPos.xyz / fs_in.pwFragPos.w;
     projCoords = projCoords * 0.5 + 0.5;
