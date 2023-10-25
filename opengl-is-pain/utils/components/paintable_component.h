@@ -27,8 +27,6 @@ namespace engine::components
 		constexpr static auto COMPONENT_ID = 2;
 
 	private:
-		/*Framebuffer paintspace_fbo;
-		Texture& paint_mask;*/
 		Texture paint_mask;
 
 		Shader* painter_shader;
@@ -37,35 +35,6 @@ namespace engine::components
 		
 
 	public:
-		/*PaintableComponent(Entity& parent, Shader& painter_shader, Texture& stain_tex, Color paint_color, unsigned int paintmask_width, unsigned int paintmask_height) :
-			Component(parent),
-			paintspace_fbo    { paintmask_width, paintmask_height, {GL_R8UI, GL_RED_INTEGER, GL_UNSIGNED_BYTE}, {GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} },
-			paint_mask        { paintspace_fbo.get_color_attachment() },
-			painter_shader    { &painter_shader },
-			stain_tex         { &stain_tex },
-			paint_color       { paint_color }
-		{
-			paintspace_fbo.bind();
-			paint_mask.bind();
-			Texture::FormatInfo tx_format = paint_mask.format_info();
-			
-			// Fill mask with max value
-			std::vector<GLubyte> pixels(paintmask_width * paintmask_height, (GLubyte)0xffffffff);
-			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, paintmask_width, paintmask_height, tx_format.format, tx_format.data_type, pixels.data());
-			
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-			GLuint borderColor[] = { UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX };
-			glTexParameterIuiv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-			
-			// set up parents material to add paintmap as a detail map 
-			parent.material->detail_map = &paint_mask;
-			
-			paint_mask.unbind();
-			paintspace_fbo.unbind();
-		}*/
 
 		PaintableComponent(Entity& parent, Shader& painter_shader, Texture& stain_tex, Color paint_color, unsigned int paintmask_width, unsigned int paintmask_height) :
 			Component(parent),
@@ -82,10 +51,12 @@ namespace engine::components
 				0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, &pixels[0]);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-			GLuint borderColor[] = { UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX };
-			glTexParameterIuiv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+			//GLuint borderColor[] = { UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX };
+			//glTexParameterIuiv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
 			paint_mask.unbind();
 
@@ -129,35 +100,6 @@ namespace engine::components
 
 			ExportMaskTexture(paint_mask.id(), 512, 512, "test.bmp");
 		}
-
-		/*void update_paintmap(const glm::mat4& paintspace_matrix, const glm::vec3& paint_direction)
-		{
-			painter_shader->bind();
-			painter_shader->setMat4("paintSpaceMatrix", paintspace_matrix);
-			painter_shader->setVec3("paintBallDirection", paint_direction);
-			
-			// setup stain
-			glActiveTexture(GL_TEXTURE0);
-			stain_tex->bind();
-			painter_shader->setInt("stainTex", 0);
-			
-			// paint mask
-			painter_shader->setInt("paint_map_size", paint_mask.width());
-			glBindImageTexture(1, paint_mask.id, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R8UI);
-
-			
-			glClear(GL_DEPTH_BUFFER_BIT);
-			parent->custom_draw(*painter_shader);
-			glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-			//ExportTexture(paint_mask.id, paint_mask.width(), paint_mask.width(), "test.bmp", GL_RGB);
-		}*/
-
-		//void on_collision(scene::Entity& other, glm::vec3 contact_point) 
-		//{
-		//	
-		//};
 		
 		// TODO temp
 		void ExportMaskTexture(GLint mask_texture, unsigned int width, unsigned int height, std::string filename)

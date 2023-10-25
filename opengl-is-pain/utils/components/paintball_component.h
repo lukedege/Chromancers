@@ -29,7 +29,7 @@ namespace engine::components
 		{
 			prev_velocity = current_velocity;
 			current_velocity = physics::to_glm_vec3(parent_rb->getLinearVelocity());
-			utils::io::info("Curr. lin. vel. : ", current_velocity.x, ", ", current_velocity.y, ", ", current_velocity.z);
+			//utils::io::info("Curr. lin. vel. : ", current_velocity.x, ", ", current_velocity.y, ", ", current_velocity.z);
 		}
 
 		int type()

@@ -190,6 +190,31 @@ float calculateShadow(vec4 lwFragPos, vec3 lightDir, vec3 normal)
 	return shadow;
 }
 
+
+float samplePaintAlpha(usampler2D paintMap, vec2 texCoords)
+{
+	float texelSize = 1.0 / textureSize(paintMap, 0).x;
+	float texelDepth = 255;
+	float paintAlpha = float(texture(paintMap, texCoords + texelSize).r) / texelDepth;
+	return paintAlpha;
+}
+
+float samplePaintAlpha_pcf()
+{
+	//for (int x = -1; x <= 1; x++)
+	//	for (int y = -1; y <= 1; y++)
+	//		paint_alpha += float(texture(detail_map, fs_in.interp_UV + texelSize * vec2(x, y)).r)/255; 
+	//paint_alpha = (9.0 - paint_alpha) / 9.0;
+	return 0.f;
+}
+
+vec4 calculatePaintColor(usampler2D paintMap, vec2 texCoords, vec4 paintColor, vec4 surfaceColor)
+{
+	float paintAlpha = samplePaintAlpha(paintMap, texCoords); 
+	vec4 finalColor = (1 - paintAlpha) * paintColor + paintAlpha * surfaceColor;
+	return finalColor;
+}
+
 vec3 BlinnPhong()
 {
 	// ambient component 
@@ -220,15 +245,8 @@ vec3 BlinnPhong()
 		// Temp
 		if(sample_detail_map == 1)
 		{
-			//int pmap_size = 512;
-			//int max_uval = 255;
-			//ivec2 uv_pixels = ivec2(fs_in.interp_UV * pmap_size);
-			//uv_pixels.x = clamp(uv_pixels.x, 0, pmap_size - 1);
-			//uv_pixels.y = clamp(uv_pixels.y, 0, pmap_size - 1);
-			//float paint_alpha = float(texture(detail_map, uv_pixels).r) / max_uval; // 0 -> 255
-			//vec4 paint_color = vec4(1,0,1,1);
-			//final_color = vec3(paint_alpha);
-			//surface_color = (1 - paint_alpha) * paint_color;
+			vec4 paint_color = vec4(1,1,0,0.1);
+			surface_color = calculatePaintColor(detail_map, fs_in.interp_UV, paint_color, surface_color);
 		}
 
 		// calculate diffuse component
@@ -283,6 +301,7 @@ vec4 calculateDirLights()
 	return color;
 }
 
+
 void main()
 {
 	vec4 color = vec4(0);
@@ -290,22 +309,12 @@ void main()
 	color += calculatePointLights();
 	color += calculateDirLights();
 	
-	if(sample_detail_map == 1)
-	{
-		vec4 paint_color = vec4(1,1,1,1);
-
-		//color = (1 - paint_alpha) * paint_color;
-		float paint = texture(detail_map, vec2(0.0019, 0.0019)).r;
-		color = vec4(paint);
-
-		float paintAlpha = 0.0;
-		float texelSize = 1.0 / textureSize(detail_map, 0).x;
-		for (int x = -1; x <= 1; x++)
-			for (int y = -1; y <= 1; y++)
-				paintAlpha += float(texture(detail_map, fs_in.interp_UV + texelSize * vec2(x, y)).r)/255; 
-		paintAlpha = (9.0 - paintAlpha) / 9.0;
-		color = (1 - paintAlpha) * paint_color + paintAlpha * vec4(0.1,0.1,0,0);
-	}
+	//if(sample_detail_map == 1)
+	//{
+	//	vec4 paint_color = vec4(0.1,0.1,0,0);
+	//	vec4 surface_color = vec4(1,1,1,1);
+	//	color = calculatePaintColor(detail_map, fs_in.interp_UV, paint_color, surface_color);
+	//}
 
 	colorFrag = color;
 }

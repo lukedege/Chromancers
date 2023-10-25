@@ -21,7 +21,7 @@ out VS_OUT
 	vec2 interp_UV;
 
     // vertex normal
-    vec3 normal;
+    vec3 wNormal;
 
     // paint dir
     vec3 wPaintDir;
@@ -32,8 +32,11 @@ out VS_OUT
 
 void main()
 {
+    mat3 worldNormalMatrix = transpose(inverse(mat3(modelMatrix))); // this matrix updates normals to follow world/model matrix transformations
+
     vs_out.interp_UV = UV;
-    vs_out.normal = normalize(normal);
+
+    vs_out.wNormal = normalize(worldNormalMatrix * normal);
     vs_out.wPaintDir = normalize(paintBallDirection);
     vs_out.pwFragPos = paintSpaceMatrix * modelMatrix * vec4(position, 1.0f);
 

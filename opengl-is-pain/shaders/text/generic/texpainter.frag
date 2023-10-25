@@ -6,7 +6,7 @@ in VS_OUT
 	vec2 interp_UV;
 
     // vertex normal
-    vec3 normal;
+    vec3 wNormal;
 
     // paint dir
     vec3 wPaintDir;
@@ -42,7 +42,7 @@ void main()
     
     // Computes incidence angle between paint ball direction and face normal.
     float paintLevel = 1.0 - texture2D(stainTex, projCoords.xy).r;
-    float incidence = dot(fs_in.wPaintDir, fs_in.normal);
+    float incidence = dot(fs_in.wPaintDir, fs_in.wNormal);
     
     // If dot product < 0 then the face got hit by the paint.
     if (incidence < 0 && paintLevel > 0)
@@ -52,8 +52,4 @@ void main()
     
         imageStore(previous_paint_map, uv_pixels, uvec4(paint));
     }
-    //ivec2 uv_pixels = ivec2(fs_in.interp_UV * paint_map_size);
-    //uv_pixels.x = clamp(uv_pixels.x, 0, paint_map_size - 1);
-    //uv_pixels.y = clamp(uv_pixels.y, 0, paint_map_size - 1);
-    //imageStore(previous_paint_map, uv_pixels, uvec4(0));
 }
