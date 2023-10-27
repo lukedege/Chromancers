@@ -19,7 +19,7 @@ uniform sampler2D stainTex; // bound to unit0
 uniform int paintmap_size;
 
 // The previous state of the paint map.
-uniform layout(binding = 3, r8ui) uimage2D previous_paint_map;
+uniform layout(binding = 3, rgba8ui) uimage2D previous_paint_map;
 
 // The maximum unsigned byte (used for normalization)
 const uint max_ubyte = 255;
@@ -36,7 +36,7 @@ void main()
     ivec2 uv_pixels = ivec2(fs_in.interp_UV * paintmap_size);
     uv_pixels.x = clamp(uv_pixels.x, 0, paintmap_size - 1);
     uv_pixels.y = clamp(uv_pixels.y, 0, paintmap_size - 1);
-    uint previous_paint_color = imageLoad(previous_paint_map, uv_pixels).r;
+    //uint previous_paint_color = imageLoad(previous_paint_map, uv_pixels).r;
     
     // Retrieves paint color added to the fragment with the current splat.
     vec3 projCoords = fs_in.pwFragPos.xyz / fs_in.pwFragPos.w;
@@ -51,8 +51,8 @@ void main()
     if (incidence < 0 && paintLevel > 0)
     {
         // Computes new paint color value.
-        uint paint = min(previous_paint_color, addedColor);
+        uvec4 paint_color = uvec4(paintBallColor) * max_ubyte;
     
-        imageStore(previous_paint_map, uv_pixels, uvec4(paint));
+        imageStore(previous_paint_map, uv_pixels, paint_color);
     }
 }

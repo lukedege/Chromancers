@@ -105,6 +105,9 @@ PhysicsEngine<Entity> physics_engine;
 float maxSecPerFrame = 1.0f / 60.0f;
 float capped_deltaTime;
 
+// Paint
+glm::vec4 paint_color;
+
 // Temporary 
 Entity* sphere_ptr;
 Model* sphere_model_ptr;
@@ -189,7 +192,7 @@ void setup_input_keys()
 			bullet->set_size(glm::vec3(0.25f));
 
 			bullet->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1.0f, 1.0f, 1.0f, {ColliderShape::SPHERE, glm::vec3{1}} }, true);
-			bullet->emplace_component<PaintballComponent>(glm::vec4{1.f, 1.f, 0.f, 1.f});
+			bullet->emplace_component<PaintballComponent>(paint_color);
 			//Entity* bullet = sphere_ptr;
 			
 			bullet->init();
@@ -589,6 +592,7 @@ int main()
 		ImGui::Text(fps_counter.c_str());
 		if (ImGui::CollapsingHeader("Coefficients and scales"))
 		{
+			ImGui::ColorEdit4  ("Paint Color", glm::value_ptr(paint_color));
 			ImGui::Separator(); ImGui::Text("Normal");
 			ImGui::SliderFloat("Repeat tex##norm", &floor_plane->material->uv_repeat, 0, 3000, " % .1f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::Separator(); ImGui::Text("Parallax");

@@ -199,6 +199,14 @@ float samplePaintAlpha(usampler2D paintMap, vec2 texCoords)
 	return paintAlpha;
 }
 
+vec4 samplePaintColor(usampler2D paintMap, vec2 texCoords)
+{
+	float texelSize = 1.0 / textureSize(paintMap, 0).x;
+	float texelDepth = 255;
+	vec4 paintColor = vec4(texture(paintMap, texCoords + texelSize)) / texelDepth;
+	return paintColor;
+}
+
 float samplePaintAlpha_pcf()
 {
 	//for (int x = -1; x <= 1; x++)
@@ -252,12 +260,14 @@ vec3 BlinnPhong()
 		// Temp
 		if(sample_detail_map == 1)
 		{
-			vec4 paint_color = vec4(1,1,0,0.1);
-			surface_color = calculatePaintColor(detail_map, fs_in.interp_UV, paint_color, surface_color);
-			if(samplePaintAlpha(detail_map, fs_in.interp_UV) == 0)
+			//vec4 paint_color = vec4(1,1,0,0.1);
+			//surface_color = calculatePaintColor(detail_map, fs_in.interp_UV, paint_color, surface_color);
+			vec4 new_surface_color = samplePaintColor(detail_map, fs_in.interp_UV);
+			if(new_surface_color.a > 0)
 			{
 				spec = pow(specAngle, 256.f);
-				surface_color *= 2;
+				new_surface_color *= 2;
+				surface_color = new_surface_color;
 			}
 		}
 

@@ -36,15 +36,15 @@ namespace engine::components
 
 		PaintableComponent(Entity& parent, Shader& painter_shader, Texture& stain_tex, unsigned int paintmask_width, unsigned int paintmask_height) :
 			Component(parent),
-			paint_mask{ paintmask_width, paintmask_height, {GL_R8UI, GL_RED_INTEGER, GL_UNSIGNED_BYTE} },
+			paint_mask{ paintmask_width, paintmask_height, {GL_RGBA8UI, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE } },
 			painter_shader{ &painter_shader },
 			stain_tex{ &stain_tex }
 		{
 			paint_mask.bind();
 			
 			const auto& tx_format = paint_mask.format_info();
-
-			std::vector<GLubyte> pixels(paintmask_width * paintmask_height, (GLubyte)UINT_MAX);
+			
+			std::vector<GLubyte> pixels(paintmask_width * paintmask_height * 4, (GLubyte)0);
 			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, paintmask_width, paintmask_height, tx_format.format, tx_format.data_type, pixels.data());
 
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -86,7 +86,7 @@ namespace engine::components
 			
 			// paint mask
 			painter_shader->setInt("paintmap_size", 512);
-			glBindImageTexture(3, paint_mask.id(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_R8UI);
+			glBindImageTexture(3, paint_mask.id(), 0, GL_FALSE, 0, GL_WRITE_ONLY, paint_mask.format_info().internal_format);
 			
 			//glClear(GL_DEPTH_BUFFER_BIT);
 			parent->custom_draw(*painter_shader);
@@ -95,7 +95,8 @@ namespace engine::components
 
 			//ExportMaskTexture(paint_mask.id(), 512, 512, "test.bmp");
 		}
-		
+
+	private:
 		// TODO temp
 		void ExportMaskTexture(GLint mask_texture, unsigned int width, unsigned int height, std::string filename)
 		{
@@ -118,8 +119,5 @@ namespace engine::components
 			glBindTexture(GL_TEXTURE_2D, 0);
 			if(true){}
 		}
-	private:
-
-		
 	};
 }
