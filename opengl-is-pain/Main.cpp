@@ -189,7 +189,7 @@ void setup_input_keys()
 			bullet->set_size(glm::vec3(0.25f));
 
 			bullet->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1.0f, 1.0f, 1.0f, {ColliderShape::SPHERE, glm::vec3{1}} }, true);
-			bullet->emplace_component<PaintballComponent>();
+			bullet->emplace_component<PaintballComponent>(glm::vec4{1.f, 1.f, 0.f, 1.f});
 			//Entity* bullet = sphere_ptr;
 			
 			bullet->init();
@@ -409,9 +409,9 @@ int main()
 	//bunny      ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 10.0f, 1.0f, 1.0f,
 	//	ColliderShapeCreateInfo{ ColliderShape::HULL, glm::vec3{1}, &bunny_mesh_vertices } }, false);
 
-	test_cube ->emplace_component<PaintableComponent>(painter_shader, splat_tex, glm::vec4{1,1,1,1}, 512, 512);
-	wall_plane->emplace_component<PaintableComponent>(painter_shader, splat_tex, glm::vec4{1,1,1,1}, 512, 512);
-	cube      ->emplace_component<PaintableComponent>(painter_shader, splat_tex, glm::vec4{1,1,1,1}, 512, 512);
+	test_cube ->emplace_component<PaintableComponent>(painter_shader, splat_tex, 512, 512);
+	wall_plane->emplace_component<PaintableComponent>(painter_shader, splat_tex, 512, 512);
+	cube      ->emplace_component<PaintableComponent>(painter_shader, splat_tex, 512, 512);
 
 	// Framebuffers
 	Framebuffer map_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGB, GL_RGB, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };

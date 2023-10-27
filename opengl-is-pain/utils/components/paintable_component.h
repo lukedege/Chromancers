@@ -22,7 +22,6 @@ namespace engine::components
 	// 3) Risalva l'immagine e usala come texture nello scene draw finale
 	class PaintableComponent : public Component
 	{
-		using Color = glm::vec4;
 	public:
 		constexpr static auto COMPONENT_ID = 2;
 
@@ -31,32 +30,27 @@ namespace engine::components
 
 		Shader* painter_shader;
 		Texture* stain_tex; // tex to apply to impact
-		Color paint_color;
 		
 
 	public:
 
-		PaintableComponent(Entity& parent, Shader& painter_shader, Texture& stain_tex, Color paint_color, unsigned int paintmask_width, unsigned int paintmask_height) :
+		PaintableComponent(Entity& parent, Shader& painter_shader, Texture& stain_tex, unsigned int paintmask_width, unsigned int paintmask_height) :
 			Component(parent),
 			paint_mask{ paintmask_width, paintmask_height, {GL_R8UI, GL_RED_INTEGER, GL_UNSIGNED_BYTE} },
 			painter_shader{ &painter_shader },
-			stain_tex{ &stain_tex },
-			paint_color{ paint_color }
+			stain_tex{ &stain_tex }
 		{
 			paint_mask.bind();
 			
+			const auto& tx_format = paint_mask.format_info();
+
 			std::vector<GLubyte> pixels(paintmask_width * paintmask_height, (GLubyte)UINT_MAX);
-			//glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, paintmask_width, paintmask_height, tx_format.format, tx_format.data_type, pixels.data());
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, paintmask_width, paintmask_height,
-				0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, &pixels[0]);
+			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, paintmask_width, paintmask_height, tx_format.format, tx_format.data_type, pixels.data());
+
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-			//GLuint borderColor[] = { UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX };
-			//glTexParameterIuiv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
 			paint_mask.unbind();
 
@@ -78,11 +72,12 @@ namespace engine::components
 			return COMPONENT_ID;
 		}
 
-		void update_paintmap(const glm::mat4& paintspace_matrix, const glm::vec3& paint_direction)
+		void update_paintmap(const glm::mat4& paintspace_matrix, const glm::vec3& paint_direction, const glm::vec4& paint_color)
 		{
 			painter_shader->bind();
 			painter_shader->setMat4("paintSpaceMatrix", paintspace_matrix);
 			painter_shader->setVec3("paintBallDirection", paint_direction);
+			painter_shader->setVec4("paintBallColor", paint_color);
 			
 			// setup stain
 			glActiveTexture(GL_TEXTURE0);
@@ -90,15 +85,15 @@ namespace engine::components
 			painter_shader->setInt("stainTex", 0);
 			
 			// paint mask
-			painter_shader->setInt("paint_map_size", 512);
+			painter_shader->setInt("paintmap_size", 512);
 			glBindImageTexture(3, paint_mask.id(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_R8UI);
 			
-			glClear(GL_DEPTH_BUFFER_BIT);
+			//glClear(GL_DEPTH_BUFFER_BIT);
 			parent->custom_draw(*painter_shader);
 			glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-			ExportMaskTexture(paint_mask.id(), 512, 512, "test.bmp");
+			//ExportMaskTexture(paint_mask.id(), 512, 512, "test.bmp");
 		}
 		
 		// TODO temp

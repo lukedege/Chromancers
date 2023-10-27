@@ -9,12 +9,14 @@ namespace engine::components
 	class PaintballComponent : public Component
 	{
 		btRigidBody* parent_rb;
+		glm::vec4 paint_color;
 		glm::vec3 prev_velocity, current_velocity; // we need this as current velocity when collision happens factors in the bounce...
 	public:
 		constexpr static auto COMPONENT_ID = 1;
 
-		PaintballComponent(scene::Entity& parent) :
+		PaintballComponent(scene::Entity& parent, glm::vec4 paint_color) :
 			Component(parent),
+			paint_color { paint_color },
 			prev_velocity    { 0 },
 			current_velocity { 0 }
 		{}
@@ -53,7 +55,7 @@ namespace engine::components
 				glm::mat4 paintProjection = glm::ortho(-frustum_size, frustum_size, -frustum_size, frustum_size, paint_near_plane, paint_far_plane);
 				glm::mat4 paintView = glm::lookAt(bullet_position - bullet_direction * distance_bias, bullet_position + bullet_direction, bullet_up);
 
-				other_paintable->update_paintmap(paintProjection * paintView, bullet_direction);
+				other_paintable->update_paintmap(paintProjection * paintView, bullet_direction, paint_color);
 			}
 
 			// Set for destruction
