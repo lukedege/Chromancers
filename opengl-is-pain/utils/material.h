@@ -21,7 +21,7 @@ namespace engine::resources
 		// "Fake" lighting parameters
 		float kA{ 0.1f }, kD{ 0.5f }, kS{ 0.4f };
 		Color ambient_color { 0.1f, 0.1f, 0.1f, 1.f }, diffuse_color{ 1.0f, 1.0f, 1.0f, 1.f }, specular_color{ 1.0f, 1.0f, 1.0f, 1.f };
-		float shininess   { 25.f };
+		float shininess   { 16.f };
 
 		// SchlickGGX parameters
 		float alpha { 0.2f }; // rugosity - 0 : smooth, 1: rough

@@ -240,17 +240,7 @@ vec3 BlinnPhong()
 	if(lambertian > 0.0)
 	{
 		// calculate surface color
-		vec4 surface_color = calculateSurfaceColor(final_texCoords);
-
-		// Temp
-		if(sample_detail_map == 1)
-		{
-			vec4 paint_color = vec4(1,1,0,0.1);
-			surface_color = calculatePaintColor(detail_map, fs_in.interp_UV, paint_color, surface_color);
-		}
-
-		// calculate diffuse component
-		vec3 diffuse_component = kD * lambertian * surface_color.rgb;
+		vec4 surface_color = calculateSurfaceColor(final_texCoords);		
 
 		// in the Blinn-Phong model we do not use the reflection vector, but the half vector
 		vec3 H = normalize(L + V);
@@ -259,6 +249,22 @@ vec3 BlinnPhong()
 		// shininess application to the specular component
 		float spec = pow(specAngle, shininess);
 
+		// Temp
+		if(sample_detail_map == 1)
+		{
+			vec4 paint_color = vec4(1,1,0,0.1);
+			surface_color = calculatePaintColor(detail_map, fs_in.interp_UV, paint_color, surface_color);
+			if(samplePaintAlpha(detail_map, fs_in.interp_UV) == 0)
+			{
+				spec = pow(specAngle, 256.f);
+				surface_color *= 2;
+			}
+		}
+
+		// calculate diffuse component
+		vec3 diffuse_component = kD * lambertian * surface_color.rgb;
+
+		// calculate specular component
 		vec3 specular_component = kS * spec * specular_color.rgb;
 
 		float shadow = calculateShadow(fs_in.lwFragPos, L, N);
@@ -309,12 +315,5 @@ void main()
 	color += calculatePointLights();
 	color += calculateDirLights();
 	
-	//if(sample_detail_map == 1)
-	//{
-	//	vec4 paint_color = vec4(0.1,0.1,0,0);
-	//	vec4 surface_color = vec4(1,1,1,1);
-	//	color = calculatePaintColor(detail_map, fs_in.interp_UV, paint_color, surface_color);
-	//}
-
 	colorFrag = color;
 }
