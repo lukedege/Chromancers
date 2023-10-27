@@ -36,7 +36,7 @@ namespace engine::components
 
 		PaintableComponent(Entity& parent, Shader& painter_shader, Texture& stain_tex, unsigned int paintmask_width, unsigned int paintmask_height) :
 			Component(parent),
-			paint_mask{ paintmask_width, paintmask_height, {GL_RGBA8UI, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE } },
+			paint_mask{ paintmask_width, paintmask_height, {GL_RGBA32F, GL_RGBA, GL_FLOAT } },
 			painter_shader{ &painter_shader },
 			stain_tex{ &stain_tex }
 		{
@@ -44,7 +44,7 @@ namespace engine::components
 			
 			const auto& tx_format = paint_mask.format_info();
 			
-			std::vector<GLubyte> pixels(paintmask_width * paintmask_height * 4, (GLubyte)0);
+			std::vector<GLfloat> pixels(paintmask_width * paintmask_height * 4, 0.f);
 			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, paintmask_width, paintmask_height, tx_format.format, tx_format.data_type, pixels.data());
 
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);

@@ -37,7 +37,7 @@ uniform DirectionalLight directionalLights[MAX_DIR_LIGHTS];
 uniform sampler2D diffuse_map     ; // TexUnit0 Main material color
 uniform sampler2D normal_map      ; // TexUnit1 Normals for detail and light computation
 uniform sampler2D displacement_map; // TexUnit2 Emulated vertex displacement (also known as height/depth map)
-uniform usampler2D detail_map      ; // TexUnit3 Secondary material color
+uniform sampler2D detail_map      ; // TexUnit3 Secondary material color
 
 uniform sampler2D shadow_map;       // TexUnit4 Shadow map
 
@@ -191,38 +191,6 @@ float calculateShadow(vec4 lwFragPos, vec3 lightDir, vec3 normal)
 }
 
 
-float samplePaintAlpha(usampler2D paintMap, vec2 texCoords)
-{
-	float texelSize = 1.0 / textureSize(paintMap, 0).x;
-	float texelDepth = 255;
-	float paintAlpha = float(texture(paintMap, texCoords + texelSize).r) / texelDepth;
-	return paintAlpha;
-}
-
-vec4 samplePaintColor(usampler2D paintMap, vec2 texCoords)
-{
-	float texelSize = 1.0 / textureSize(paintMap, 0).x;
-	float texelDepth = 255;
-	vec4 paintColor = vec4(texture(paintMap, texCoords + texelSize)) / texelDepth;
-	return paintColor;
-}
-
-float samplePaintAlpha_pcf()
-{
-	//for (int x = -1; x <= 1; x++)
-	//	for (int y = -1; y <= 1; y++)
-	//		paint_alpha += float(texture(detail_map, fs_in.interp_UV + texelSize * vec2(x, y)).r)/255; 
-	//paint_alpha = (9.0 - paint_alpha) / 9.0;
-	return 0.f;
-}
-
-vec4 calculatePaintColor(usampler2D paintMap, vec2 texCoords, vec4 paintColor, vec4 surfaceColor)
-{
-	float paintAlpha = samplePaintAlpha(paintMap, texCoords); 
-	vec4 finalColor = (1 - paintAlpha) * paintColor + paintAlpha * surfaceColor;
-	return finalColor;
-}
-
 vec3 BlinnPhong()
 {
 	// ambient component 
@@ -257,15 +225,14 @@ vec3 BlinnPhong()
 		// shininess application to the specular component
 		float spec = pow(specAngle, shininess);
 
-		// Temp
+		// TODO Temp, move to a function when done
 		if(sample_detail_map == 1)
 		{
-			//vec4 paint_color = vec4(1,1,0,0.1);
-			//surface_color = calculatePaintColor(detail_map, fs_in.interp_UV, paint_color, surface_color);
-			vec4 new_surface_color = samplePaintColor(detail_map, fs_in.interp_UV);
+			// TODO add pcf
+			vec4 new_surface_color = texture(detail_map, fs_in.interp_UV);
 			if(new_surface_color.a > 0)
 			{
-				spec = pow(specAngle, 256.f);
+				spec = pow(specAngle, 512.f);
 				new_surface_color *= 2;
 				surface_color = new_surface_color;
 			}

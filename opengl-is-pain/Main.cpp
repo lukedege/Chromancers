@@ -106,7 +106,7 @@ float maxSecPerFrame = 1.0f / 60.0f;
 float capped_deltaTime;
 
 // Paint
-glm::vec4 paint_color;
+glm::vec4 paint_color{1.f};
 
 // Temporary 
 Entity* sphere_ptr;

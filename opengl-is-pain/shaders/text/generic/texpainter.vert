@@ -3,8 +3,6 @@
 layout (location = 0) in vec3 position;  // vertex position in world coordinates
 layout (location = 1) in vec3 normal;    // vertex normal
 layout (location = 2) in vec2 UV;        // UV texture coordinates
-//layout (location = 3) in vec3 tangent;   // tangent   axis in tangent space (orthogonal to normal)
-//layout (location = 4) in vec3 bitangent; // bitangent axis in tangent space (orthogonal to normal)
 
 // Paint transform matrix
 uniform mat4 paintSpaceMatrix;
