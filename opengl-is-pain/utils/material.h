@@ -13,10 +13,11 @@ namespace engine::resources
 	public:
 		Shader* shader;
 		//Color albedo              { 1 }; TODO use in place of diffuse when ambient and specular are gone
-		Texture* diffuse_map      { nullptr };
-		Texture* normal_map       { nullptr };
-		Texture* displacement_map { nullptr };
-		Texture* detail_map       { nullptr };
+		Texture* diffuse_map        { nullptr };
+		Texture* normal_map         { nullptr };
+		Texture* displacement_map   { nullptr };
+		Texture* detail_diffuse_map { nullptr };
+		Texture* detail_normal_map  { nullptr };
 
 		// "Fake" lighting parameters
 		float kA{ 0.1f }, kD{ 0.5f }, kS{ 0.4f };
@@ -78,12 +79,19 @@ namespace engine::resources
 				shader->setInt("sample_displacement_map", 1);
 			}
 
-			if (detail_map)
+			if (detail_diffuse_map)
 			{
 				glActiveTexture(GL_TEXTURE3);
-				detail_map->bind();
-				shader->setInt("detail_map", 3);
-				shader->setInt("sample_detail_map", 1);
+				detail_diffuse_map->bind();
+				shader->setInt("detail_diffuse_map", 3);
+				shader->setInt("sample_detail_diffuse_map", 1);
+			}
+			if (detail_normal_map)
+			{
+				glActiveTexture(GL_TEXTURE4);
+				detail_normal_map->bind();
+				shader->setInt("detail_normal_map", 4);
+				shader->setInt("sample_detail_normal_map", 1);
 			}
 		}
 
@@ -111,11 +119,18 @@ namespace engine::resources
 				displacement_map->unbind();
 			}
 
-			if (detail_map)
+			if (detail_diffuse_map)
 			{
-				shader->setInt("sample_detail_map", 0);
-				shader->setInt("detail_map", 0);
-				detail_map->unbind();
+				shader->setInt("sample_detail_diffuse_map", 0);
+				shader->setInt("detail_diffuse_map", 0);
+				detail_diffuse_map->unbind();
+			}
+
+			if (detail_normal_map)
+			{
+				shader->setInt("sample_detail_normal_map", 0);
+				shader->setInt("detail_normal_map", 0);
+				detail_normal_map->unbind();
 			}
 
 			shader->unbind();

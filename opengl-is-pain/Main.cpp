@@ -109,6 +109,7 @@ float capped_deltaTime;
 glm::vec4 paint_color{1.f};
 
 // Temporary 
+GLint shadow_texture_unit = 5;
 Entity* sphere_ptr;
 Model* sphere_model_ptr;
 Material* sphere_material_ptr;
@@ -326,7 +327,7 @@ int main()
 	Texture redbricks_diffuse_tex{ "textures/bricks2.jpg" },
 		redbricks_normal_tex{ "textures/bricks2_normal.jpg" },
 		redbricks_depth_tex{ "textures/bricks2_disp.jpg" };
-	Texture splat_tex{ "textures/splat.png" };
+	Texture splat_tex{ "textures/uniform_splat_inv.png" }, splat_normal_tex{"textures/splat_normal.jpg"};
 
 	// Shared materials
 	Material redbricks_mat{ default_lit };
@@ -412,9 +413,9 @@ int main()
 	//bunny      ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 10.0f, 1.0f, 1.0f,
 	//	ColliderShapeCreateInfo{ ColliderShape::HULL, glm::vec3{1}, &bunny_mesh_vertices } }, false);
 
-	test_cube ->emplace_component<PaintableComponent>(painter_shader, splat_tex, 512, 512);
-	wall_plane->emplace_component<PaintableComponent>(painter_shader, splat_tex, 512, 512);
-	cube      ->emplace_component<PaintableComponent>(painter_shader, splat_tex, 512, 512);
+	test_cube ->emplace_component<PaintableComponent>(painter_shader, 512, 512, &splat_tex, &splat_normal_tex);
+	wall_plane->emplace_component<PaintableComponent>(painter_shader, 512, 512, &splat_tex, &splat_normal_tex);
+	cube      ->emplace_component<PaintableComponent>(painter_shader, 512, 512, &splat_tex, &splat_normal_tex);
 
 	// Framebuffers
 	Framebuffer map_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGB, GL_RGB, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
@@ -521,12 +522,12 @@ int main()
 		glViewport(0, 0, ws.width, ws.height);
 
 		// Update lit shaders to add the computed shadowmap
-		glActiveTexture(GL_TEXTURE4);
+		glActiveTexture(GL_TEXTURE0+shadow_texture_unit);
 		shadows_framebuffer.get_depth_attachment().bind();
 		for (Shader& lit_shader : lit_shaders)
 		{
 			lit_shader.bind();
-			lit_shader.setInt("shadow_map", 4);
+			lit_shader.setInt("shadow_map", shadow_texture_unit);
 			lit_shader.unbind();
 		}
 

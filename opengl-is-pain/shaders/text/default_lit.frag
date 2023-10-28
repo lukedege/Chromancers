@@ -34,17 +34,19 @@ uniform DirectionalLight directionalLights[MAX_DIR_LIGHTS];
 
 // Textures
 // texture samplers
-uniform sampler2D diffuse_map     ; // TexUnit0 Main material color
-uniform sampler2D normal_map      ; // TexUnit1 Normals for detail and light computation
-uniform sampler2D displacement_map; // TexUnit2 Emulated vertex displacement (also known as height/depth map)
-uniform sampler2D detail_map      ; // TexUnit3 Secondary material color
+uniform sampler2D diffuse_map        ; // TexUnit0 Main material color
+uniform sampler2D normal_map         ; // TexUnit1 Normals for detail and light computation
+uniform sampler2D displacement_map   ; // TexUnit2 Emulated vertex displacement (also known as height/depth map)
+uniform sampler2D detail_diffuse_map ; // TexUnit3 Secondary material color
+uniform sampler2D detail_normal_map  ; // TexUnit4 Secondary material color
 
-uniform sampler2D shadow_map;       // TexUnit4 Shadow map
+uniform sampler2D shadow_map;       // TexUnit5 Shadow map
 
-uniform int sample_diffuse_map      = 0;
-uniform int sample_normal_map       = 0;
-uniform int sample_displacement_map = 0;
-uniform int sample_detail_map       = 0;
+uniform int sample_diffuse_map        = 0;
+uniform int sample_normal_map         = 0;
+uniform int sample_displacement_map   = 0;
+uniform int sample_detail_diffuse_map = 0;
+uniform int sample_detail_normal_map  = 0;
 
 uniform float uv_repeat = 1; // texture repetitions
 
@@ -147,16 +149,16 @@ vec4 calculateSurfaceColor(vec2 texCoords)
 vec4 calculateDetailColor(vec2 texCoords)
 {
 	// branchless condition to avoid divergence
-	vec4 detail_color = ((1 - sample_detail_map) * 0) + // don't consider detail
-	                    ((sample_detail_map)     * texture(detail_map, texCoords)); // use detail map
+	vec4 detail_color = ((1 - sample_detail_diffuse_map) * 0) + // don't consider detail
+	                    ((sample_detail_diffuse_map)     * texture(detail_diffuse_map, texCoords)); // use detail map
 
 	return detail_color;
 }
 
-vec3 calculateNormal(vec2 texCoords)
+vec3 calculateNormal(sampler2D normal_map, int sample_normal_map, vec3 vertexNormal, vec2 texCoords)
 {
 	// branchless condition to avoid divergence
-	vec3 normal = ((1 - sample_normal_map) * normalize(fs_in.twNormal)) + // use vertex normal
+	vec3 normal = ((1 - sample_normal_map) * normalize(vertexNormal)) + // use vertex normal
 	              ((sample_normal_map)     * normalize(texture(normal_map, texCoords).rgb * 2.0 - 1.0)); // use normal map
 
 	return normal;
@@ -193,6 +195,8 @@ float calculateShadow(vec4 lwFragPos, vec3 lightDir, vec3 normal)
 
 vec3 BlinnPhong()
 {
+	float shininess_factor = shininess;
+
 	// ambient component 
 	vec3 ambient_component = kA * ambient_color.rgb;
 
@@ -201,9 +205,23 @@ vec3 BlinnPhong()
 
     vec2 final_texCoords = calculateTexCoords(fs_in.interp_UV, V);
 
-	// obtain normal 
-	vec3 N = calculateNormal(final_texCoords);
-	
+	// obtain normal from primary normal map
+	vec3 N = calculateNormal(normal_map, sample_normal_map, fs_in.twNormal, final_texCoords);
+	vec4 surface_color = diffuse_color;
+	vec4 diffuse_color = texture(diffuse_map, final_texCoords);
+	vec4 detail_diffuse_color = texture(detail_diffuse_map, fs_in.interp_UV);
+
+	if(sample_diffuse_map == 1)
+		surface_color = diffuse_color;
+
+	if(sample_detail_diffuse_map == 1 && sample_detail_normal_map == 1 && detail_diffuse_color.a > 0 )
+	{
+		N += calculateNormal(detail_normal_map, sample_detail_normal_map, fs_in.twNormal, final_texCoords) * 0.25f;
+		N = normalize(N);
+		shininess_factor = 512.f;
+		surface_color = detail_diffuse_color * 2;
+	}
+
 	// normalization of the per-fragment light incidence direction
 	vec3 L = normalize(curr_twLightDir);
 	
@@ -215,28 +233,12 @@ vec3 BlinnPhong()
 	// if the lambert coefficient is positive, then we calculate the specular component
 	if(lambertian > 0.0)
 	{
-		// calculate surface color
-		vec4 surface_color = calculateSurfaceColor(final_texCoords);		
-
 		// in the Blinn-Phong model we do not use the reflection vector, but the half vector
 		vec3 H = normalize(L + V);
 		// we use H to calculate the specular component
 		float specAngle = max(dot(H, N), 0.0);
 		// shininess application to the specular component
-		float spec = pow(specAngle, shininess);
-
-		// TODO Temp, move to a function when done
-		if(sample_detail_map == 1)
-		{
-			// TODO add pcf
-			vec4 new_surface_color = texture(detail_map, fs_in.interp_UV);
-			if(new_surface_color.a > 0)
-			{
-				spec = pow(specAngle, 512.f);
-				new_surface_color *= 2;
-				surface_color = new_surface_color;
-			}
-		}
+		float spec = pow(specAngle, shininess_factor);
 
 		// calculate diffuse component
 		vec3 diffuse_component = kD * lambertian * surface_color.rgb;

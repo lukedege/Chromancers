@@ -12,8 +12,8 @@ in VS_OUT
     vec4 pwFragPos;
 } fs_in;
 
-// The texture that represents the stain mask to apply
-uniform sampler2D stainTex; // bound to unit0
+// The texture that represents the splat mask to apply
+uniform sampler2D splat_mask; // bound to unit0
 
 // The size of the paint map
 uniform int paintmap_size;
@@ -36,16 +36,17 @@ void main()
     vec3 projCoords = fs_in.pwFragPos.xyz / fs_in.pwFragPos.w;
     projCoords = projCoords * 0.5 + 0.5;
 
-    // Compute if fragment is inside the paint stain mask
-    float paintLevel = 1.0 - texture2D(stainTex, projCoords.xy).r;
+    // Compute if fragment is inside the paint splat mask
+    float paintMaskAlpha = texture2D(splat_mask, projCoords.xy).r;
+    float paintAlpha = paintBallColor.a * paintMaskAlpha;
 
     // Computes incidence angle between paint ball direction and face normal
     float incidence = dot(normalize(paintBallDirection), fs_in.wNormal);
     
     // If dot product < 0 then the face got hit by the paint
-    if (incidence < 0 && paintLevel > 0)
+    if (incidence < 0 && paintMaskAlpha > 0)
     {
         // Store new paint color value
-        imageStore(paint_map, uv_pixels, paintBallColor);
+        imageStore(paint_map, uv_pixels, vec4(paintBallColor.rgb, paintAlpha));
     }
 }

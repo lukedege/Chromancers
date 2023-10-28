@@ -29,16 +29,17 @@ namespace engine::components
 		Texture paint_mask;
 
 		Shader* painter_shader;
-		Texture* stain_tex; // tex to apply to impact
-		
+		Texture* splat_tex; // tex to apply to impact
+		Texture* paint_normal_map; // tex to apply to impact
 
 	public:
 
-		PaintableComponent(Entity& parent, Shader& painter_shader, Texture& stain_tex, unsigned int paintmask_width, unsigned int paintmask_height) :
+		PaintableComponent(Entity& parent, Shader& painter_shader, unsigned int paintmask_width, unsigned int paintmask_height, Texture* splat_tex, Texture* paint_normal_map = nullptr) :
 			Component(parent),
 			paint_mask{ paintmask_width, paintmask_height, {GL_RGBA32F, GL_RGBA, GL_FLOAT } },
 			painter_shader{ &painter_shader },
-			stain_tex{ &stain_tex }
+			splat_tex{ splat_tex },
+			paint_normal_map{ paint_normal_map } 
 		{
 			paint_mask.bind();
 			
@@ -54,7 +55,8 @@ namespace engine::components
 
 			paint_mask.unbind();
 
-			parent.material->detail_map = &paint_mask;
+			parent.material->detail_diffuse_map = &paint_mask;
+			parent.material->detail_normal_map = paint_normal_map;
 		}
 
 		void init()
@@ -79,10 +81,10 @@ namespace engine::components
 			painter_shader->setVec3("paintBallDirection", paint_direction);
 			painter_shader->setVec4("paintBallColor", paint_color);
 			
-			// setup stain
+			// setup splat mask
 			glActiveTexture(GL_TEXTURE0);
-			stain_tex->bind();
-			painter_shader->setInt("stainTex", 0);
+			splat_tex->bind();
+			painter_shader->setInt("splat_mask", 0);
 			
 			// paint mask
 			painter_shader->setInt("paintmap_size", 512);
