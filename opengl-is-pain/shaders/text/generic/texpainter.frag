@@ -30,6 +30,7 @@ uniform vec3 paintBallDirection;
 void main()
 {
     // Compute the integer coordinates from the interpolated normalized uvs, aka from [0, 1] to [0, paintmap_size] 
+    // This is needed for imageStore as the coordinates required are integers
     ivec2 uv_pixels = ivec2(fs_in.interp_UV * paintmap_size);
     
     // Compute perspective divide and normalize it into a [0, 1] range
@@ -37,7 +38,7 @@ void main()
     projCoords = projCoords * 0.5 + 0.5;
 
     // Compute if fragment is inside the paint splat mask
-    float paintMaskAlpha = texture2D(splat_mask, projCoords.xy).r;
+    float paintMaskAlpha = texture(splat_mask, projCoords.xy).r;
     float paintAlpha = paintBallColor.a * paintMaskAlpha;
 
     // Computes incidence angle between paint ball direction and face normal
@@ -47,6 +48,7 @@ void main()
     if (incidence < 0 && paintMaskAlpha > 0)
     {
         // Store new paint color value
+        //imageStore(paint_map, uv_pixels, vec4(paintBallColor.rgb, paintAlpha));
         imageStore(paint_map, uv_pixels, vec4(paintBallColor.rgb, paintAlpha));
     }
 }

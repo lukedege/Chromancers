@@ -90,11 +90,14 @@ namespace engine::components
 			painter_shader->setInt("paintmap_size", 512);
 			glBindImageTexture(3, paint_mask.id(), 0, GL_FALSE, 0, GL_WRITE_ONLY, paint_mask.format_info().internal_format);
 			
-			//glClear(GL_DEPTH_BUFFER_BIT);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			glEnable( GL_BLEND );
+			
+			glClear(GL_DEPTH_BUFFER_BIT);
 			parent->custom_draw(*painter_shader);
 			glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+			glDisable( GL_BLEND );
 			//ExportMaskTexture(paint_mask.id(), 512, 512, "test.bmp");
 		}
 

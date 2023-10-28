@@ -51,7 +51,7 @@ namespace engine::components
 				glm::vec3 bullet_up = glm::normalize(glm::cross(bullet_direction, bullet_lateral));
 				
 				// Create paintspace viewprojection
-				float paint_near_plane = 0.05f, paint_far_plane = 2.f, frustum_size = 1.f, distance_bias = 1.f;
+				float paint_near_plane = 0.05f, paint_far_plane = 5.f, frustum_size = 1.f, distance_bias = 1.f;
 				glm::mat4 paintProjection = glm::ortho(-frustum_size, frustum_size, -frustum_size, frustum_size, paint_near_plane, paint_far_plane);
 				glm::mat4 paintView = glm::lookAt(bullet_position - bullet_direction * distance_bias, bullet_position + bullet_direction, bullet_up);
 
