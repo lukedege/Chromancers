@@ -191,8 +191,6 @@ float calculateShadow(vec4 lwFragPos, vec3 lightDir, vec3 normal)
 
 	return shadow;
 }
-
-
 vec3 BlinnPhong()
 {
 	float shininess_factor = shininess;
@@ -208,18 +206,23 @@ vec3 BlinnPhong()
 	// obtain normal from primary normal map
 	vec3 N = calculateNormal(normal_map, sample_normal_map, fs_in.twNormal, final_texCoords);
 	vec4 surface_color = diffuse_color;
-	vec4 diffuse_color = texture(diffuse_map, final_texCoords);
+	vec4 diffuse_map_color = texture(diffuse_map, final_texCoords);
 	vec4 detail_diffuse_color = texture(detail_diffuse_map, fs_in.interp_UV);
 
 	if(sample_diffuse_map == 1)
-		surface_color = diffuse_color;
+		surface_color = diffuse_map_color;
 
 	if(sample_detail_diffuse_map == 1 && sample_detail_normal_map == 1 && detail_diffuse_color.a > 0 )
 	{
-		N += calculateNormal(detail_normal_map, sample_detail_normal_map, fs_in.twNormal, final_texCoords) * 0.25f;
-		N = normalize(N);
-		shininess_factor = 512.f;
-		surface_color = detail_diffuse_color * 2;
+		
+		if(detail_diffuse_color.a > 0.7f)
+		{
+			shininess_factor = 512.f;
+			N += calculateNormal(detail_normal_map, sample_detail_normal_map, fs_in.twNormal, final_texCoords) * 0.25f;
+			N = normalize(N);
+		}
+		float paint_bias = 1.5f;
+		surface_color = vec4(mix(surface_color.rgb, detail_diffuse_color.rgb * paint_bias, detail_diffuse_color.a), 1.f);
 	}
 
 	// normalization of the per-fragment light incidence direction
@@ -255,9 +258,10 @@ vec3 BlinnPhong()
 	return final_color;
 }
 
-vec4 calculatePointLights()
+vec3 calculatePointLights()
 {
-	vec4 color = vec4(0);
+	vec3 color = vec3(0);
+
 	for(int i = 0; i < nPointLights; i++)
 	{
 		curr_twLightDir = fs_in.twPointLightDir[i];//maybe you need to check for twfragpos
@@ -267,20 +271,20 @@ vec4 calculatePointLights()
 							pointLights[i].attenuation_linear * light_distance +
 							pointLights[i].attenuation_quadratic * light_distance * light_distance;
 
-		color += vec4(BlinnPhong(), 1.0f) * pointLights[i].color * pointLights[i].intensity * (1.f/attenuation);
+		color += BlinnPhong() * pointLights[i].color.rgb * pointLights[i].intensity * (1.f/attenuation);
 	}
 	//color = normalize(color);
 	return color;
 }
 
-vec4 calculateDirLights()
+vec3 calculateDirLights()
 {
-	vec4 color = vec4(0);
+	vec3 color = vec3(0);
 	
 	for(int i = 0; i < nDirLights; i++)
 	{
 		curr_twLightDir = fs_in.twDirLightDir[i];
-		color += vec4(BlinnPhong(), 1.0f) * directionalLights[i].color * directionalLights[i].intensity;
+		color += BlinnPhong() * directionalLights[i].color.rgb * directionalLights[i].intensity;
 	}
 	//color = normalize(color);
 	return color;
@@ -289,10 +293,10 @@ vec4 calculateDirLights()
 
 void main()
 {
-	vec4 color = vec4(0);
+	vec3 color = vec3(0);
 	
 	color += calculatePointLights();
 	color += calculateDirLights();
 	
-	colorFrag = color;
+	colorFrag = vec4(color, 1.0f);
 }

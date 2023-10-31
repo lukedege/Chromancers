@@ -413,9 +413,9 @@ int main()
 	//bunny      ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 10.0f, 1.0f, 1.0f,
 	//	ColliderShapeCreateInfo{ ColliderShape::HULL, glm::vec3{1}, &bunny_mesh_vertices } }, false);
 
-	test_cube ->emplace_component<PaintableComponent>(painter_shader, 512, 512, &splat_tex, &splat_normal_tex);
-	wall_plane->emplace_component<PaintableComponent>(painter_shader, 512, 512, &splat_tex, &splat_normal_tex);
-	cube      ->emplace_component<PaintableComponent>(painter_shader, 512, 512, &splat_tex, &splat_normal_tex);
+	test_cube ->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
+	wall_plane->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
+	cube      ->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
 
 	// Framebuffers
 	Framebuffer map_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGB, GL_RGB, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };

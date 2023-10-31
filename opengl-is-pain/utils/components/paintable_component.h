@@ -26,6 +26,7 @@ namespace engine::components
 		constexpr static auto COMPONENT_ID = 2;
 
 	private:
+		Texture paint_map;
 		Texture paint_mask;
 
 		Shader* painter_shader;
@@ -34,28 +35,33 @@ namespace engine::components
 
 	public:
 
-		PaintableComponent(Entity& parent, Shader& painter_shader, unsigned int paintmask_width, unsigned int paintmask_height, Texture* splat_tex, Texture* paint_normal_map = nullptr) :
+		PaintableComponent(Entity& parent, Shader& painter_shader, unsigned int paintmap_width, unsigned int paintmap_height, Texture* splat_tex, Texture* paint_normal_map = nullptr) :
 			Component(parent),
-			paint_mask{ paintmask_width, paintmask_height, {GL_RGBA32F, GL_RGBA, GL_FLOAT } },
+			paint_map { paintmap_width, paintmap_height, {GL_RGBA32F, GL_RGBA, GL_FLOAT } },
+			paint_mask{ paintmap_width, paintmap_height, {GL_R8, GL_RED, GL_FLOAT } },
 			painter_shader{ &painter_shader },
 			splat_tex{ splat_tex },
 			paint_normal_map{ paint_normal_map } 
 		{
-			paint_mask.bind();
+			std::vector<GLfloat> pixels(paintmap_width * paintmap_height * 4, 0.f);
 			
-			const auto& tx_format = paint_mask.format_info();
-			
-			std::vector<GLfloat> pixels(paintmask_width * paintmask_height * 4, 0.f);
-			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, paintmask_width, paintmask_height, tx_format.format, tx_format.data_type, pixels.data());
+			const auto& pmask_format = paint_mask.format_info();
+			const auto& pmap_format = paint_map.format_info();
 
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			paint_mask.bind();
+			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, paintmap_width, paintmap_height, pmask_format.format, pmask_format.data_type, pixels.data());
+
+			paint_map.bind();
+			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, paintmap_width, paintmap_height, pmap_format.format, pmap_format.data_type, pixels.data());
+
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-			paint_mask.unbind();
+			paint_map.unbind();
 
-			parent.material->detail_diffuse_map = &paint_mask;
+			parent.material->detail_diffuse_map = &paint_map;
 			parent.material->detail_normal_map = paint_normal_map;
 		}
 
@@ -85,38 +91,42 @@ namespace engine::components
 			glActiveTexture(GL_TEXTURE0);
 			splat_tex->bind();
 			painter_shader->setInt("splat_mask", 0);
-			
+
+			// paint map
+			painter_shader->setInt("paintmap_size", paint_map.width());
+			glBindImageTexture(1, paint_map.id(), 0, GL_FALSE, 0, GL_READ_WRITE, paint_map.format_info().internal_format);
+
 			// paint mask
-			painter_shader->setInt("paintmap_size", 512);
-			glBindImageTexture(3, paint_mask.id(), 0, GL_FALSE, 0, GL_WRITE_ONLY, paint_mask.format_info().internal_format);
-			
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			glEnable( GL_BLEND );
+			glBindImageTexture(2, paint_mask.id(), 0, GL_FALSE, 0, GL_READ_WRITE, paint_mask.format_info().internal_format);
 			
 			glClear(GL_DEPTH_BUFFER_BIT);
 			parent->custom_draw(*painter_shader);
 			glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			glDisable( GL_BLEND );
-			//ExportMaskTexture(paint_mask.id(), 512, 512, "test.bmp");
+			
+			//ExportMaskTexture(paint_map, paint_map.width(), paint_map.width(), "test.bmp");
 		}
 
 	private:
 		// TODO temp
-		void ExportMaskTexture(GLint mask_texture, unsigned int width, unsigned int height, std::string filename)
+		void ExportMaskTexture(Texture& map_texture, unsigned int width, unsigned int height, std::string filename)
 		{
 			// Image Writing
-			std::unique_ptr<GLubyte[]> imageData = std::make_unique<GLubyte[]>(width * height);
-			glBindTexture(GL_TEXTURE_2D, mask_texture);
-			glGetTexImage(GL_TEXTURE_2D, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, imageData.get());
+			std::unique_ptr<GLubyte[]> imageData = std::make_unique<GLubyte[]>(width * height * 4);
+			glBindTexture(GL_TEXTURE_2D, map_texture.id());
+			glGetTexImage(GL_TEXTURE_2D, 0, map_texture.format_info().format, GL_UNSIGNED_BYTE, imageData.get());
 
 			bitmap_image image(width, height);
 			GLubyte* current_pixel = imageData.get();
 			for (unsigned int y = 0; y < width; y++)
 			{
-				for (unsigned int x = 0; x < height; x++, current_pixel++)
+				for (unsigned int x = 0; x < height; x++, current_pixel++) // skip alpha
 				{
-					image.set_pixel(x, y, *(current_pixel), *(current_pixel), *(current_pixel));
+					// BGR
+					GLubyte blue  = *(current_pixel++);
+					GLubyte green = *(current_pixel++);
+					GLubyte red   = *(current_pixel++);
+					image.set_pixel(x, y, red, green, blue);
 				}
 			}
 
@@ -124,5 +134,6 @@ namespace engine::components
 			glBindTexture(GL_TEXTURE_2D, 0);
 			if(true){}
 		}
+
 	};
 }
