@@ -191,6 +191,9 @@ float calculateShadow(vec4 lwFragPos, vec3 lightDir, vec3 normal)
 
 	return shadow;
 }
+
+
+
 vec3 BlinnPhong()
 {
 	float shininess_factor = shininess;
@@ -207,21 +210,33 @@ vec3 BlinnPhong()
 	vec3 N = calculateNormal(normal_map, sample_normal_map, fs_in.twNormal, final_texCoords);
 	vec4 surface_color = diffuse_color;
 	vec4 diffuse_map_color = texture(diffuse_map, final_texCoords);
+
 	vec4 detail_diffuse_color = texture(detail_diffuse_map, fs_in.interp_UV);
+
+	// pcf
+	vec2 texelSize = 1.0 / textureSize(detail_diffuse_map, 0);
+	for(int x = -1; x <= 1; ++x)
+	{
+		for(int y = -1; y <= 1; ++y)
+		{
+			detail_diffuse_color += texture(detail_diffuse_map, fs_in.interp_UV + vec2(x, y) * texelSize); 
+		}    
+	}
+	detail_diffuse_color /= 9.0;
 
 	if(sample_diffuse_map == 1)
 		surface_color = diffuse_map_color;
 
-	if(sample_detail_diffuse_map == 1 && sample_detail_normal_map == 1 && detail_diffuse_color.a > 0 )
+	if(sample_detail_diffuse_map == 1 && sample_detail_normal_map == 1)
 	{
-		
-		if(detail_diffuse_color.a > 0.7f)
+		if(detail_diffuse_color.a > 0.8f)
 		{
 			shininess_factor = 512.f;
-			N += calculateNormal(detail_normal_map, sample_detail_normal_map, fs_in.twNormal, final_texCoords) * 0.25f;
-			N = normalize(N);
+			float normal_bias = 0.25f;
+			N += calculateNormal(detail_normal_map, sample_detail_normal_map, fs_in.twNormal, final_texCoords) * normal_bias;
 		}
-		float paint_bias = 1.5f;
+		N = normalize(N);
+		float paint_bias = 1.75f;
 		surface_color = vec4(mix(surface_color.rgb, detail_diffuse_color.rgb * paint_bias, detail_diffuse_color.a), 1.f);
 	}
 

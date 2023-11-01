@@ -27,7 +27,6 @@ namespace engine::components
 
 	private:
 		Texture paint_map;
-		Texture paint_mask;
 
 		Shader* painter_shader;
 		Texture* splat_tex; // tex to apply to impact
@@ -37,19 +36,14 @@ namespace engine::components
 
 		PaintableComponent(Entity& parent, Shader& painter_shader, unsigned int paintmap_width, unsigned int paintmap_height, Texture* splat_tex, Texture* paint_normal_map = nullptr) :
 			Component(parent),
-			paint_map { paintmap_width, paintmap_height, {GL_RGBA32F, GL_RGBA, GL_FLOAT } },
-			paint_mask{ paintmap_width, paintmap_height, {GL_R8, GL_RED, GL_FLOAT } },
+			paint_map { paintmap_width, paintmap_height, {GL_RGBA8, GL_RGBA, GL_FLOAT} },
 			painter_shader{ &painter_shader },
 			splat_tex{ splat_tex },
 			paint_normal_map{ paint_normal_map } 
 		{
 			std::vector<GLfloat> pixels(paintmap_width * paintmap_height * 4, 0.f);
 			
-			const auto& pmask_format = paint_mask.format_info();
 			const auto& pmap_format = paint_map.format_info();
-
-			paint_mask.bind();
-			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, paintmap_width, paintmap_height, pmask_format.format, pmask_format.data_type, pixels.data());
 
 			paint_map.bind();
 			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, paintmap_width, paintmap_height, pmap_format.format, pmap_format.data_type, pixels.data());
@@ -95,9 +89,6 @@ namespace engine::components
 			// paint map
 			painter_shader->setInt("paintmap_size", paint_map.width());
 			glBindImageTexture(1, paint_map.id(), 0, GL_FALSE, 0, GL_READ_WRITE, paint_map.format_info().internal_format);
-
-			// paint mask
-			glBindImageTexture(2, paint_mask.id(), 0, GL_FALSE, 0, GL_READ_WRITE, paint_mask.format_info().internal_format);
 			
 			glClear(GL_DEPTH_BUFFER_BIT);
 			parent->custom_draw(*painter_shader);
