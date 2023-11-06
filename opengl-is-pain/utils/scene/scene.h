@@ -3,12 +3,12 @@
 #include <vector>
 #include <unordered_map>
 #include <memory>
-#include <random>
-#include <limits>
 
 #include "camera.h"
 #include "light.h"
 #include "entity.h"
+
+#include "../random.h"
 
 namespace engine::scene
 {
@@ -18,13 +18,9 @@ namespace engine::scene
 		std::unordered_map<std::string, std::unique_ptr<Entity>> entities; // unique pointers to elements in the vector will be valid even after the vector is resized    
 		std::vector<std::string> marked_for_removal; 
 
-		// For random ids
-		std::random_device random_device; // create object for seeding
-		std::mt19937 engine{random_device()}; // create engine and seed it
-		std::uniform_int_distribution<unsigned int> distribution{0, std::numeric_limits<unsigned int>::max()}; // create distribution for integers with given range
-
 	public:
 		Camera* current_camera;
+		utils::random::generator rng;
 
 		template <typename ...Args>
 		Entity* emplace_entity(std::string key, Args&&... args)
@@ -32,7 +28,7 @@ namespace engine::scene
 			std::string final_key = key;
 			while (entities.contains(final_key))
 			{
-				unsigned int random_number = distribution(engine);
+				unsigned int random_number = rng.get_random_uint();
 				final_key = key + std::to_string(random_number);
 				//utils::io::warn("SCENE - The scene already contains an entity with id ", key, ". For disambiguation purposes, its new id will be ", final_key);
 			}

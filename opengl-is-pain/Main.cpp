@@ -37,6 +37,7 @@
 #include "utils/physics.h"
 #include "utils/input.h"
 #include "utils/framebuffer.h"
+#include "utils/random.h"
 
 #include "utils/scene/entity.h"
 #include "utils/scene/light.h "
@@ -107,6 +108,9 @@ float capped_deltaTime;
 
 // Paint
 glm::vec4 paint_color{1.f};
+
+// Random
+utils::random::generator rng;
 
 // Temporary 
 GLint shadow_texture_unit = 5;
@@ -186,21 +190,26 @@ void setup_input_keys()
 			else
 				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);// Fill in fragments
 		});
-	Input::instance().add_onRelease_callback(GLFW_MOUSE_BUTTON_RIGHT, [&]()
+	Input::instance().add_onPressed_callback(GLFW_MOUSE_BUTTON_RIGHT, [&]()
 		{
 			Entity* bullet = main_scene.emplace_entity("bullet", "bullet", *sphere_model_ptr, *sphere_material_ptr );
-			bullet->set_position(main_scene.current_camera->position() + main_scene.current_camera->forward());
-			bullet->set_size(glm::vec3(0.25f));
+			bullet->set_position(main_scene.current_camera->position() + main_scene.current_camera->forward() - glm::vec3{0, 0.5f, 0});
+			bullet->set_size(glm::vec3(0.1f));
 
-			bullet->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1.0f, 1.0f, 1.0f, {ColliderShape::SPHERE, glm::vec3{1}} }, true);
+			// setting up collision mask for paintball rigidbodies (to avoid colliding with themselves)
+			CollisionFilter paintball_cf{ 1 << 7, ~(1 << 7) }; // this means "Paintball group is 1 << 7 (128), mask is everything but paintball group (inverse of the group bit)"
+
+			bullet->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1.0f, 1.0f, 1.0f, {ColliderShape::SPHERE, glm::vec3{1}} }, paintball_cf, true);
 			bullet->emplace_component<PaintballComponent>(paint_color);
 			//Entity* bullet = sphere_ptr;
 			
 			bullet->init();
 
-			float shootInitialSpeed = 20.f;
+			float bias = 3;
+			float speed_spread = rng.get_random_float(-1, 1) * bias; // get float between -bias and +bias
+			float shootInitialSpeed = 20.f + speed_spread;
 			glm::vec3 shoot_dir = main_scene.current_camera->forward() * shootInitialSpeed;
-			btVector3 impulse = btVector3(shoot_dir.x, shoot_dir.y, shoot_dir.z);
+			btVector3 impulse = btVector3(shoot_dir.x+rng.get_random_float(-1, 1), shoot_dir.y+rng.get_random_float(-1, 1), shoot_dir.z+rng.get_random_float(-1, 1));
 			bullet->get_component<RigidBodyComponent>()->rigid_body->applyCentralImpulse(impulse);
 		});
 }

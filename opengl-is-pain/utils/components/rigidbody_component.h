@@ -33,6 +33,15 @@ namespace engine::components
 			rigid_body->setUserPointer(&parent); // sets user pointer used when resolving collisions
 		}
 
+		RigidBodyComponent(Entity& parent, PhysicsEngine<Entity>& phy_engine, RigidBodyCreateInfo rb_cinfo, CollisionFilter cf, bool use_transform_size = false) :
+			Component(parent),
+			physics_engine{&phy_engine},
+			rigid_body { create_rigidbody(rb_cinfo, cf, use_transform_size) },
+			is_kinematic {false}
+		{
+			rigid_body->setUserPointer(&parent); // sets user pointer used when resolving collisions
+		}
+
 		~RigidBodyComponent()
 		{
 			physics_engine->deleteRigidBody(rigid_body);
@@ -79,7 +88,14 @@ namespace engine::components
 		{
 			if (use_transform_size) rb_cinfo.cs_info.size = parent->transform().size();
 
-			return physics_engine->createRigidBody(parent->transform().position(), parent->transform().orientation(), rb_cinfo);
+			return physics_engine->addRigidBody(parent->transform().position(), parent->transform().orientation(), rb_cinfo);
+		}
+
+		btRigidBody* create_rigidbody(RigidBodyCreateInfo rb_cinfo, CollisionFilter cf, bool use_transform_size = false)
+		{
+			if (use_transform_size) rb_cinfo.cs_info.size = parent->transform().size();
+
+			return physics_engine->addRigidBody(parent->transform().position(), parent->transform().orientation(), rb_cinfo, cf);
 		}
 
 		void reset_forces()

@@ -121,6 +121,12 @@ namespace engine::physics
         ColliderShapeCreateInfo cs_info;
     };
 
+    struct CollisionFilter
+    {
+        int group; // which group  the rigidbody is part of
+        int mask;  // which groups the rigidbody should collide with
+    };
+
     template<typename GameObject>
     class PhysicsEngine
     {
@@ -221,63 +227,24 @@ namespace engine::physics
             return collision_shape;
         }
 
-        // Method for the creation of a rigid body, based on a Box or Sphere Collision Shape
-        // The Collision Shape is a reference solid that approximates the shape of the actual object of the scene. The Physical simulation is applied to these solids, and the rotations and positions of these solids are used on the real models.
-        btRigidBody* createRigidBody(const glm::vec3 pos, const glm::vec3 rot, const RigidBodyCreateInfo rb_info)
+        btRigidBody* addRigidBody(const glm::vec3 pos, const glm::vec3 rot, const RigidBodyCreateInfo rb_info)
         {
-            // we convert the glm vector to a Bullet vector
-            btVector3 position = btVector3(pos.x, pos.y, pos.z);
-
-            // we convert from degrees to radians because in setEuler function BULLET USES RADIANS BUT DOESNT SAY 
-            glm::vec3 rot_radians {glm::radians(rot)};
-
-            // we set a quaternion from the Euler angles passed as parameters
-            btQuaternion rotation;
-            
-            rotation.setEuler(rot_radians.y, rot_radians.x, rot_radians.z);
-
-            // We set the initial transformations
-            btTransform objTransform;
-            objTransform.setIdentity();
-            objTransform.setRotation(rotation);
-            // we set the initial position (it must be equal to the position of the corresponding model of the scene)
-            objTransform.setOrigin(position);
-
-            // We create the collision shape
-            btCollisionShape* collision_shape = createCollisionShape(rb_info.cs_info);
-
-            // if objects has mass = 0 -> then it is static (it does not move and it is not subject to forces)
-            btScalar mass = rb_info.mass;
-            bool isDynamic = (mass != 0.0f);
-
-            // if it is dynamic (mass > 0) then we calculates local inertia
-            btVector3 localInertia(0.0f, 0.0f, 0.0f);
-            if (isDynamic)
-                collision_shape->calculateLocalInertia(mass, localInertia);
-
-            // we initialize the Motion State of the object on the basis of the transformations
-            // using the Motion State, the physical simulation will calculate the positions and rotations of the rigid body
-            btDefaultMotionState* motionState = new btDefaultMotionState(objTransform);
-
-            // we set the data structure for the rigid body
-            btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, motionState, collision_shape, localInertia);
-            // we set friction and restitution
-            rbInfo.m_friction = rb_info.friction;
-            rbInfo.m_restitution = rb_info.restitution;
-
-            // if the Collision Shape is a sphere
-            if (rb_info.cs_info.type == SPHERE) {
-                // the sphere touches the plane on the plane on a single point, and thus the friction between sphere and the plane does not work -> the sphere does not stop
-                // to avoid the problem, we apply the rolling friction together with an angular damping (which applies a resistence during the rolling movement), in order to make the sphere to stop after a while
-                rbInfo.m_angularDamping = 0.3f;
-                rbInfo.m_rollingFriction = 0.3f;
-            }
-
-            // we create the rigid body
-            btRigidBody* body = new btRigidBody(rbInfo);
+            btRigidBody* body = createRigidBody(pos, rot, rb_info);
 
             //add the body to the dynamics world
             dynamicsWorld->addRigidBody(body);
+
+            // the function returns a pointer to the created rigid body
+            // in a standard simulation (e.g., only objects falling), it is not needed to have a reference to a single rigid body, but in some cases (e.g., the application of an impulse), it is needed.
+            return body;
+        }
+
+        btRigidBody* addRigidBody(const glm::vec3 pos, const glm::vec3 rot, const RigidBodyCreateInfo rb_info, const CollisionFilter cf)
+        {
+            btRigidBody* body = createRigidBody(pos, rot, rb_info);
+
+            //add the body to the dynamics world
+            dynamicsWorld->addRigidBody(body, cf.group, cf.mask);
 
             // the function returns a pointer to the created rigid body
             // in a standard simulation (e.g., only objects falling), it is not needed to have a reference to a single rigid body, but in some cases (e.g., the application of an impulse), it is needed.
@@ -360,6 +327,66 @@ namespace engine::physics
         }
     private:
         btIDebugDraw* debugDrawer;
+
+        // Method for the creation of a rigid body, based on a Box or Sphere Collision Shape
+        // The Collision Shape is a reference solid that approximates the shape of the actual object of the scene. The Physical simulation is applied to these solids, and the rotations and positions of these solids are used on the real models.
+        btRigidBody* createRigidBody(const glm::vec3 pos, const glm::vec3 rot, const RigidBodyCreateInfo rb_info)
+        {
+            // we convert the glm vector to a Bullet vector
+            btVector3 position = btVector3(pos.x, pos.y, pos.z);
+
+            // we convert from degrees to radians because in setEuler function BULLET USES RADIANS BUT DOESNT SAY 
+            glm::vec3 rot_radians {glm::radians(rot)};
+
+            // we set a quaternion from the Euler angles passed as parameters
+            btQuaternion rotation;
+            
+            rotation.setEuler(rot_radians.y, rot_radians.x, rot_radians.z);
+
+            // We set the initial transformations
+            btTransform objTransform;
+            objTransform.setIdentity();
+            objTransform.setRotation(rotation);
+            // we set the initial position (it must be equal to the position of the corresponding model of the scene)
+            objTransform.setOrigin(position);
+
+            // We create the collision shape
+            btCollisionShape* collision_shape = createCollisionShape(rb_info.cs_info);
+
+            // if objects has mass = 0 -> then it is static (it does not move and it is not subject to forces)
+            btScalar mass = rb_info.mass;
+            bool isDynamic = (mass != 0.0f);
+
+            // if it is dynamic (mass > 0) then we calculates local inertia
+            btVector3 localInertia(0.0f, 0.0f, 0.0f);
+            if (isDynamic)
+                collision_shape->calculateLocalInertia(mass, localInertia);
+
+            // we initialize the Motion State of the object on the basis of the transformations
+            // using the Motion State, the physical simulation will calculate the positions and rotations of the rigid body
+            btDefaultMotionState* motionState = new btDefaultMotionState(objTransform);
+
+            // we set the data structure for the rigid body
+            btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, motionState, collision_shape, localInertia);
+            // we set friction and restitution
+            rbInfo.m_friction = rb_info.friction;
+            rbInfo.m_restitution = rb_info.restitution;
+
+            // if the Collision Shape is a sphere
+            if (rb_info.cs_info.type == SPHERE) {
+                // the sphere touches the plane on the plane on a single point, and thus the friction between sphere and the plane does not work -> the sphere does not stop
+                // to avoid the problem, we apply the rolling friction together with an angular damping (which applies a resistence during the rolling movement), in order to make the sphere to stop after a while
+                rbInfo.m_angularDamping = 0.3f;
+                rbInfo.m_rollingFriction = 0.3f;
+            }
+
+            // we create the rigid body
+            btRigidBody* body = new btRigidBody(rbInfo);
+
+            // the function returns a pointer to the created rigid body
+            // in a standard simulation (e.g., only objects falling), it is not needed to have a reference to a single rigid body, but in some cases (e.g., the application of an impulse), it is needed.
+            return body;
+        }
 
         void clear()
         {

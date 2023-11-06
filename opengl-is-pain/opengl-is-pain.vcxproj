@@ -180,6 +180,7 @@
     <ClInclude Include="utils\model.h" />
     <ClInclude Include="utils\oop.h" />
     <ClInclude Include="utils\physics.h" />
+    <ClInclude Include="utils\random.h" />
     <ClInclude Include="utils\scene\camera.h" />
     <ClInclude Include="utils\scene\entity.h" />
     <ClInclude Include="utils\scene\light.h" />
