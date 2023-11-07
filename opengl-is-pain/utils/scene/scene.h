@@ -4,11 +4,12 @@
 #include <unordered_map>
 #include <memory>
 
+#include "../shader.h"
+#include "../random.h"
+
 #include "camera.h"
 #include "light.h"
 #include "entity.h"
-
-#include "../random.h"
 
 namespace engine::scene
 {
@@ -28,7 +29,7 @@ namespace engine::scene
 			std::string final_key = key;
 			while (entities.contains(final_key))
 			{
-				unsigned int random_number = rng.get_random_uint();
+				unsigned int random_number = rng.get_uint();
 				final_key = key + std::to_string(random_number);
 				//utils::io::warn("SCENE - The scene already contains an entity with id ", key, ". For disambiguation purposes, its new id will be ", final_key);
 			}

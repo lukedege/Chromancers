@@ -108,6 +108,8 @@ float capped_deltaTime;
 
 // Paint
 glm::vec4 paint_color{1.f};
+float paintball_size = 0.1f;
+bool autofire = true;
 
 // Random
 utils::random::generator rng;
@@ -116,7 +118,7 @@ utils::random::generator rng;
 GLint shadow_texture_unit = 5;
 Entity* sphere_ptr;
 Model* sphere_model_ptr;
-Material* sphere_material_ptr;
+Material* bullet_material_ptr;
 
 
 // TODOs 
@@ -150,11 +152,41 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 	}
 }
 
+// Creates and launches a paintball
+std::function<void(bool)> los_paintball = [&](bool precise)
+{
+	Entity* bullet = main_scene.emplace_entity("bullet", "bullet", *sphere_model_ptr, *bullet_material_ptr);
+	bullet->set_position(main_scene.current_camera->position() + main_scene.current_camera->forward() - glm::vec3{0, 0.5f, 0});
+	bullet->set_size(glm::vec3(paintball_size));
+
+	// setting up collision mask for paintball rigidbodies (to avoid colliding with themselves)
+	CollisionFilter paintball_cf{ 1 << 7, ~(1 << 7) }; // this means "Paintball group is 1 << 7 (128), mask is everything but paintball group (inverse of the group bit)"
+
+	bullet->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1.0f, 1.0f, 1.0f, {ColliderShape::SPHERE, glm::vec3{1}} }, paintball_cf, true);
+	bullet->emplace_component<PaintballComponent>(paint_color);
+
+	bullet->init();
+
+	float speed_modifier = 20.f;
+	glm::vec3 spread_modifier {0};
+
+	if (!precise)
+	{
+		float speed_bias = 2.0f;
+		float spread_bias = 1.5f;
+		float speed_spread = rng.get_float(-1, 1) * speed_bias; // get float between -bias and +bias
+		speed_modifier = 20.f + speed_spread;
+		spread_modifier = normalize(glm::vec3{rng.get_float(-1, 1), rng.get_float(-1, 1), rng.get_float(-1, 1)}) * spread_bias;
+	}
+
+	glm::vec3 shoot_dir = main_scene.current_camera->forward() * speed_modifier + spread_modifier;
+	btVector3 impulse = btVector3(shoot_dir.x, shoot_dir.y, shoot_dir.z);
+	bullet->get_component<RigidBodyComponent>()->rigid_body->applyCentralImpulse(impulse);
+};
+
 void setup_input_keys()
 {
 	// Pressed input
-	Input::instance().add_onPressed_callback(GLFW_KEY_H, [&]() { std::cout << "h pressed\n"; }); // TEMP
-	Input::instance().add_onRelease_callback(GLFW_KEY_H, [&]() { std::cout << "h released\n"; }); // TEMP
 	Input::instance().add_onPressed_callback(GLFW_KEY_W, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::FORWARD, deltaTime); });
 	Input::instance().add_onPressed_callback(GLFW_KEY_S, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::BACKWARD, deltaTime); });
 	Input::instance().add_onPressed_callback(GLFW_KEY_A, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::LEFT, deltaTime); });
@@ -167,13 +199,11 @@ void setup_input_keys()
 	Input::instance().add_onPressed_callback(GLFW_KEY_UP   , [&]() { currentLight->position.z -= mov_light_speed * deltaTime; });
 	Input::instance().add_onPressed_callback(GLFW_KEY_DOWN , [&]() { currentLight->position.z += mov_light_speed * deltaTime; });
 
-	Input::instance().add_onPressed_callback(GLFW_KEY_F, [&]()
+	Input::instance().add_onPressed_callback(GLFW_MOUSE_BUTTON_RIGHT, [&]()
 		{
-			Window::window_size ws = wdw_ptr->get_size();
-			glm::vec4 wCursorPosition = utils::math::unproject(cursor_x, cursor_y, ws.width, ws.height, 
-				main_scene.current_camera->viewMatrix(), main_scene.current_camera->projectionMatrix());
+			if (!autofire) return;
 
-			// TODO modify stuff based on cursor position
+			los_paintball(!autofire);
 		});
 
 	// Toggled input
@@ -190,27 +220,11 @@ void setup_input_keys()
 			else
 				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);// Fill in fragments
 		});
-	Input::instance().add_onPressed_callback(GLFW_MOUSE_BUTTON_RIGHT, [&]()
+	Input::instance().add_onRelease_callback(GLFW_MOUSE_BUTTON_RIGHT, [&]()
 		{
-			Entity* bullet = main_scene.emplace_entity("bullet", "bullet", *sphere_model_ptr, *sphere_material_ptr );
-			bullet->set_position(main_scene.current_camera->position() + main_scene.current_camera->forward() - glm::vec3{0, 0.5f, 0});
-			bullet->set_size(glm::vec3(0.1f));
+			if (autofire) return;
 
-			// setting up collision mask for paintball rigidbodies (to avoid colliding with themselves)
-			CollisionFilter paintball_cf{ 1 << 7, ~(1 << 7) }; // this means "Paintball group is 1 << 7 (128), mask is everything but paintball group (inverse of the group bit)"
-
-			bullet->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1.0f, 1.0f, 1.0f, {ColliderShape::SPHERE, glm::vec3{1}} }, paintball_cf, true);
-			bullet->emplace_component<PaintballComponent>(paint_color);
-			//Entity* bullet = sphere_ptr;
-			
-			bullet->init();
-
-			float bias = 3;
-			float speed_spread = rng.get_random_float(-1, 1) * bias; // get float between -bias and +bias
-			float shootInitialSpeed = 20.f + speed_spread;
-			glm::vec3 shoot_dir = main_scene.current_camera->forward() * shootInitialSpeed;
-			btVector3 impulse = btVector3(shoot_dir.x+rng.get_random_float(-1, 1), shoot_dir.y+rng.get_random_float(-1, 1), shoot_dir.z+rng.get_random_float(-1, 1));
-			bullet->get_component<RigidBodyComponent>()->rigid_body->applyCentralImpulse(impulse);
+			los_paintball(!autofire);
 		});
 }
 
@@ -281,17 +295,17 @@ int main()
 	glm::mat4 projection = main_camera.projectionMatrix();
 
 	// Lights setup 
-	PointLight pl1{ glm::vec3{-20.f, 10.f, 10.f}, glm::vec4{1, 1, 1, 1}, 1 };
-	PointLight pl2{ glm::vec3{ 20.f, 10.f, 10.f}, glm::vec4{1, 1, 1, 1}, 1 };
-	DirectionalLight dl1{ glm::vec3{ 0, -1, -1 }, glm::vec4{1, 1, 1, 1}, 1 };
+	PointLight pl1{ glm::vec3{-8.0f, 2.0f, 2.5f}, glm::vec4{1, 0, 1, 1}, 1 };
+	PointLight pl2{ glm::vec3{-8.0f, 2.0f, 7.5f}, glm::vec4{0, 1, 1, 1}, 1 };
+	DirectionalLight dl1{ glm::vec3{ -1, -1, -1 }, glm::vec4{1, 1, 1, 1}, 1 };
 
-	std::vector<PointLight> point_lights;
-	point_lights.push_back(pl1); point_lights.push_back(pl2);
+	std::vector<PointLight*> point_lights;
+	point_lights.push_back(&pl1); point_lights.push_back(&pl2);
 
-	std::vector<DirectionalLight> dir_lights;
-	dir_lights.push_back(dl1);
+	std::vector<DirectionalLight*> dir_lights;
+	dir_lights.push_back(&dl1);
 
-	currentLight = &point_lights[0];
+	currentLight = point_lights[0];
 
 	// Scene setup
 	main_scene.current_camera = &main_camera;
@@ -354,6 +368,10 @@ int main()
 	Material wall_material { redbricks_mat };
 	wall_material.uv_repeat = 20.f;
 
+	Material left_room_lwall_material { wall_material };
+	Material left_room_rwall_material { wall_material };
+	Material left_room_bwall_material { wall_material };
+
 	Material floor_material{ grey_bricks }; //TODO LA UV REPEAT E I SUOI ESTREMI DEVONO DIPENDERE DALLA DIMENSIONE DELLA TEXTURE E/O DALLA SIZE DELLA TRANSFORM?
 	floor_material.uv_repeat = 0.75f * std::max(floor_material.diffuse_map->width(), floor_material.diffuse_map->height());
 
@@ -361,6 +379,8 @@ int main()
 	cube_material.uv_repeat = 3.f;
 
 	Material test_cube_material{ sph_mat };
+
+	Material bullet_material{ sph_mat };
 
 #pragma endregion materials_setup
 
@@ -372,6 +392,10 @@ int main()
 	Entity* floor_plane = main_scene.emplace_entity("floor", "floorplane", plane_model, floor_material);
 	Entity* wall_plane  = main_scene.emplace_entity("wall", "wallplane", plane_model, wall_material);
 	Entity* sphere      = main_scene.emplace_entity("sphere", "sphere", sphere_model, sph_mat);
+
+	Entity* left_room_lwall = main_scene.emplace_entity("wall", "left_room_leftwall", plane_model, left_room_lwall_material);
+	Entity* left_room_rwall = main_scene.emplace_entity("wall", "left_room_rightwall", plane_model, left_room_rwall_material);
+	Entity* left_room_bwall = main_scene.emplace_entity("wall", "left_room_backwall", plane_model, left_room_bwall_material);
 	//Entity* bunny       = main_scene.emplace_entity("bunny", "buny", bunny_model, sph_mat);
 
 	sphere_ptr = sphere;
@@ -391,10 +415,22 @@ int main()
 		wall_plane->set_rotation(glm::vec3(90.0f, 0.0f, 0.f));
 		wall_plane->set_size(glm::vec3(10.0f, 0.1f, 5.0f));
 
+		left_room_lwall->set_position(glm::vec3(-10.0f, 4.0f, 0.0f));
+		left_room_lwall->set_rotation(glm::vec3(90.0f, 0.0f, 0.f));
+		left_room_lwall->set_size(glm::vec3(5.0f, 0.1f, 5.0f));
+
+		left_room_rwall->set_position(glm::vec3(-10.0f, 4.0f, 10.0f));
+		left_room_rwall->set_rotation(glm::vec3(90.0f, 0.0f, 0.f));
+		left_room_rwall->set_size(glm::vec3(5.0f, 0.1f, 5.0f));
+
+		left_room_bwall->set_position(glm::vec3(-15.0f, 4.0f, 5.f));
+		left_room_bwall->set_rotation(glm::vec3(90.0f, 90.0f, 0.f));
+		left_room_bwall->set_size(glm::vec3(5.0f, 0.1f, 5.0f));
+
 		cube->set_position(glm::vec3(0.0f, 3.0f, 0.0f));
 		cube->set_rotation(glm::vec3(0.0f, 0.0f, 0.0f));
 
-		test_cube->set_position(glm::vec3(7.0f, 0.0f, 0.0f));
+		test_cube->set_position(glm::vec3(-12.0f, 0.0f, 5.f));
 
 		sphere->set_position(glm::vec3(0.0f, 0.0f, 0.0f));
 		sphere->set_rotation(glm::vec3(0.0f, 0.0f, 0.0f));
@@ -418,14 +454,22 @@ int main()
 	cube       ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1.0f, 0.1f, 0.1f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
 	sphere     ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1.0f, 1.0f, 1.0f, {ColliderShape::SPHERE, glm::vec3{1}} }, true);
 
+	left_room_lwall->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
+	left_room_rwall->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
+	left_room_bwall->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
+
 	std::vector<glm::vec3> bunny_mesh_vertices = bunny_model.get_vertices_positions();
 	//bunny      ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 10.0f, 1.0f, 1.0f,
 	//	ColliderShapeCreateInfo{ ColliderShape::HULL, glm::vec3{1}, &bunny_mesh_vertices } }, false);
 
-	test_cube  ->emplace_component<PaintableComponent>(painter_shader, 128, 128, &splat_tex, &splat_normal_tex);
-	wall_plane ->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
-	cube       ->emplace_component<PaintableComponent>(painter_shader, 128, 128, &splat_tex, &splat_normal_tex);
-	floor_plane->emplace_component<PaintableComponent>(painter_shader, 4096, 4096, &splat_tex, &splat_normal_tex);
+	test_cube      ->emplace_component<PaintableComponent>(painter_shader, 128, 128, &splat_tex, &splat_normal_tex);
+	wall_plane     ->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
+	cube           ->emplace_component<PaintableComponent>(painter_shader, 128, 128, &splat_tex, &splat_normal_tex);
+	floor_plane    ->emplace_component<PaintableComponent>(painter_shader, 4096, 4096, &splat_tex, &splat_normal_tex);
+
+	left_room_lwall->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
+	left_room_rwall->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
+	left_room_bwall->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
 
 	// Framebuffers
 	Framebuffer map_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGB, GL_RGB, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
@@ -433,11 +477,11 @@ int main()
 
 	// Shadow map setup
 	// (for now only the first dir light is a shadowcaster)
-	float light_near_plane = 1.f, light_far_plane = 20.f, frustum_size = 20.f, distance_bias = 5.f;
+	float light_near_plane = 1.f, light_far_plane = 50.f, frustum_size = 50.f, distance_bias = 20.f;
 
-	// Temp
+	// Bullet stuff
 	sphere_model_ptr = &sphere_model;
-	sphere_material_ptr = &sph_mat;
+	bullet_material_ptr = &bullet_material;
 
 	main_scene.init();
 
@@ -445,7 +489,7 @@ int main()
 	{
 #pragma region setup_loop
 		glm::mat4 lightProjection = glm::ortho(-frustum_size, frustum_size, -frustum_size, frustum_size, light_near_plane, light_far_plane);
-		glm::mat4 lightView = glm::lookAt(-dir_lights[0].direction * distance_bias, glm::vec3(0.f), glm::vec3(0.0f, 1.0f, 0.0f));
+		glm::mat4 lightView = glm::lookAt(-dir_lights[0]->direction * distance_bias, glm::vec3(0.f), glm::vec3(0.0f, 1.0f, 0.0f));
 		glm::mat4 lightSpaceMatrix = lightProjection * lightView;
 
 		// we determine the time passed from the beginning
@@ -488,11 +532,11 @@ int main()
 			lit_shader.bind();
 			for (size_t i = 0; i < point_lights.size(); i++)
 			{
-				point_lights[i].setup(lit_shader, i);
+				point_lights[i]->setup(lit_shader, i);
 			}
 			for (size_t i = 0; i < dir_lights.size(); i++)
 			{
-				dir_lights[i].setup(lit_shader, i);
+				dir_lights[i]->setup(lit_shader, i);
 			}
 			lit_shader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
 			lit_shader.unbind();
@@ -603,7 +647,9 @@ int main()
 		ImGui::Text(fps_counter.c_str());
 		if (ImGui::CollapsingHeader("Coefficients and scales"))
 		{
-			ImGui::ColorEdit4  ("Paint Color", glm::value_ptr(paint_color));
+			ImGui::ColorEdit4 ("Paint Color",    glm::value_ptr(paint_color));
+			ImGui::SliderFloat("Paintball size", &paintball_size, 0, 1, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::Checkbox   ("Automatic firing", &autofire);
 			ImGui::Separator(); ImGui::Text("Normal");
 			ImGui::SliderFloat("Repeat tex##norm", &floor_plane->material->uv_repeat, 0, 3000, " % .1f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::Separator(); ImGui::Text("Parallax");
@@ -618,12 +664,12 @@ int main()
 				std::string light_label = "Point light n." + std::to_string(i);
 				ImGui::Separator(); ImGui::Text(light_label.c_str());
 
-				ImGui::SliderFloat("Intensity", &point_lights[i].intensity, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-				ImGui::ColorEdit4 ("Color", glm::value_ptr(point_lights[i].color));
-				ImGui::SliderFloat3("Pos", glm::value_ptr(point_lights[i].position), -20, 20, "%.2f", 1);
-				ImGui::SliderFloat("Att_const", &point_lights[i].attenuation_constant, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-				ImGui::SliderFloat("Att_lin"  , &point_lights[i].attenuation_linear, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-				ImGui::SliderFloat("Att_quad" , &point_lights[i].attenuation_quadratic, 0, 0.1f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("Intensity", &point_lights[i]->intensity, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::ColorEdit4 ("Color", glm::value_ptr(point_lights[i]->color));
+				ImGui::SliderFloat3("Pos" , glm::value_ptr(point_lights[i]->position), -20, 20, "%.2f", 1);
+				ImGui::SliderFloat("Att_const", &point_lights[i]->attenuation_constant, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("Att_lin"  , &point_lights[i]->attenuation_linear, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("Att_quad" , &point_lights[i]->attenuation_quadratic, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 
 				ImGui::PopID();
 			}
@@ -632,14 +678,14 @@ int main()
 				ImGui::PushID(&dir_lights + i);
 				std::string light_label = "Directional light n." + std::to_string(i);
 				ImGui::Separator(); ImGui::Text(light_label.c_str());
-				ImGui::SliderFloat3("Dir", glm::value_ptr(dir_lights[i].direction), -1, 1, "%.2f", 1);
-				ImGui::SliderFloat ("Intensity", &dir_lights[i].intensity, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-				ImGui::ColorEdit4  ("Color", glm::value_ptr(dir_lights[i].color));
+				ImGui::SliderFloat3("Dir",   glm::value_ptr(dir_lights[i]->direction), -1, 1, "%.2f", 1);
+				ImGui::SliderFloat ("Intensity",           &dir_lights[i]->intensity, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::ColorEdit4  ("Color", glm::value_ptr(dir_lights[i]->color));
 
 				ImGui::PopID();
 			}
 			ImGui::SliderFloat("Dist bias", &distance_bias, 0, 100, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Near ", &light_near_plane, 0, 3, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Near ", &light_near_plane, 0, 100, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::SliderFloat("Far ", &light_far_plane, 0, 100, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::SliderFloat("Frust ", &frustum_size, 0, 100, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 		}

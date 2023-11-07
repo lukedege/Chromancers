@@ -14,20 +14,20 @@ namespace utils::random
 
 	public:
 
-		float get_random_float(float min, float max)
+		float get_float(float min, float max)
 		{
 			std::uniform_real_distribution<float> float_distribution{min, max};
 			return float_distribution(random_engine);
 		}
 
 		// Returns a float between 0 and 1
-		float get_random_float()
+		float get_float()
 		{
 			return float_distribution(random_engine);
 		}
 
 		// Returns an unsigned int between 0 and uint::max
-		unsigned int get_random_uint()
+		unsigned int get_uint()
 		{
 			return uint_distribution(random_engine);
 		}

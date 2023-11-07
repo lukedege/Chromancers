@@ -73,6 +73,11 @@ uniform float parallax_heightscale;
 // Current light position
 vec3 curr_twLightDir;
 
+// Computed stuff
+vec3 twViewDir;
+vec2 finalTexCoords;
+vec3 finalNormal;
+
 vec2 CheapParallaxMapping(vec2 texCoords, vec3 viewDir)
 { 
 	// Sample the heightmap
@@ -164,6 +169,24 @@ vec3 calculateNormal(sampler2D normal_map, int sample_normal_map, vec3 vertexNor
 	return normal;
 }
 
+vec4 texturePCF(sampler2D map, vec2 interp_UV)
+{
+	vec4 sampled = vec4(0);
+
+	vec2 texelSize = 1.0 / textureSize(map, 0);
+	for(int x = -1; x <= 1; ++x)
+	{
+		for(int y = -1; y <= 1; ++y)
+		{
+			sampled += texture(map, interp_UV + vec2(x, y) * texelSize); 
+		}    
+	}
+	sampled /= 9.0;
+
+	return sampled;
+}
+
+
 float calculateShadow(vec4 lwFragPos, vec3 lightDir, vec3 normal)
 {
 	// perform perspective divide
@@ -172,9 +195,6 @@ float calculateShadow(vec4 lwFragPos, vec3 lightDir, vec3 normal)
 	// normalize coordinates to be within [0,1] instead of NDC range [-1,1]
 	projCoords = projCoords * 0.5 + 0.5; 
 
-	// sample the depthmap obtained from the light POV
-	float closestDepth = texture(shadow_map, projCoords.xy).r;
-
 	// get fragment depth
 	float currentDepth = projCoords.z;  
 
@@ -182,8 +202,26 @@ float calculateShadow(vec4 lwFragPos, vec3 lightDir, vec3 normal)
 	float shadow_factor = dot(normal, lightDir);
 	float bias = mix(0.005, 0.0, shadow_factor);
 
+	// sample the depthmap obtained from the light POV
+	float closestDepth = texturePCF(shadow_map, projCoords.xy).r;
 	// if fragment has greater depth, then something occluded it from light POV, thus is in shadow
-	float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;  
+	float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0; 
+	
+	// PCF-filtered shadow sampling
+	/*
+	float shadow = 0.0;
+    vec2 texelSize = 1.0 / textureSize(shadow_map, 0);
+    for(int x = -1; x <= 1; ++x)
+    {
+        for(int y = -1; y <= 1; ++y)
+        {
+			// sample the depthmap obtained from the light POV through the filtering mask
+            float pcfDepth = texture(shadow_map, projCoords.xy + vec2(x, y) * texelSize).r; 
+            shadow += currentDepth - bias > pcfDepth  ? 1.0 : 0.0;        
+        }    
+    }
+	// Average-out the filtering mask
+    shadow /= 9.0;*/
 
 	// don't affect areas outside the shadow_map
 	if(projCoords.z > 1.0)
@@ -191,8 +229,6 @@ float calculateShadow(vec4 lwFragPos, vec3 lightDir, vec3 normal)
 
 	return shadow;
 }
-
-
 
 vec3 BlinnPhong()
 {
@@ -202,27 +238,16 @@ vec3 BlinnPhong()
 	vec3 ambient_component = kA * ambient_color.rgb;
 
 	// view direction
-	vec3 V = normalize( fs_in.twCameraPos - fs_in.twFragPos );
+	vec3 V = twViewDir;
 
-    vec2 final_texCoords = calculateTexCoords(fs_in.interp_UV, V);
+    vec2 final_texCoords = finalTexCoords;
 
 	// obtain normal from primary normal map
-	vec3 N = calculateNormal(normal_map, sample_normal_map, fs_in.twNormal, final_texCoords);
+	vec3 N = finalNormal;
 	vec4 surface_color = diffuse_color;
 	vec4 diffuse_map_color = texture(diffuse_map, final_texCoords);
 
-	vec4 detail_diffuse_color = texture(detail_diffuse_map, fs_in.interp_UV);
-
-	// pcf
-	vec2 texelSize = 1.0 / textureSize(detail_diffuse_map, 0);
-	for(int x = -1; x <= 1; ++x)
-	{
-		for(int y = -1; y <= 1; ++y)
-		{
-			detail_diffuse_color += texture(detail_diffuse_map, fs_in.interp_UV + vec2(x, y) * texelSize); 
-		}    
-	}
-	detail_diffuse_color /= 9.0;
+	vec4 detail_diffuse_color = texturePCF(detail_diffuse_map, fs_in.interp_UV);
 
 	if(sample_diffuse_map == 1)
 		surface_color = diffuse_map_color;
@@ -235,15 +260,15 @@ vec3 BlinnPhong()
 			float normal_bias = 0.25f;
 			N += calculateNormal(detail_normal_map, sample_detail_normal_map, fs_in.twNormal, final_texCoords) * normal_bias;
 		}
-		N = normalize(N);
 		float paint_bias = 1.75f;
 		surface_color = vec4(mix(surface_color.rgb, detail_diffuse_color.rgb * paint_bias, detail_diffuse_color.a), 1.f);
 	}
-
+	
 	// normalization of the per-fragment light incidence direction
 	vec3 L = normalize(curr_twLightDir);
 	
 	// Lambert coefficient
+	N = normalize(N);
 	float lambertian = max(dot(L,N), 0.0);
 	
 	vec3 final_color = ambient_component;
@@ -263,12 +288,10 @@ vec3 BlinnPhong()
 
 		// calculate specular component
 		vec3 specular_component = kS * spec * specular_color.rgb;
-
-		float shadow = calculateShadow(fs_in.lwFragPos, L, N);
 		
 		// We add diffusive and specular components to the final color
 		// N.B. ): in this implementation, the sum of the components can be different than 1
-		final_color += (1 - shadow) * (diffuse_component + specular_component);
+		final_color +=  (diffuse_component + specular_component);
 	}
 	return final_color;
 }
@@ -279,7 +302,7 @@ vec3 calculatePointLights()
 
 	for(int i = 0; i < nPointLights; i++)
 	{
-		curr_twLightDir = fs_in.twPointLightDir[i];//maybe you need to check for twfragpos
+		curr_twLightDir = normalize(fs_in.twPointLightDir[i]);
 		float light_distance = length(curr_twLightDir);
 		float attenuation = 0.001f + // to avoid division by zero
 							pointLights[i].attenuation_constant +
@@ -288,7 +311,7 @@ vec3 calculatePointLights()
 
 		color += BlinnPhong() * pointLights[i].color.rgb * pointLights[i].intensity * (1.f/attenuation);
 	}
-	//color = normalize(color);
+
 	return color;
 }
 
@@ -298,17 +321,25 @@ vec3 calculateDirLights()
 	
 	for(int i = 0; i < nDirLights; i++)
 	{
-		curr_twLightDir = fs_in.twDirLightDir[i];
-		color += BlinnPhong() * directionalLights[i].color.rgb * directionalLights[i].intensity;
+		curr_twLightDir = normalize(fs_in.twDirLightDir[i]);
+
+		float shadow = calculateShadow(fs_in.lwFragPos, curr_twLightDir, finalNormal);
+
+		color += (1 - shadow) * BlinnPhong() * directionalLights[i].color.rgb * directionalLights[i].intensity;
 	}
-	//color = normalize(color);
+
 	return color;
 }
+
 
 
 void main()
 {
 	vec3 color = vec3(0);
+
+	twViewDir = normalize( fs_in.twCameraPos - fs_in.twFragPos );
+	finalTexCoords = calculateTexCoords(fs_in.interp_UV, twViewDir);
+	finalNormal = calculateNormal(normal_map, sample_normal_map, fs_in.twNormal, finalTexCoords);
 	
 	color += calculatePointLights();
 	color += calculateDirLights();
