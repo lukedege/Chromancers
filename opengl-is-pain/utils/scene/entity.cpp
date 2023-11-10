@@ -69,7 +69,7 @@ namespace engine::scene
 		}
 	}
 
-	const SceneState& Entity::scene_state() const
+	const Entity::SceneState& Entity::scene_state() const
 	{
 		return _scene_state;
 	}

@@ -34,7 +34,7 @@ uniform mat4 projectionMatrix = mat4(1);
 
 //Lights
 // light space matrix is already lightProjMatrix * lightViewMatrix
-uniform mat4 lightSpaceMatrix = mat4(1); // for now only the first dir light
+uniform mat4 lightSpaceMatrix = mat4(1); // TODO for now only the first dir light
 
 uniform uint nPointLights;
 uniform uint nDirLights  ;

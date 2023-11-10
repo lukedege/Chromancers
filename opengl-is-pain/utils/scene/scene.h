@@ -8,7 +8,6 @@
 #include "../random.h"
 
 #include "camera.h"
-#include "light.h"
 #include "entity.h"
 
 namespace engine::scene
@@ -16,6 +15,8 @@ namespace engine::scene
 	class Scene
 	{
 	private:
+		using Shader = engine::resources::Shader;
+
 		std::unordered_map<std::string, std::unique_ptr<Entity>> entities; // unique pointers to elements in the vector will be valid even after the vector is resized    
 		std::vector<std::string> marked_for_removal; 
 

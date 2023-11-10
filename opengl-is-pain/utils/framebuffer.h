@@ -5,17 +5,13 @@
 #include "texture.h"
 #include "window.h"
 
-namespace
-{
-	using namespace engine::resources;
-}
-
 namespace utils::graphics::opengl
 {
 	class Framebuffer
 	{
-	public:
+		using Texture = engine::resources::Texture;
 
+	public:
 		Framebuffer(unsigned int width, unsigned int height, Texture::FormatInfo color_att_format_info, Texture::FormatInfo depth_att_format_info) :
 			_id{ generate_framebuffer() },
 			_width  { width  }, 

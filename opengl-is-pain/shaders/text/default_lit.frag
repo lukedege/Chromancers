@@ -203,13 +203,12 @@ float calculateShadow(vec4 lwFragPos, vec3 lightDir, vec3 normal)
 	float bias = mix(0.005, 0.0, shadow_factor);
 
 	// sample the depthmap obtained from the light POV
-	float closestDepth = texturePCF(shadow_map, projCoords.xy).r;
+	float closestDepth = texture(shadow_map, projCoords.xy).r;
 	// if fragment has greater depth, then something occluded it from light POV, thus is in shadow
 	float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0; 
 	
 	// PCF-filtered shadow sampling
-	/*
-	float shadow = 0.0;
+	/*shadow = 0.0;
     vec2 texelSize = 1.0 / textureSize(shadow_map, 0);
     for(int x = -1; x <= 1; ++x)
     {
@@ -291,7 +290,7 @@ vec3 BlinnPhong()
 		
 		// We add diffusive and specular components to the final color
 		// N.B. ): in this implementation, the sum of the components can be different than 1
-		final_color +=  (diffuse_component + specular_component);
+		final_color += (diffuse_component + specular_component);
 	}
 	return final_color;
 }

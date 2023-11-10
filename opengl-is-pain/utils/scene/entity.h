@@ -21,24 +21,29 @@
 
 #include "scene.h"
 
-namespace
-{
-	using namespace engine::components;
-}
-
 namespace engine::scene
 {
 	class Scene; 
-	struct SceneState
-	{
-		Scene* current_scene;
-		std::string entity_id;
-	};
 
 	// Object in scene
 	class Entity : utils::oop::non_movable
 	{
 		friend class Scene;
+
+		using Shader = engine::resources::Shader;
+		using Model = engine::resources::Model;
+		using Material = engine::resources::Material;
+		using Component = engine::components::Component;
+
+		// This is a record for the entity to remember 
+		// - to which scene it is into (current_scene)
+		// - by which string id its identified in it (entity_id)
+		struct SceneState
+		{
+			Scene* current_scene;
+			std::string entity_id;
+		};
+
 	protected:
 		Transform _transform;
 		Model* model; 

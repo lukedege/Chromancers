@@ -7,14 +7,6 @@
 #include "../shader.h"
 #include "../framebuffer.h"
 
-// unnamed namespace will keep this namespace declaration for this file only, even if included
-namespace
-{
-	using namespace engine::scene;
-	using namespace engine::resources;
-	using namespace utils::graphics::opengl;
-}
-
 namespace engine::components
 {
 	// 1) Renderizzare la scena in paintspace su framebuffer
@@ -22,6 +14,9 @@ namespace engine::components
 	// 3) Risalva l'immagine e usala come texture nello scene draw finale
 	class PaintableComponent : public Component
 	{
+		using Shader = engine::resources::Shader;
+		using Texture = engine::resources::Texture;
+
 	public:
 		constexpr static auto COMPONENT_ID = 2;
 

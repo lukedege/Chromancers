@@ -4,27 +4,24 @@
 #include "../physics.h"
 #include "../transform.h"
 
-// unnamed namespace will keep this namespace declaration for this file only, even if included
-namespace
-{
-	using namespace engine::physics;
-	using namespace engine::scene;
-}
-
 namespace engine::components
 {
 	class RigidBodyComponent : public Component
 	{
+		using PhysicsEngine = engine::physics::PhysicsEngine<Entity>;
+		using RigidBodyCreateInfo = engine::physics::RigidBodyCreateInfo;
+		using CollisionFilter = engine::physics::CollisionFilter;
+
 	public:
 		constexpr static auto COMPONENT_ID = 0;
 	private:
-		PhysicsEngine<Entity>* physics_engine;
+		PhysicsEngine* physics_engine;
 
 	public:
 		btRigidBody* rigid_body;
 		bool is_kinematic; // TODO check if rigid body's mass needs to be set to zero or this is enough
 
-		RigidBodyComponent(Entity& parent, PhysicsEngine<Entity>& phy_engine, RigidBodyCreateInfo rb_cinfo, bool use_transform_size = false) :
+		RigidBodyComponent(Entity& parent, PhysicsEngine& phy_engine, RigidBodyCreateInfo rb_cinfo, bool use_transform_size = false) :
 			Component(parent),
 			physics_engine{&phy_engine},
 			rigid_body { create_rigidbody(rb_cinfo, use_transform_size) },
@@ -33,7 +30,7 @@ namespace engine::components
 			rigid_body->setUserPointer(&parent); // sets user pointer used when resolving collisions
 		}
 
-		RigidBodyComponent(Entity& parent, PhysicsEngine<Entity>& phy_engine, RigidBodyCreateInfo rb_cinfo, CollisionFilter cf, bool use_transform_size = false) :
+		RigidBodyComponent(Entity& parent, PhysicsEngine& phy_engine, RigidBodyCreateInfo rb_cinfo, CollisionFilter cf, bool use_transform_size = false) :
 			Component(parent),
 			physics_engine{&phy_engine},
 			rigid_body { create_rigidbody(rb_cinfo, cf, use_transform_size) },

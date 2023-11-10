@@ -39,10 +39,10 @@
 #include "utils/framebuffer.h"
 #include "utils/random.h"
 
-#include "utils/scene/entity.h"
-#include "utils/scene/light.h "
 #include "utils/scene/camera.h"
+#include "utils/scene/entity.h"
 #include "utils/scene/scene.h "
+#include "utils/scene/light.h "
 
 #include "utils/components/rigidbody_component.h"
 #include "utils/components/paintable_component.h"
@@ -294,19 +294,6 @@ int main()
 	glm::mat4 view = main_camera.viewMatrix();
 	glm::mat4 projection = main_camera.projectionMatrix();
 
-	// Lights setup 
-	PointLight pl1{ glm::vec3{-8.0f, 2.0f, 2.5f}, glm::vec4{1, 0, 1, 1}, 1 };
-	PointLight pl2{ glm::vec3{-8.0f, 2.0f, 7.5f}, glm::vec4{0, 1, 1, 1}, 1 };
-	DirectionalLight dl1{ glm::vec3{ -1, -1, -1 }, glm::vec4{1, 1, 1, 1}, 1 };
-
-	std::vector<PointLight*> point_lights;
-	point_lights.push_back(&pl1); point_lights.push_back(&pl2);
-
-	std::vector<DirectionalLight*> dir_lights;
-	dir_lights.push_back(&dl1);
-
-	currentLight = point_lights[0];
-
 	// Scene setup
 	main_scene.current_camera = &main_camera;
 
@@ -328,6 +315,23 @@ int main()
 	std::vector <std::reference_wrapper<Shader>> lit_shaders, all_shaders;
 	lit_shaders.push_back(default_lit);
 	all_shaders.push_back(basic_mvp_shader); all_shaders.push_back(default_lit);
+
+	// Lights setup 
+	Light::ShadowMapSettings sm_settings;
+	sm_settings.resolution = 1024;
+	sm_settings.shader = &shadowmap_shader;
+
+	PointLight pl1{ glm::vec3{-8.0f, 2.0f, 2.5f}, glm::vec4{1, 0, 1, 1}, 1 };
+	PointLight pl2{ glm::vec3{-8.0f, 2.0f, 7.5f}, glm::vec4{0, 1, 1, 1}, 1 };
+	DirectionalLight dl1{ glm::vec3{ -1, -1, -1 }, glm::vec4{1, 1, 1, 1}, 1, sm_settings};
+
+	std::vector<PointLight*> point_lights;
+	point_lights.push_back(&pl1); point_lights.push_back(&pl2);
+
+	std::vector<DirectionalLight*> dir_lights;
+	dir_lights.push_back(&dl1);
+
+	currentLight = point_lights[0];
 
 	// Shader commons and "constants" setup
 	for (Shader& shader : all_shaders)
@@ -473,11 +477,6 @@ int main()
 
 	// Framebuffers
 	Framebuffer map_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGB, GL_RGB, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
-	Framebuffer shadows_framebuffer{ 1024, 1024, Texture::FormatInfo{GL_RGB, GL_RGB, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
-
-	// Shadow map setup
-	// (for now only the first dir light is a shadowcaster)
-	float light_near_plane = 1.f, light_far_plane = 50.f, frustum_size = 50.f, distance_bias = 20.f;
 
 	// Bullet stuff
 	sphere_model_ptr = &sphere_model;
@@ -488,10 +487,6 @@ int main()
 	while (wdw.is_open())
 	{
 #pragma region setup_loop
-		glm::mat4 lightProjection = glm::ortho(-frustum_size, frustum_size, -frustum_size, frustum_size, light_near_plane, light_far_plane);
-		glm::mat4 lightView = glm::lookAt(-dir_lights[0]->direction * distance_bias, glm::vec3(0.f), glm::vec3(0.0f, 1.0f, 0.0f));
-		glm::mat4 lightSpaceMatrix = lightProjection * lightView;
-
 		// we determine the time passed from the beginning
 		// and we calculate the time difference between current frame rendering and the previous one
 		float currentFrame = gsl::narrow_cast<float>(glfwGetTime());
@@ -538,7 +533,6 @@ int main()
 			{
 				dir_lights[i]->setup(lit_shader, i);
 			}
-			lit_shader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
 			lit_shader.unbind();
 		}
 #pragma endregion setup_loop
@@ -553,31 +547,26 @@ int main()
 #pragma endregion update_world
 
 #pragma region shadow_pass
-		// Shadow pass
-		shadows_framebuffer.bind();
-		glClear(GL_DEPTH_BUFFER_BIT);
 		
-		glCullFace(GL_FRONT); // Culling front face to reduce peter panning effect
-
-		shadowmap_shader.bind();
-		shadowmap_shader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
-		main_scene.custom_draw(shadowmap_shader);
-		shadows_framebuffer.unbind();
-
-		glCullFace(GL_BACK); // Restoring back face culling for drawing
+		for (auto& light : dir_lights)
+		{
+			light->compute_shadowmap(main_scene, &default_lit); // TODO each light has its own lightspacematrix, thus should go in the array of light attributes in the shader
+		}
+		
+		const Texture& computed_shadowmap = dir_lights[0]->get_shadowmap();
 
 		//debug draw the depth texture
 		glViewport(0, 0, 256, 256);
 		tex_depth_shader.bind();
 		glActiveTexture(GL_TEXTURE0);
-		shadows_framebuffer.get_depth_attachment().bind();
+		computed_shadowmap.bind();
 		quad_mesh.draw();
 		textured_shader.unbind();
 		glViewport(0, 0, ws.width, ws.height);
 
 		// Update lit shaders to add the computed shadowmap
 		glActiveTexture(GL_TEXTURE0+shadow_texture_unit);
-		shadows_framebuffer.get_depth_attachment().bind();
+		computed_shadowmap.bind();
 		for (Shader& lit_shader : lit_shaders)
 		{
 			lit_shader.bind();
@@ -681,13 +670,13 @@ int main()
 				ImGui::SliderFloat3("Dir",   glm::value_ptr(dir_lights[i]->direction), -1, 1, "%.2f", 1);
 				ImGui::SliderFloat ("Intensity",           &dir_lights[i]->intensity, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 				ImGui::ColorEdit4  ("Color", glm::value_ptr(dir_lights[i]->color));
-
+				
+				ImGui::SliderFloat("Dist bias", &dir_lights[i]->shadowmap_settings.distance_bias, 0, 100, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("Near ", &dir_lights[i]->shadowmap_settings.frustum_near, 0, 100, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("Far ", &dir_lights[i]->shadowmap_settings.frustum_far, 0, 100, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("Frust ", &dir_lights[i]->shadowmap_settings.frustum_size, 0, 100, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 				ImGui::PopID();
 			}
-			ImGui::SliderFloat("Dist bias", &distance_bias, 0, 100, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Near ", &light_near_plane, 0, 100, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Far ", &light_far_plane, 0, 100, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Frust ", &frustum_size, 0, 100, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 		}
 
 		ImGui::End();
