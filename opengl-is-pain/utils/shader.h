@@ -180,6 +180,8 @@ namespace engine::resources
 		void setMat3 (const std::string& name, const glm::mat3& mat)                  const { glUniformMatrix3fv(getUniformLocation(name), 1, GL_FALSE, glm::value_ptr(mat)); }
 					 
 		void setMat4 (const std::string& name, const glm::mat4& mat)                  const { glUniformMatrix4fv(getUniformLocation(name), 1, GL_FALSE, glm::value_ptr(mat)); }
+
+		void setIntV (const std::string& name, const int count, const int* value)     const { glUniform1iv(getUniformLocation(name), count, value); }
 #pragma endregion 
 
 	private:	

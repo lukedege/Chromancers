@@ -107,7 +107,7 @@ float maxSecPerFrame = 1.0f / 60.0f;
 float capped_deltaTime;
 
 // Paint
-glm::vec4 paint_color{1.f};
+glm::vec4 paint_color{1.f, 1.f, 0.f, 1.f};
 float paintball_size = 0.1f;
 bool autofire = true;
 
@@ -324,12 +324,14 @@ int main()
 	PointLight pl1{ glm::vec3{-8.0f, 2.0f, 2.5f}, glm::vec4{1, 0, 1, 1}, 1 };
 	PointLight pl2{ glm::vec3{-8.0f, 2.0f, 7.5f}, glm::vec4{0, 1, 1, 1}, 1 };
 	DirectionalLight dl1{ glm::vec3{ -1, -1, -1 }, glm::vec4{1, 1, 1, 1}, 1, sm_settings};
+	DirectionalLight dl2{ glm::vec3{ -1, -1, 0 }, glm::vec4{1, 1, 1, 1}, 1, sm_settings};
+	DirectionalLight dl3{ glm::vec3{ 1, -1, 0 }, glm::vec4{1, 1, 1, 1}, 1, sm_settings};
 
 	std::vector<PointLight*> point_lights;
 	point_lights.push_back(&pl1); point_lights.push_back(&pl2);
 
 	std::vector<DirectionalLight*> dir_lights;
-	dir_lights.push_back(&dl1);
+	dir_lights.push_back(&dl1); dir_lights.push_back(&dl2);dir_lights.push_back(&dl3);
 
 	currentLight = point_lights[0];
 
@@ -550,12 +552,11 @@ int main()
 		
 		for (auto& light : dir_lights)
 		{
-			light->compute_shadowmap(main_scene, &default_lit); // TODO each light has its own lightspacematrix, thus should go in the array of light attributes in the shader
+			light->compute_shadowmap(main_scene); // TODO each light has its own lightspacematrix, thus should go in the array of light attributes in the shader
 		}
 		
-		const Texture& computed_shadowmap = dir_lights[0]->get_shadowmap();
-
-		//debug draw the depth texture
+		//debug draw a depth texture
+		const Texture& computed_shadowmap = dir_lights[dir_lights.size()-1]->get_shadowmap();
 		glViewport(0, 0, 256, 256);
 		tex_depth_shader.bind();
 		glActiveTexture(GL_TEXTURE0);
@@ -564,13 +565,18 @@ int main()
 		textured_shader.unbind();
 		glViewport(0, 0, ws.width, ws.height);
 
-		// Update lit shaders to add the computed shadowmap
-		glActiveTexture(GL_TEXTURE0+shadow_texture_unit);
-		computed_shadowmap.bind();
+		// Update lit shaders to add the computed shadowmap(s)
+		std::vector<GLint> locs;
 		for (Shader& lit_shader : lit_shaders)
 		{
 			lit_shader.bind();
-			lit_shader.setInt("shadow_map", shadow_texture_unit);
+			for (int i = 0; i < dir_lights.size(); i++)
+			{
+				glActiveTexture(GL_TEXTURE0+shadow_texture_unit+i);
+				dir_lights[i]->get_shadowmap().bind();
+				locs.push_back(shadow_texture_unit + i);
+			}
+			lit_shader.setIntV("directional_shadow_maps", locs.size(), locs.data());
 			lit_shader.unbind();
 		}
 
@@ -686,7 +692,7 @@ int main()
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 #pragma endregion imgui_draw
 
-		// Swap buffers
+		// Swap buffers and cleanup
 		main_scene.remove_marked();
 		glfwSwapBuffers(glfw_window);
 	}

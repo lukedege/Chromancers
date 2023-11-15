@@ -19,7 +19,7 @@ in VS_OUT
 	vec3 twNormal;
 
 	// light space data
-	vec4 lwFragPos;
+	vec4 lwDirFragPos[MAX_DIR_LIGHTS];
 
 	// the output variable for UV coordinates
 	vec2 interp_UV;
@@ -40,7 +40,7 @@ uniform sampler2D displacement_map   ; // TexUnit2 Emulated vertex displacement 
 uniform sampler2D detail_diffuse_map ; // TexUnit3 Secondary material color
 uniform sampler2D detail_normal_map  ; // TexUnit4 Secondary material color
 
-uniform sampler2D shadow_map;       // TexUnit5 Shadow map
+uniform sampler2D directional_shadow_maps[MAX_DIR_LIGHTS]; // TexUnit5 Shadow map 0
 
 uniform int sample_diffuse_map        = 0;
 uniform int sample_normal_map         = 0;
@@ -187,7 +187,7 @@ vec4 texturePCF(sampler2D map, vec2 interp_UV)
 }
 
 
-float calculateShadow(vec4 lwFragPos, vec3 lightDir, vec3 normal)
+float calculateShadow(sampler2D shadow_map, vec4 lwFragPos, vec3 lightDir, vec3 normal)
 {
 	// perform perspective divide
     vec3 projCoords = lwFragPos.xyz / lwFragPos.w;
@@ -322,7 +322,7 @@ vec3 calculateDirLights()
 	{
 		curr_twLightDir = normalize(fs_in.twDirLightDir[i]);
 
-		float shadow = calculateShadow(fs_in.lwFragPos, curr_twLightDir, finalNormal);
+		float shadow = calculateShadow(directional_shadow_maps[i], fs_in.lwDirFragPos[i], curr_twLightDir, finalNormal);
 
 		color += (1 - shadow) * BlinnPhong() * directionalLights[i].color.rgb * directionalLights[i].intensity;
 	}
