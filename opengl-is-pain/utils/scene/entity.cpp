@@ -43,7 +43,7 @@ namespace engine::scene
 		prepare_draw();
 
 		material->bind();
-			
+
 		material->shader->setMat4("modelMatrix", _transform.world_matrix());
 
 		model->draw();

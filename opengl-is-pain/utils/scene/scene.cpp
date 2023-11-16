@@ -13,12 +13,20 @@ namespace engine::scene
 		{
 			entities.erase(entity_id);
 		}
+		for (const std::string& entity_id : marked_for_removal)// TODO temp
+		{
+			instanced_entities.erase(entity_id);
+		}
 		marked_for_removal.clear();
 	}
 
 	void Scene::init()
 	{
 		for (auto& [id, entity] : entities)
+		{
+			entity->init();
+		}
+		for (auto& [id, entity] : instanced_entities)// TODO temp
 		{
 			entity->init();
 		}
@@ -30,6 +38,11 @@ namespace engine::scene
 		{
 			entity->update(deltaTime);
 		}
+
+		for (auto& [id, entity] : instanced_entities)// TODO temp
+		{
+			entity->update(deltaTime);
+		}
 	}
 
 	void Scene::draw() const
@@ -38,6 +51,18 @@ namespace engine::scene
 		{
 			entity->draw();
 		}
+	}
+
+	void Scene::instanced_draw(Material& m) const// TODO temp
+	{
+		m.bind();
+		for (auto& [id, entity] : instanced_entities)
+		{
+			// TODO replace this with actual opengl instanced drawing
+			entity->custom_draw(*m.shader);
+
+		}
+		m.unbind();
 	}
 
 	void Scene::custom_draw(Shader& shader) const

@@ -16,6 +16,7 @@ namespace engine::components
 	{
 		using Shader = engine::resources::Shader;
 		using Texture = engine::resources::Texture;
+		using Framebuffer = utils::graphics::opengl::Framebuffer;
 
 	public:
 		constexpr static auto COMPONENT_ID = 2;
@@ -26,6 +27,7 @@ namespace engine::components
 		Shader* painter_shader;
 		Texture* splat_tex; // tex to apply to impact
 		Texture* paint_normal_map; // tex to apply to impact
+		Framebuffer paint_fbo; // this framebuffer simply stands to avoid polluting the main rendering framebuffer with drawcalls
 
 	public:
 
@@ -71,6 +73,7 @@ namespace engine::components
 
 		void update_paintmap(const glm::mat4& paintspace_matrix, const glm::vec3& paint_direction, const glm::vec4& paint_color)
 		{
+			paint_fbo.bind();
 			painter_shader->bind();
 			painter_shader->setMat4("paintSpaceMatrix", paintspace_matrix);
 			painter_shader->setVec3("paintBallDirection", paint_direction);
@@ -85,12 +88,12 @@ namespace engine::components
 			painter_shader->setInt("paintmap_size", paint_map.width());
 			glBindImageTexture(1, paint_map.id(), 0, GL_FALSE, 0, GL_READ_WRITE, paint_map.format_info().internal_format);
 			
-			glClear(GL_DEPTH_BUFFER_BIT);
+			//glClear(GL_DEPTH_BUFFER_BIT);
 			parent->custom_draw(*painter_shader);
 			glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			
-			//ExportMaskTexture(paint_map, paint_map.width(), paint_map.width(), "test.bmp");
+			//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+			paint_fbo.unbind();
 		}
 
 	private:

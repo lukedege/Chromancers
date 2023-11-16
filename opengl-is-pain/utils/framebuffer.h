@@ -12,7 +12,9 @@ namespace utils::graphics::opengl
 		using Texture = engine::resources::Texture;
 
 	public:
-		Framebuffer(unsigned int width, unsigned int height, Texture::FormatInfo color_att_format_info, Texture::FormatInfo depth_att_format_info) :
+		Framebuffer(unsigned int width = 512, unsigned int height = 512, 
+			Texture::FormatInfo color_att_format_info = Texture::FormatInfo::sample_color_attachment_info(), 
+			Texture::FormatInfo depth_att_format_info = Texture::FormatInfo::sample_depth_attachment_info()) :
 			_id{ generate_framebuffer() },
 			_width  { width  }, 
 			_height { height },

@@ -18,6 +18,16 @@ namespace engine::resources
 			GLenum internal_format;
 			GLenum format;
 			GLenum data_type;
+
+			static FormatInfo sample_color_attachment_info()
+			{
+				return { GL_RGB, GL_RGB, GL_UNSIGNED_BYTE };
+			}
+
+			static FormatInfo sample_depth_attachment_info()
+			{
+				return {GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT};
+			}
 		};
 		
 

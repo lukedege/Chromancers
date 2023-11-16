@@ -57,6 +57,11 @@ namespace engine::resources
 			for (size_t i = 0; i < meshes.size(); i++) { meshes[i].draw(); }
 		}
 
+		void draw_instanced(size_t amount) const
+		{
+			for (size_t i = 0; i < meshes.size(); i++) { meshes[i].draw_instanced(amount); }
+		}
+
 		std::vector<glm::vec3> get_vertices_positions() const 
 		{
 			std::vector<glm::vec3> vertices;

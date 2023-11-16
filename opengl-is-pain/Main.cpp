@@ -155,7 +155,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 // Creates and launches a paintball
 std::function<void(bool)> los_paintball = [&](bool precise)
 {
-	Entity* bullet = main_scene.emplace_entity("bullet", "bullet", *sphere_model_ptr, *bullet_material_ptr);
+	Entity* bullet = main_scene.emplace_instanced_entity("bullet", "bullet", *sphere_model_ptr, *bullet_material_ptr);
 	bullet->set_position(main_scene.current_camera->position() + main_scene.current_camera->forward() - glm::vec3{0, 0.5f, 0});
 	bullet->set_size(glm::vec3(paintball_size));
 
@@ -585,6 +585,7 @@ int main()
 #pragma region draw_world
 		// Render scene
 		main_scene.draw();
+		main_scene.instanced_draw(bullet_material);
 
 #pragma endregion draw_world
 
