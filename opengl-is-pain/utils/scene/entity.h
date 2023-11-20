@@ -3,6 +3,7 @@
 #include <iostream>
 #include <memory>
 #include <unordered_map>
+#include <optional>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -19,11 +20,9 @@
 
 #include "../transform.h"
 
-#include "scene.h"
-
 namespace engine::scene
 {
-	class Scene; 
+	class Scene; // Forward declaration of Scene class (we aren't using it explicitly so we don't need the include, avoiding the cyclical include)
 
 	// Object in scene
 	class Entity : utils::oop::non_movable
@@ -38,10 +37,12 @@ namespace engine::scene
 		// This is a record for the entity to remember 
 		// - to which scene it is into (current_scene)
 		// - by which string id its identified in it (entity_id)
+		// - (optional) in which group of instanced drawing elements it belongs to (instanced_group_id)
 		struct SceneState
 		{
 			Scene* current_scene;
 			std::string entity_id;
+			std::optional<std::string> instanced_group_id;
 		};
 
 	protected:

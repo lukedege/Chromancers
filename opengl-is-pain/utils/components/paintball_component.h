@@ -1,5 +1,7 @@
 #pragma once 
 
+#include <optional>
+
 #include "../component.h"
 #include "../scene/entity.h"
 #include "../io.h"
@@ -11,6 +13,7 @@ namespace engine::components
 		btRigidBody* parent_rb;
 		glm::vec4 paint_color;
 		glm::vec3 prev_velocity, current_velocity; // we need this as current velocity when collision happens factors in the bounce...
+		float lifetime; // i think its seconds
 	public:
 		constexpr static auto COMPONENT_ID = 1;
 
@@ -18,7 +21,8 @@ namespace engine::components
 			Component(parent),
 			paint_color { paint_color },
 			prev_velocity    { 0 },
-			current_velocity { 0 }
+			current_velocity { 0 },
+			lifetime { 10.f }
 		{}
 
 		void init()
@@ -33,6 +37,9 @@ namespace engine::components
 			current_velocity = physics::to_glm_vec3(parent_rb->getLinearVelocity());
 			parent->material->diffuse_color = paint_color;
 			parent->material->shininess = 512.f;
+			lifetime -= delta_time;
+			if (lifetime <= 0.f)
+				expire();
 			//utils::io::info("Curr. lin. vel. : ", current_velocity.x, ", ", current_velocity.y, ", ", current_velocity.z);
 		}
 
@@ -63,8 +70,7 @@ namespace engine::components
 			}
 
 			// Set for destruction
-			auto& scene_state = parent->scene_state();
-			scene_state.current_scene->mark_for_removal(scene_state.entity_id);
+			expire();
 
 			/*
 			utils::io::info(parent->display_name, " is colliding with ", other.display_name, " at coords ", glm::to_string(contact_point));
@@ -72,6 +78,12 @@ namespace engine::components
 			utils::io::info("Impulse is: ", glm::to_string(impulse));
 			utils::io::info("--------------------------------------------------------------------------");
 			*/
-		};
+		}
+	private:
+		void expire()
+		{
+			auto& scene_state = parent->scene_state();
+			scene_state.current_scene->mark_for_removal(scene_state.entity_id, scene_state.instanced_group_id);
+		}
 	};
 }

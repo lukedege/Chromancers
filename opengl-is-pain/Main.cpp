@@ -152,10 +152,10 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 	}
 }
 
-// Creates and launches a paintball
+// Creates and launches a paintball, if precise is true then there will be no spread among fired bullets 
 std::function<void(bool)> los_paintball = [&](bool precise)
 {
-	Entity* bullet = main_scene.emplace_instanced_entity("bullet", "bullet", *sphere_model_ptr, *bullet_material_ptr);
+	Entity* bullet = main_scene.emplace_instanced_entity("bullets", "bullet", "This is a paintball", *sphere_model_ptr, *bullet_material_ptr);
 	bullet->set_position(main_scene.current_camera->position() + main_scene.current_camera->forward() - glm::vec3{0, 0.5f, 0});
 	bullet->set_size(glm::vec3(paintball_size));
 
@@ -201,8 +201,10 @@ void setup_input_keys()
 
 	Input::instance().add_onPressed_callback(GLFW_MOUSE_BUTTON_RIGHT, [&]()
 		{
+			// This control is a workaround to avoid triggering both onRelease and onPressed callbacks at the same time
 			if (!autofire) return;
 
+			// Fire precisely since it's single fire
 			los_paintball(!autofire);
 		});
 
@@ -222,8 +224,10 @@ void setup_input_keys()
 		});
 	Input::instance().add_onRelease_callback(GLFW_MOUSE_BUTTON_RIGHT, [&]()
 		{
+			// This control is a workaround to avoid triggering both onRelease and onPressed callbacks at the same time
 			if (autofire) return;
 
+			// Fire with spread since it's autofire
 			los_paintball(!autofire);
 		});
 }
@@ -576,7 +580,7 @@ int main()
 				dir_lights[i]->get_shadowmap().bind();
 				locs.push_back(shadow_texture_unit + i);
 			}
-			lit_shader.setIntV("directional_shadow_maps", locs.size(), locs.data());
+			lit_shader.setIntV("directional_shadow_maps", gsl::narrow<int>(locs.size()), locs.data());
 			lit_shader.unbind();
 		}
 
@@ -585,7 +589,7 @@ int main()
 #pragma region draw_world
 		// Render scene
 		main_scene.draw();
-		main_scene.instanced_draw(bullet_material);
+		//main_scene.instanced_draw(bullet_material);
 
 #pragma endregion draw_world
 

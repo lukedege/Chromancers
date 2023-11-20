@@ -82,7 +82,7 @@ namespace engine::resources
 		void draw_instanced(size_t amount, GLenum mode = GL_TRIANGLES) const
 		{
 			glBindVertexArray(VAO);
-			glDrawElementsInstanced(mode, indices.size(), GL_UNSIGNED_INT, 0, amount);
+			glDrawElementsInstanced(mode, gsl::narrow<GLsizei>(indices.size()), GL_UNSIGNED_INT, 0, gsl::narrow<GLsizei>(amount));
 			glBindVertexArray(0);
 		}
 
