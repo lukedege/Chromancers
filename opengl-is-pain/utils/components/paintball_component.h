@@ -29,14 +29,16 @@ namespace engine::components
 		{
 			parent_rb = parent->get_component<RigidBodyComponent>()->rigid_body;
 			if (!parent_rb) utils::io::warn("PaintballComponent - RigidBody component not found: a RigidBody component is required for this component to work.");
+
+			parent->material->diffuse_color = paint_color;
+			parent->material->shininess = 512.f;
 		}
 
 		void update(float delta_time)
 		{
 			prev_velocity = current_velocity;
 			current_velocity = physics::to_glm_vec3(parent_rb->getLinearVelocity());
-			parent->material->diffuse_color = paint_color;
-			parent->material->shininess = 512.f;
+			
 			lifetime -= delta_time;
 			if (lifetime <= 0.f)
 				expire();

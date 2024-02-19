@@ -48,6 +48,8 @@ uniform int sample_displacement_map   = 0;
 uniform int sample_detail_diffuse_map = 0;
 uniform int sample_detail_normal_map  = 0;
 
+uniform int sample_shadow_map  = 0; // receive shadows or not
+
 uniform float uv_repeat = 1; // texture repetitions
 
 // Material-light attributes
@@ -322,7 +324,7 @@ vec3 calculateDirLights()
 	{
 		curr_twLightDir = normalize(fs_in.twDirLightDir[i]);
 
-		float shadow = calculateShadow(directional_shadow_maps[i], fs_in.lwDirFragPos[i], curr_twLightDir, finalNormal);
+		float shadow = calculateShadow(directional_shadow_maps[i], fs_in.lwDirFragPos[i], curr_twLightDir, finalNormal) * sample_shadow_map;
 
 		color += (1 - shadow) * BlinnPhong() * directionalLights[i].color.rgb * directionalLights[i].intensity;
 	}
@@ -342,6 +344,6 @@ void main()
 	
 	color += calculatePointLights();
 	color += calculateDirLights();
-	
+
 	colorFrag = vec4(color, 1.0f);
 }

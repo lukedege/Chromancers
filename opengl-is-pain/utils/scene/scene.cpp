@@ -5,9 +5,9 @@ namespace engine::scene
 	void Scene::mark_for_removal(const std::string& id_to_remove, std::optional<std::string> group_id)
 	{
 		if(group_id.has_value())
-			marked_for_removal_instanced.emplace_back(group_id.value(), id_to_remove);
+			marked_for_removal_instanced.emplace(group_id.value(), id_to_remove);
 		else
-			marked_for_removal.emplace_back(id_to_remove);
+			marked_for_removal.emplace(id_to_remove);
 	}
 
 	void Scene::remove_marked()
@@ -68,15 +68,19 @@ namespace engine::scene
 		Material* current_group_material;
 		for (auto& [group_id, instanced_group] : instanced_entities_groups)
 		{
-			// get first entity material, we're assuming all entities in a group share the same material
+			// get first entity material, we're assuming all entities in a group share the same material and model
 			if (instanced_group.size() > 0)
 			{
 				current_group_material = instanced_group.begin()->second->material; 
 				current_group_material->bind();
 				for (auto& [id, instanced_entity] : instanced_group)
 				{
-					instanced_entity->custom_draw(*current_group_material->shader);
+					instanced_entity->custom_draw(*current_group_material->shader); 
+					//TODO Real instanced drawing:
+					//TODO fill the shader's ubo/ssbo with each entity transform
 				}
+				//TODO perform the instanced draw on the common model of the group
+				
 				current_group_material->unbind();
 			}
 		}

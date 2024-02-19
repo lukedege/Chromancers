@@ -307,14 +307,15 @@ int main()
 	// Shader setup
 	std::vector<const GLchar*> utils_shaders { "shaders/types.glsl", "shaders/constants.glsl" };
 
-	Shader basic_shader    { "shaders/text/generic/basic.vert" ,"shaders/text/generic/basic.frag", 4, 3 };
-	Shader basic_mvp_shader{ "shaders/text/generic/mvp.vert", "shaders/text/generic/basic.frag", 4, 3 };
-	Shader debug_shader    { "shaders/text/generic/mvp.vert", "shaders/text/generic/fullcolor.frag", 4, 3 };
-	Shader default_lit     { "shaders/text/default_lit.vert", "shaders/text/default_lit.frag", 4, 3, nullptr, utils_shaders };
-	Shader textured_shader { "shaders/text/generic/textured.vert" , "shaders/text/generic/textured.frag", 4, 3 };
-	Shader tex_depth_shader{ "shaders/text/generic/textured.vert" , "shaders/text/generic/textured_depth.frag", 4, 3 };
-	Shader shadowmap_shader{ "shaders/text/generic/shadow_map.vert" , "shaders/text/generic/shadow_map.frag", 4, 3 };
-	Shader painter_shader  { "shaders/text/generic/texpainter.vert" , "shaders/text/generic/texpainter.frag", 4, 3 };
+	Shader basic_shader      { "shaders/text/generic/basic.vert" ,"shaders/text/generic/basic.frag", 4, 3 };
+	Shader basic_mvp_shader  { "shaders/text/generic/mvp.vert", "shaders/text/generic/basic.frag", 4, 3 };
+	Shader basic_color_shader{ "shaders/text/generic/mvp.vert" , "shaders/text/generic/fullcolor.frag", 4, 3 };
+	Shader debug_shader      { "shaders/text/generic/mvp.vert", "shaders/text/generic/fullcolor.frag", 4, 3 };
+	Shader default_lit       { "shaders/text/default_lit.vert", "shaders/text/default_lit.frag", 4, 3, nullptr, utils_shaders };
+	Shader textured_shader   { "shaders/text/generic/textured.vert" , "shaders/text/generic/textured.frag", 4, 3 };
+	Shader tex_depth_shader  { "shaders/text/generic/textured.vert" , "shaders/text/generic/textured_depth.frag", 4, 3 };
+	Shader shadowmap_shader  { "shaders/text/generic/shadow_map.vert" , "shaders/text/generic/shadow_map.frag", 4, 3 };
+	Shader painter_shader    { "shaders/text/generic/texpainter.vert" , "shaders/text/generic/texpainter.frag", 4, 3 };
 
 	std::vector <std::reference_wrapper<Shader>> lit_shaders, all_shaders;
 	lit_shaders.push_back(default_lit);
@@ -388,9 +389,9 @@ int main()
 	Material cube_material { redbricks_mat };
 	cube_material.uv_repeat = 3.f;
 
-	Material test_cube_material{ sph_mat };
+	Material test_cube_material{ default_lit };
 
-	Material bullet_material{ sph_mat };
+	Material bullet_material{ default_lit };
 
 #pragma endregion materials_setup
 
@@ -414,6 +415,19 @@ int main()
 	Model quad_mesh{ Mesh::simple_quad_mesh() };
 	Entity cursor{ "cursor", triangle_mesh, basic_mat };
 
+	// Lightcubes
+	std::vector<Material> lightcube_materials; lightcube_materials.resize(point_lights.size());
+	std::vector<Entity*> lightcube_entites; lightcube_entites.resize(point_lights.size());
+	for (size_t i = 0; i < point_lights.size(); i++)
+	{
+		Material lightcolor { default_lit };
+		lightcolor.ambient_color = point_lights[i]->color;
+		lightcolor.kA = 1; lightcolor.kD = 0; lightcolor.kS = 0;
+		lightcolor.receive_shadows = false;
+		lightcube_materials[i] = lightcolor;
+
+		lightcube_entites[i] = main_scene.emplace_entity("light_cube", "light_cube", cube_model, lightcube_materials[i]);
+	}
 
 	// Entities setup in scene
 	scene_setup = [&]()
@@ -449,9 +463,16 @@ int main()
 		//bunny->set_position(glm::vec3(-5.0f, 3.0f, 0.0f));
 		//bunny->set_size(glm::vec3(1.f));
 
+		for (auto& lightcube_entity : lightcube_entites)
+		{
+			lightcube_entity->set_size(glm::vec3(0.25f));
+		}
+
 		cursor.set_size(glm::vec3(3.0f));
 	};
 	scene_setup();
+
+	
 
 	// Physics setup
 	GLDebugDrawer phy_debug_drawer{ main_camera, debug_shader };
@@ -541,6 +562,13 @@ int main()
 			}
 			lit_shader.unbind();
 		}
+
+		// Update lightcubes
+		for (size_t i = 0; i < point_lights.size(); i++)
+		{
+			lightcube_entites[i]->set_position(point_lights[i]->position);
+			lightcube_entites[i]->material->ambient_color = point_lights[i]->color;
+		}
 #pragma endregion setup_loop
 
 #pragma region update_world
@@ -596,7 +624,7 @@ int main()
 #pragma region map_draw
 		// MAP
 		map_framebuffer.bind();
-		glClearColor(0.5f, 0.1f, 0.1f, 1.0f);
+		glClearColor(0.26f, 0.98f, 0.26f, 1.0f); //the "clear" color for the default frame buffer
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		float topdown_height = 20;
@@ -649,6 +677,7 @@ int main()
 		{
 			ImGui::ColorEdit4 ("Paint Color",    glm::value_ptr(paint_color));
 			ImGui::SliderFloat("Paintball size", &paintball_size, 0, 1, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+			
 			ImGui::Checkbox   ("Automatic firing", &autofire);
 			ImGui::Separator(); ImGui::Text("Normal");
 			ImGui::SliderFloat("Repeat tex##norm", &floor_plane->material->uv_repeat, 0, 3000, " % .1f", ImGuiSliderFlags_AlwaysClamp);

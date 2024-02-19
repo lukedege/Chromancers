@@ -276,7 +276,7 @@ namespace engine::physics
 
         void step(float delta_time)
         {
-            dynamicsWorld->stepSimulation(delta_time, 10);
+            dynamicsWorld->stepSimulation(delta_time);
             if (debugDrawer && debugDrawer->getDebugMode())
             {
                 dynamicsWorld->debugDrawWorld();

@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 #include <memory>
 #include <utility>
 
@@ -14,6 +15,17 @@
 
 namespace engine::scene
 {
+	namespace details
+	{
+		struct string_pair_hash 
+		{
+			inline std::size_t operator()(const std::pair<std::string, std::string> & v) const 
+			{
+				std::hash<std::string> hasher;
+				return hasher(v.first+v.second);
+			}
+		};
+	}
 	class Scene
 	{
 	private:
@@ -26,8 +38,8 @@ namespace engine::scene
 		// Groups of entities which will be drawn together in instanced mode, sharing a material (thus a shader)
 		std::unordered_map<std::string, std::unordered_map<std::string, std::unique_ptr<Entity>>> instanced_entities_groups; // TODO assume for now that they use the same material
 		
-		std::vector<std::string> marked_for_removal; 
-		std::vector<std::pair<std::string, std::string>> marked_for_removal_instanced; 
+		std::unordered_set<std::string> marked_for_removal; 
+		std::unordered_set<std::pair<std::string, std::string>, details::string_pair_hash> marked_for_removal_instanced; 
 
 	public:
 		Camera* current_camera;

@@ -34,6 +34,10 @@ namespace engine::resources
 		// Height map parameters
 		float parallax_heightscale { 0.05f };
 
+		// Shadow map parameters
+		bool receive_shadows{ true };
+
+		Material() {}
 		Material(Shader& shader) : shader { &shader } {}
 
 		void bind()
@@ -53,6 +57,8 @@ namespace engine::resources
 
 			shader->setFloat("uv_repeat", uv_repeat);
 			shader->setFloat("parallax_heightscale", parallax_heightscale);
+
+			shader->setInt("sample_shadow_map", receive_shadows);
 			
 			if (diffuse_map)
 			{
