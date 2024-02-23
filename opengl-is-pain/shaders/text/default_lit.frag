@@ -41,6 +41,7 @@ uniform sampler2D detail_diffuse_map ; // TexUnit3 Secondary material color
 uniform sampler2D detail_normal_map  ; // TexUnit4 Secondary material color
 
 uniform sampler2D directional_shadow_maps[MAX_DIR_LIGHTS]; // TexUnit5 Shadow map 0
+uniform samplerCube point_shadow_maps[MAX_POINT_LIGHTS]; // TexUnit??
 
 uniform int sample_diffuse_map        = 0;
 uniform int sample_normal_map         = 0;
@@ -231,6 +232,23 @@ float calculateShadow(sampler2D shadow_map, vec4 lwFragPos, vec3 lightDir, vec3 
 	return shadow;
 }
 
+float calculateShadow(samplerCube shadow_cube, vec3 wFragPos, vec3 wLightPos, float far_plane /* TODO temp*/)
+{
+    // get vector between fragment position and light position
+    vec3 fragToLight = wFragPos - wLightPos;
+    // use the light to fragment vector to sample from the depth map    
+    float closestDepth = texture(shadow_cube, fragToLight).r;
+    // it is currently in linear range between [0,1]. Re-transform back to original value
+    closestDepth *= far_plane;
+    // now get current linear depth as the length between the fragment and light position
+    float currentDepth = length(fragToLight);
+    // now test for shadows
+    float bias = 0.05; 
+    float shadow = currentDepth -  bias > closestDepth ? 1.0 : 0.0;
+
+    return shadow;
+} 
+
 vec3 BlinnPhong()
 {
 	float shininess_factor = shininess;
@@ -310,7 +328,9 @@ vec3 calculatePointLights()
 							pointLights[i].attenuation_linear * light_distance +
 							pointLights[i].attenuation_quadratic * light_distance * light_distance;
 
-		color += BlinnPhong() * pointLights[i].color.rgb * pointLights[i].intensity * (1.f/attenuation);
+		float shadow = calculateShadow(point_shadow_maps[i], fs_in.wFragPos, pointLights[i].position, 25.f) * sample_shadow_map;
+
+		color += (1 - shadow) * BlinnPhong() * pointLights[i].color.rgb * pointLights[i].intensity * (1.f/attenuation);
 	}
 
 	return color;

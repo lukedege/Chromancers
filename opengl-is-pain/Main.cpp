@@ -92,7 +92,7 @@ bool wireframe = false;
 
 // Lights
 PointLight* currentLight;
-float mov_light_speed = 30.f;
+float mov_light_speed = 5.f;
 
 // Scene material/lighting setup 
 glm::vec3 ambient{ 0.1f, 0.1f, 0.1f }, diffuse{ 1.0f, 1.0f, 1.0f }, specular{ 1.0f, 1.0f, 1.0f };
@@ -314,29 +314,35 @@ int main()
 	Shader default_lit       { "shaders/text/default_lit.vert", "shaders/text/default_lit.frag", 4, 3, nullptr, utils_shaders };
 	Shader textured_shader   { "shaders/text/generic/textured.vert" , "shaders/text/generic/textured.frag", 4, 3 };
 	Shader tex_depth_shader  { "shaders/text/generic/textured.vert" , "shaders/text/generic/textured_depth.frag", 4, 3 };
-	Shader shadowmap_shader  { "shaders/text/generic/shadow_map.vert" , "shaders/text/generic/shadow_map.frag", 4, 3 };
 	Shader painter_shader    { "shaders/text/generic/texpainter.vert" , "shaders/text/generic/texpainter.frag", 4, 3 };
+	Shader shadowmap_shader  { "shaders/text/generic/shadow_map.vert" , "shaders/text/generic/shadow_map.frag", 4, 3 };
+	Shader shadowcube_shader  { "shaders/text/generic/shadow_cube.vert" , "shaders/text/generic/shadow_cube.frag", 4, 3, "shaders/text/generic/shadow_cube.geom" };
 
 	std::vector <std::reference_wrapper<Shader>> lit_shaders, all_shaders;
 	lit_shaders.push_back(default_lit);
 	all_shaders.push_back(basic_mvp_shader); all_shaders.push_back(default_lit);
 
 	// Lights setup 
-	Light::ShadowMapSettings sm_settings;
-	sm_settings.resolution = 1024;
-	sm_settings.shader = &shadowmap_shader;
+	DirectionalLight::ShadowMapSettings dir_sm_settings;
+	dir_sm_settings.resolution = 1024;
+	dir_sm_settings.shader = &shadowmap_shader;
 
-	PointLight pl1{ glm::vec3{-8.0f, 2.0f, 2.5f}, glm::vec4{1, 0, 1, 1}, 1 };
-	PointLight pl2{ glm::vec3{-8.0f, 2.0f, 7.5f}, glm::vec4{0, 1, 1, 1}, 1 };
-	DirectionalLight dl1{ glm::vec3{ -1, -1, -1 }, glm::vec4{1, 1, 1, 1}, 1, sm_settings};
-	DirectionalLight dl2{ glm::vec3{ -1, -1, 0 }, glm::vec4{1, 1, 1, 1}, 1, sm_settings};
-	DirectionalLight dl3{ glm::vec3{ 1, -1, 0 }, glm::vec4{1, 1, 1, 1}, 1, sm_settings};
+	PointLight::ShadowMapSettings pl_sm_settings;
+	pl_sm_settings.resolution = 1024;
+	pl_sm_settings.shader = &shadowcube_shader;
+
+	PointLight pl1{ glm::vec3{-8.0f, 2.0f, 2.5f}, glm::vec4{1, 0, 1, 1}, 1, pl_sm_settings};
+	PointLight pl2{ glm::vec3{-8.0f, 2.0f, 7.5f}, glm::vec4{0, 1, 1, 1}, 1, pl_sm_settings};
+	PointLight pl3{ glm::vec3{-8.0f, 2.0f, 7.5f}, glm::vec4{0, 1, 1, 1}, 1, pl_sm_settings};
+	DirectionalLight dl1{ glm::vec3{ -1, -1, -1 }, glm::vec4{1, 1, 1, 1}, 1, dir_sm_settings};
+	DirectionalLight dl2{ glm::vec3{ -1, -1, 0 }, glm::vec4{1, 1, 1, 1}, 1, dir_sm_settings};
+	DirectionalLight dl3{ glm::vec3{ 1, -1, 0 }, glm::vec4{1, 1, 1, 1}, 1, dir_sm_settings};
 
 	std::vector<PointLight*> point_lights;
-	point_lights.push_back(&pl1); point_lights.push_back(&pl2);
+	point_lights.push_back(&pl1); point_lights.push_back(&pl2); //point_lights.push_back(&pl3);
 
 	std::vector<DirectionalLight*> dir_lights;
-	dir_lights.push_back(&dl1); dir_lights.push_back(&dl2);dir_lights.push_back(&dl3);
+	dir_lights.push_back(&dl1); dir_lights.push_back(&dl2); //dir_lights.push_back(&dl3);
 
 	currentLight = point_lights[0];
 
@@ -584,31 +590,38 @@ int main()
 		
 		for (auto& light : dir_lights)
 		{
-			light->compute_shadowmap(main_scene); // TODO each light has its own lightspacematrix, thus should go in the array of light attributes in the shader
+			light->compute_shadowmap(main_scene);
 		}
-		
-		//debug draw a depth texture
-		const Texture& computed_shadowmap = dir_lights[dir_lights.size()-1]->get_shadowmap();
-		glViewport(0, 0, 256, 256);
-		tex_depth_shader.bind();
-		glActiveTexture(GL_TEXTURE0);
-		computed_shadowmap.bind();
-		quad_mesh.draw();
-		textured_shader.unbind();
-		glViewport(0, 0, ws.width, ws.height);
+		for (auto& light : point_lights)
+		{
+			light->compute_shadowmap(main_scene);
+		}
 
 		// Update lit shaders to add the computed shadowmap(s)
-		std::vector<GLint> locs;
+		std::array<GLint, MAX_DIR_LIGHTS> dir_shadow_locs;
+		std::array<GLint, MAX_POINT_LIGHTS> point_shadow_locs;
 		for (Shader& lit_shader : lit_shaders)
 		{
 			lit_shader.bind();
-			for (int i = 0; i < dir_lights.size(); i++)
+			// Set sampler locations for directional shadow maps
+			for (int i = 0; i < dir_shadow_locs.size(); i++)
 			{
-				glActiveTexture(GL_TEXTURE0+shadow_texture_unit+i);
-				dir_lights[i]->get_shadowmap().bind();
-				locs.push_back(shadow_texture_unit + i);
+				int tex_offset = shadow_texture_unit + i;
+				dir_shadow_locs[i] = tex_offset;
+				glActiveTexture(GL_TEXTURE0 + tex_offset);
+				glBindTexture(GL_TEXTURE_2D, i < dir_lights.size() ? dir_lights[i]->get_shadowmap().id() : 0);
 			}
-			lit_shader.setIntV("directional_shadow_maps", gsl::narrow<int>(locs.size()), locs.data());
+			// Set sampler locations for point shadow maps
+			for (int i = 0; i < point_shadow_locs.size(); i++)
+			{
+				int tex_offset = shadow_texture_unit + dir_shadow_locs.size() + i;
+				point_shadow_locs[i] = tex_offset;
+				glActiveTexture(GL_TEXTURE0 + tex_offset);
+				glBindTexture(GL_TEXTURE_CUBE_MAP, i < point_lights.size() ? point_lights[i]->depthCubemap : 0);
+			}
+
+			lit_shader.setIntV("directional_shadow_maps", gsl::narrow<int>(dir_shadow_locs.size()), dir_shadow_locs.data());
+			lit_shader.setIntV("point_shadow_maps", gsl::narrow<int>(point_shadow_locs.size()), point_shadow_locs.data());
 			lit_shader.unbind();
 		}
 
@@ -655,6 +668,7 @@ int main()
 		map_framebuffer.unbind();
 
 		// we render now into the smaller map viewport
+		glDisable(GL_DEPTH_TEST); // draw on top of everything
 		glViewport(ws.width - map_framebuffer.width() / 4 - 10, ws.height - map_framebuffer.height() / 4 - 10, map_framebuffer.width() / 4, map_framebuffer.height() / 4);
 		textured_shader.bind();
 		glActiveTexture(GL_TEXTURE0);
@@ -662,6 +676,7 @@ int main()
 		quad_mesh.draw();
 		textured_shader.unbind();
 		glViewport(0, 0, ws.width, ws.height);
+		glEnable(GL_DEPTH_TEST); 
 #pragma endregion map_draw
 
 #pragma region imgui_draw
@@ -685,38 +700,52 @@ int main()
 			ImGui::SliderFloat("Height Scale", &cube->material->parallax_heightscale, 0, 0.5, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::SliderFloat("Repeat tex##prlx", &cube->material->uv_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
 		}
+
 		if (ImGui::CollapsingHeader("Lights"))
 		{
-			for (size_t i = 0; i < point_lights.size(); i++)
+			ImGui::PushID(&point_lights);
+			ImGui::Indent();
+			if (ImGui::CollapsingHeader("Pointlights"))
 			{
-				ImGui::PushID(&point_lights + i);
-				std::string light_label = "Point light n." + std::to_string(i);
-				ImGui::Separator(); ImGui::Text(light_label.c_str());
+				for (size_t i = 0; i < point_lights.size(); i++)
+				{
+					ImGui::PushID(i);
+					std::string light_label = "Point light n." + std::to_string(i);
+					ImGui::Separator(); ImGui::Text(light_label.c_str());
 
-				ImGui::SliderFloat("Intensity", &point_lights[i]->intensity, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-				ImGui::ColorEdit4 ("Color", glm::value_ptr(point_lights[i]->color));
-				ImGui::SliderFloat3("Pos" , glm::value_ptr(point_lights[i]->position), -20, 20, "%.2f", 1);
-				ImGui::SliderFloat("Att_const", &point_lights[i]->attenuation_constant, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-				ImGui::SliderFloat("Att_lin"  , &point_lights[i]->attenuation_linear, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-				ImGui::SliderFloat("Att_quad" , &point_lights[i]->attenuation_quadratic, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+					ImGui::SliderFloat3("Pos", glm::value_ptr(point_lights[i]->position), -20, 20, "%.2f", 1);
+					ImGui::SliderFloat("Intensity", &point_lights[i]->intensity, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+					ImGui::ColorEdit4("Color", glm::value_ptr(point_lights[i]->color));
 
-				ImGui::PopID();
+					ImGui::SliderFloat("Att_const", &point_lights[i]->attenuation_constant, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+					ImGui::SliderFloat("Att_lin", &point_lights[i]->attenuation_linear, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+					ImGui::SliderFloat("Att_quad", &point_lights[i]->attenuation_quadratic, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+
+					ImGui::PopID();
+				}
 			}
-			for (size_t i = 0; i < dir_lights.size(); i++)
+			ImGui::PopID();
+
+			ImGui::PushID(&dir_lights);
+			if (ImGui::CollapsingHeader("Dir lights"))
 			{
-				ImGui::PushID(&dir_lights + i);
-				std::string light_label = "Directional light n." + std::to_string(i);
-				ImGui::Separator(); ImGui::Text(light_label.c_str());
-				ImGui::SliderFloat3("Dir",   glm::value_ptr(dir_lights[i]->direction), -1, 1, "%.2f", 1);
-				ImGui::SliderFloat ("Intensity",           &dir_lights[i]->intensity, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-				ImGui::ColorEdit4  ("Color", glm::value_ptr(dir_lights[i]->color));
-				
-				ImGui::SliderFloat("Dist bias", &dir_lights[i]->shadowmap_settings.distance_bias, 0, 100, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-				ImGui::SliderFloat("Near ", &dir_lights[i]->shadowmap_settings.frustum_near, 0, 100, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-				ImGui::SliderFloat("Far ", &dir_lights[i]->shadowmap_settings.frustum_far, 0, 100, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-				ImGui::SliderFloat("Frust ", &dir_lights[i]->shadowmap_settings.frustum_size, 0, 100, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-				ImGui::PopID();
+				for (size_t i = 0; i < dir_lights.size(); i++)
+				{
+					ImGui::PushID(i);
+					std::string light_label = "Directional light n." + std::to_string(i);
+					ImGui::Separator(); ImGui::Text(light_label.c_str());
+					ImGui::SliderFloat3("Dir", glm::value_ptr(dir_lights[i]->direction), -1, 1, "%.2f", 1);
+					ImGui::SliderFloat("Intensity", &dir_lights[i]->intensity, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+					ImGui::ColorEdit4("Color", glm::value_ptr(dir_lights[i]->color));
+
+					ImGui::SliderFloat("Dist bias", &dir_lights[i]->shadowmap_settings.distance_bias, 0, 100, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+					ImGui::SliderFloat("Near ", &dir_lights[i]->shadowmap_settings.frustum_near, 0, 100, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+					ImGui::SliderFloat("Far ", &dir_lights[i]->shadowmap_settings.frustum_far, 0, 100, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+					ImGui::SliderFloat("Frust ", &dir_lights[i]->shadowmap_settings.frustum_size, 0, 100, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+					ImGui::PopID();
+				}
 			}
+			ImGui::PopID();
 		}
 
 		ImGui::End();

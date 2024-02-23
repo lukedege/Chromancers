@@ -7,6 +7,64 @@
 
 namespace utils::graphics::opengl
 {
+	class BasicFramebuffer
+	{
+	public:
+		BasicFramebuffer(unsigned int width = 512, unsigned int height = 512) :
+			_id{ generate_framebuffer() },
+			_width  { width  }, 
+			_height { height }
+		{}
+		
+		~BasicFramebuffer()
+		{
+			dispose();
+		}
+
+		void bind()
+		{
+			int viewport_size_data[4];
+			glGetIntegerv(GL_VIEWPORT, viewport_size_data);
+			old_width = viewport_size_data[2];
+			old_height = viewport_size_data[3];
+
+			glViewport(0, 0, _width, _height);
+			glBindFramebuffer(GL_FRAMEBUFFER, _id);
+		}
+
+		void unbind()
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			glViewport(0, 0, old_width, old_height);
+		}
+
+		// N.B. viewport restoring functionality from bind/unbind is guaranteed
+		// only if the methods are called in a coupled way
+		// e.g. bind = "(", unbind = ")"
+		// ()[](), ([]), [()()] are okay configurations
+		// ([)] is an example of not okay configuration
+
+		unsigned int width () const noexcept { return _width;  }
+		unsigned int height() const noexcept { return _height; }
+		unsigned int id()     const noexcept { return _id; }
+
+	private:
+		GLuint _id;
+		unsigned int _width, _height;
+		unsigned int old_width, old_height; // stores the glviewport values before binding
+
+		GLuint generate_framebuffer()
+		{
+			GLuint framebuffer;
+			glGenFramebuffers(1, &framebuffer);
+			return framebuffer;
+		}
+
+		void dispose()
+		{
+			glDeleteFramebuffers(1, &_id);
+		}
+	};
 	class Framebuffer
 	{
 		using Texture = engine::resources::Texture;
