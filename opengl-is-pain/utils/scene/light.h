@@ -56,14 +56,14 @@ namespace engine::scene
 		float attenuation_quadratic   = 0.02f;
 
 		// Shadowmap stuff
-		utils::graphics::opengl::BasicFramebuffer depthMapFBO;
+		utils::graphics::opengl::BasicFramebuffer depthmap_framebuffer;
 		unsigned int depthCubemap;
 
 		PointLight(const glm::vec3& position, 
 			const glm::vec4& color = { 1.0f, 1.0f, 1.0f, 1.0f }, const float intensity = { 1.0f }, ShadowMapSettings shadowmap_settings = {}) :
 			Light{ color, intensity }, 
 			shadowmap_settings{ shadowmap_settings },
-			depthMapFBO{ shadowmap_settings.resolution, shadowmap_settings.resolution },
+			depthmap_framebuffer{ shadowmap_settings.resolution, shadowmap_settings.resolution },
 			position{ position } 
 		{
 			// Create cubemap
@@ -84,11 +84,11 @@ namespace engine::scene
 			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);  
 
 			// Attach the whole cubemap as depth attachment to the framebuffer as we'll do a geom shader trick to render all faces at once
-			depthMapFBO.bind();
+			depthmap_framebuffer.bind();
 			glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0);
 			glDrawBuffer(GL_NONE); // NO COLOR ATTACHMENT NEEDED
 			glReadBuffer(GL_NONE);
-			depthMapFBO.unbind();
+			depthmap_framebuffer.unbind();
 		}
 
 		void setup(const Shader& shader, size_t index)
@@ -113,7 +113,7 @@ namespace engine::scene
 			const unsigned int SHADOW_WIDTH = shadowmap_settings.resolution, SHADOW_HEIGHT = shadowmap_settings.resolution;
 
 			// Shadow pass
-			depthMapFBO.bind();
+			depthmap_framebuffer.bind();
 			glClear(GL_DEPTH_BUFFER_BIT);
 		
 			glCullFace(GL_FRONT); // Culling front face to reduce peter panning effect
@@ -131,7 +131,7 @@ namespace engine::scene
 			glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
 			scene.custom_draw(*shadowmap_settings.shader);
 
-			depthMapFBO.unbind();
+			depthmap_framebuffer.unbind();
 		
 			glCullFace(GL_BACK); // Restoring back face culling for drawing
 		}
@@ -176,14 +176,14 @@ namespace engine::scene
 
 		glm::vec3 direction;
 
-		utils::graphics::opengl::Framebuffer shadows_framebuffer;
+		utils::graphics::opengl::Framebuffer depthmap_framebuffer;
 		glm::mat4 lightspace_matrix{1};
 
 		DirectionalLight(const glm::vec3& direction, const glm::vec4& color = { 1.0f, 1.0f, 1.0f, 1.0f }, float intensity = 1.0f, ShadowMapSettings shadowmap_settings = {}) :
 			Light{ color, intensity }, 
 			direction{ glm::normalize(direction) },
 			shadowmap_settings{ shadowmap_settings },
-			shadows_framebuffer{ shadowmap_settings.resolution, shadowmap_settings.resolution,
+			depthmap_framebuffer{ shadowmap_settings.resolution, shadowmap_settings.resolution,
 				Texture::FormatInfo{GL_RGB, GL_RGB, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} }
 		{}
 
@@ -205,7 +205,7 @@ namespace engine::scene
 			}
 			
 			// Shadow pass
-			shadows_framebuffer.bind();
+			depthmap_framebuffer.bind();
 			glClear(GL_DEPTH_BUFFER_BIT);
 		
 			glCullFace(GL_FRONT); // Culling front face to reduce peter panning effect
@@ -213,14 +213,14 @@ namespace engine::scene
 			shadowmap_settings.shader->bind();
 			shadowmap_settings.shader->setMat4("lightSpaceMatrix", lightspace_matrix);
 			scene.custom_draw(*shadowmap_settings.shader);
-			shadows_framebuffer.unbind();
+			depthmap_framebuffer.unbind();
 		
 			glCullFace(GL_BACK); // Restoring back face culling for drawing
 		}
 
 		const Texture& get_shadowmap()
 		{
-			return shadows_framebuffer.get_depth_attachment();
+			return depthmap_framebuffer.get_depth_attachment();
 		}
 
 	private:

@@ -331,12 +331,12 @@ int main()
 	pl_sm_settings.resolution = 1024;
 	pl_sm_settings.shader = &shadowcube_shader;
 
-	PointLight pl1{ glm::vec3{-8.0f, 2.0f, 2.5f}, glm::vec4{1, 0, 1, 1}, 1, pl_sm_settings};
-	PointLight pl2{ glm::vec3{-8.0f, 2.0f, 7.5f}, glm::vec4{0, 1, 1, 1}, 1, pl_sm_settings};
-	PointLight pl3{ glm::vec3{-8.0f, 2.0f, 7.5f}, glm::vec4{0, 1, 1, 1}, 1, pl_sm_settings};
-	DirectionalLight dl1{ glm::vec3{ -1, -1, -1 }, glm::vec4{1, 1, 1, 1}, 1, dir_sm_settings};
-	DirectionalLight dl2{ glm::vec3{ -1, -1, 0 }, glm::vec4{1, 1, 1, 1}, 1, dir_sm_settings};
-	DirectionalLight dl3{ glm::vec3{ 1, -1, 0 }, glm::vec4{1, 1, 1, 1}, 1, dir_sm_settings};
+	PointLight pl1 { glm::vec3{-8.0f, 2.0f, 2.5f}, glm::vec4{1, 0, 1, 1}, 0.5f, pl_sm_settings};
+	PointLight pl2 { glm::vec3{-8.0f, 2.0f, 7.5f}, glm::vec4{0, 1, 1, 1}, 0.5f, pl_sm_settings};
+	PointLight pl3 { glm::vec3{-8.0f, 2.0f, 7.5f}, glm::vec4{0, 1, 1, 1}, 0.5f, pl_sm_settings};
+	DirectionalLight dl1{ glm::vec3{ -1, -1, -1 }, glm::vec4{1, 1, 1, 1}, 1.0f, dir_sm_settings};
+	DirectionalLight dl2{ glm::vec3{ -1, -1,  0 }, glm::vec4{1, 1, 1, 1}, 0.5f, dir_sm_settings};
+	DirectionalLight dl3{ glm::vec3{  1, -1,  0 }, glm::vec4{1, 1, 1, 1}, 0.5f, dir_sm_settings};
 
 	std::vector<PointLight*> point_lights;
 	point_lights.push_back(&pl1); point_lights.push_back(&pl2); //point_lights.push_back(&pl3);
@@ -400,7 +400,7 @@ int main()
 	Material bullet_material{ default_lit };
 
 #pragma endregion materials_setup
-
+#pragma region entities_setup
 	// Entities setup
 	Model plane_model{ "models/quad.obj" }, cube_model{ "models/cube.obj" }, sphere_model{ "models/sphere.obj" }, bunny_model{ "models/bunny.obj" };
 
@@ -476,9 +476,7 @@ int main()
 
 		cursor.set_size(glm::vec3(3.0f));
 	};
-	scene_setup();
-
-	
+	scene_setup();	
 
 	// Physics setup
 	GLDebugDrawer phy_debug_drawer{ main_camera, debug_shader };
@@ -488,7 +486,7 @@ int main()
 	floor_plane->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{100.0f, 0.01f, 100.0f}}}, false );
 	wall_plane ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
 	test_cube  ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 0.1f, 0.1f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
-	cube       ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1.0f, 0.1f, 0.1f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
+	cube       ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 30.0f, 0.1f, 0.1f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
 	sphere     ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1.0f, 1.0f, 1.0f, {ColliderShape::SPHERE, glm::vec3{1}} }, true);
 
 	left_room_lwall->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
@@ -507,13 +505,14 @@ int main()
 	left_room_lwall->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
 	left_room_rwall->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
 	left_room_bwall->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
-
-	// Framebuffers
-	Framebuffer map_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGB, GL_RGB, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
-
+	
 	// Bullet stuff
 	sphere_model_ptr = &sphere_model;
 	bullet_material_ptr = &bullet_material;
+#pragma endregion entities_setup
+
+	// Framebuffers
+	Framebuffer map_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGB, GL_RGB, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
 
 	main_scene.init();
 
