@@ -51,9 +51,9 @@ namespace engine::scene
 		glm::vec3 position;
 
 		// Attenuation values 
-		float attenuation_constant    = 1.f;
-		float attenuation_linear      = 0.5f;
-		float attenuation_quadratic   = 0.01f;
+		float attenuation_constant    = 0.1f;
+		float attenuation_linear      = 0.1f;
+		float attenuation_quadratic   = 0.02f;
 
 		// Shadowmap stuff
 		utils::graphics::opengl::BasicFramebuffer depthMapFBO;

@@ -7,14 +7,16 @@ in VS_OUT
 {
 	// world space data
 	vec3 wFragPos;
+	vec3 wPointLightDir[MAX_POINT_LIGHTS];
+	vec3 wDirLightDir  [MAX_DIR_LIGHTS];
 
 	// view space data
 	vec3 vwFragPos;
 
 	// tangent space data
+	vec3 twFragPos; // Local -> World (w) -> Tangent (t) position of frag N.B. THE FIRST LETTER SPECIFIES THE FINAL SPACE 
 	vec3 twPointLightDir[MAX_POINT_LIGHTS];
 	vec3 twDirLightDir  [MAX_DIR_LIGHTS];
-	vec3 twFragPos; // Local -> World (w) -> Tangent (t) position of frag N.B. THE FIRST LETTER SPECIFIES THE FINAL SPACE 
 	vec3 twCameraPos; 
 	vec3 twNormal;
 
@@ -190,7 +192,7 @@ vec4 texturePCF(sampler2D map, vec2 interp_UV)
 }
 
 
-float calculateShadow(sampler2D shadow_map, vec4 lwFragPos, vec3 lightDir, vec3 normal)
+float calculateShadow(sampler2D shadow_map, vec4 lwFragPos, vec3 wLightDir, vec3 normal)
 {
 	// perform perspective divide
     vec3 projCoords = lwFragPos.xyz / lwFragPos.w;
@@ -202,8 +204,8 @@ float calculateShadow(sampler2D shadow_map, vec4 lwFragPos, vec3 lightDir, vec3 
 	float currentDepth = projCoords.z;  
 
 	// calculate bias to solve shadow acne 
-	float shadow_factor = dot(normal, lightDir);
-	float bias = mix(0.005, 0.0, shadow_factor);
+	float shadow_factor = dot(normal, wLightDir);
+	float bias = max(0.01 * (1.0 - shadow_factor), 0.005);
 
 	// sample the depthmap obtained from the light POV
 	float closestDepth = texture(shadow_map, projCoords.xy).r;
@@ -211,7 +213,7 @@ float calculateShadow(sampler2D shadow_map, vec4 lwFragPos, vec3 lightDir, vec3 
 	float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0; 
 	
 	// PCF-filtered shadow sampling
-	/*shadow = 0.0;
+	shadow = 0.0;
     vec2 texelSize = 1.0 / textureSize(shadow_map, 0);
     for(int x = -1; x <= 1; ++x)
     {
@@ -223,7 +225,7 @@ float calculateShadow(sampler2D shadow_map, vec4 lwFragPos, vec3 lightDir, vec3 
         }    
     }
 	// Average-out the filtering mask
-    shadow /= 9.0;*/
+    shadow /= 9.0;
 
 	// don't affect areas outside the shadow_map
 	if(projCoords.z > 1.0)
@@ -245,6 +247,26 @@ float calculateShadow(samplerCube shadow_cube, vec3 wFragPos, vec3 wLightPos, fl
     // now test for shadows
     float bias = 0.05; 
     float shadow = currentDepth -  bias > closestDepth ? 1.0 : 0.0;
+
+	// PCF-filtered shadow sampling
+	shadow  = 0.0;
+	bias    = 0.05; 
+	float samples = 4.0;
+	float offset  = 0.1;
+	for(float x = -offset; x < offset; x += offset / (samples * 0.5))
+	{
+		for(float y = -offset; y < offset; y += offset / (samples * 0.5))
+		{
+			for(float z = -offset; z < offset; z += offset / (samples * 0.5))
+			{
+				closestDepth = texture(shadow_cube, fragToLight + vec3(x, y, z)).r; 
+				closestDepth *= far_plane;   // undo mapping [0;1]
+				if(currentDepth - bias > closestDepth)
+					shadow += 1.0;
+			}
+		}
+	}
+	shadow /= (samples * samples * samples);
 
     return shadow;
 } 
@@ -322,7 +344,7 @@ vec3 calculatePointLights()
 	for(int i = 0; i < nPointLights; i++)
 	{
 		curr_twLightDir = normalize(fs_in.twPointLightDir[i]);
-		float light_distance = length(curr_twLightDir);
+		float light_distance = length(fs_in.wPointLightDir[i]);
 		float attenuation = 0.001f + // to avoid division by zero
 							pointLights[i].attenuation_constant +
 							pointLights[i].attenuation_linear * light_distance +
@@ -344,7 +366,8 @@ vec3 calculateDirLights()
 	{
 		curr_twLightDir = normalize(fs_in.twDirLightDir[i]);
 
-		float shadow = calculateShadow(directional_shadow_maps[i], fs_in.lwDirFragPos[i], curr_twLightDir, finalNormal) * sample_shadow_map;
+		//float shadow = calculateShadow(directional_shadow_maps[i], fs_in.lwDirFragPos[i], curr_twLightDir, finalNormal) * sample_shadow_map;
+		float shadow = calculateShadow(directional_shadow_maps[i], fs_in.lwDirFragPos[i], fs_in.wDirLightDir[i], finalNormal) * sample_shadow_map;
 
 		color += (1 - shadow) * BlinnPhong() * directionalLights[i].color.rgb * directionalLights[i].intensity;
 	}

@@ -719,7 +719,7 @@ int main()
 
 					ImGui::SliderFloat("Att_const", &point_lights[i]->attenuation_constant, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 					ImGui::SliderFloat("Att_lin", &point_lights[i]->attenuation_linear, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-					ImGui::SliderFloat("Att_quad", &point_lights[i]->attenuation_quadratic, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+					ImGui::SliderFloat("Att_quad", &point_lights[i]->attenuation_quadratic, 0, 0.1, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 
 					ImGui::PopID();
 				}
