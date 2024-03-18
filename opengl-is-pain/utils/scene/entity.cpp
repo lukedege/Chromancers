@@ -10,24 +10,13 @@ namespace engine::scene
 	// Object in scene
 	
 	Entity::Entity(std::string display_name, Model& drawable, Material& material) :
-		display_name { display_name }, model{ &drawable }, material{ &material }
+		EntityBase(display_name), model{ &drawable }, material{ &material }
 	{}
 
 	Entity::~Entity()
 	{
 		//utils::io::log(utils::io::INFO, "Deleting " + display_name);
 		components.clear();
-	}
-
-	// draws using the provided shader instead of the material
-	void Entity::custom_draw(Shader& shader) const noexcept
-	{
-		shader.bind();
-
-		shader.setMat4("modelMatrix", _transform.world_matrix());
-		model->draw();
-			
-		shader.unbind();
 	}
 
 	void Entity::init() noexcept
@@ -50,9 +39,20 @@ namespace engine::scene
 		material->unbind();
 	}
 
+	// draws using the provided shader instead of the material
+	void Entity::custom_draw(Shader& shader) const noexcept
+	{
+		shader.bind();
+
+		shader.setMat4("modelMatrix", _transform.world_matrix());
+		model->draw();
+			
+		shader.unbind();
+	}
+
 	void Entity::update(float delta_time) noexcept
 	{
-		child_update(delta_time);
+		specializated_update(delta_time);
 
 		// TODO check order of updates (components or child first?)
 		for (auto& c : components)
@@ -89,7 +89,7 @@ namespace engine::scene
 #pragma endregion transform_stuff
 
 	void Entity::prepare_draw() const noexcept {}
-	void Entity::child_update(float delta_time) noexcept {}
+	void Entity::specializated_update(float delta_time) noexcept {}
 
 	void Entity::on_transform_update()
 	{

@@ -26,7 +26,7 @@ namespace engine::scene
 		glm::vec3 world_front {0, 0, -1}, world_up{0, 1, 0};
 
 		// matrix related
-		float fov{ 45.f }, aspect_ratio{ 16.f / 9.f }, near_plane{ 1.f }, far_plane { 100.f };
+		float fov{ 45.f }, aspect_ratio{ 16.f / 9.f }, near_plane{ .1f }, far_plane { 100.f };
 
 		// matrices
 		glm::mat4 view_matrix;

@@ -164,6 +164,9 @@
     <ClInclude Include="utils\random.h">
       <Filter>Header Files\utils</Filter>
     </ClInclude>
+    <ClInclude Include="utils\scene\player.h">
+      <Filter>Header Files\utils\scene</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\constants.glsl">

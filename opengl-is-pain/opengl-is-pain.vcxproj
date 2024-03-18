@@ -185,6 +185,7 @@
     <ClInclude Include="utils\scene\camera.h" />
     <ClInclude Include="utils\scene\entity.h" />
     <ClInclude Include="utils\scene\light.h" />
+    <ClInclude Include="utils\scene\player.h" />
     <ClInclude Include="utils\scene\scene.h" />
     <ClInclude Include="utils\shader.h" />
     <ClInclude Include="utils\texture.h" />

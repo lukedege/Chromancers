@@ -24,15 +24,15 @@ namespace engine::scene
 {
 	class Scene; // Forward declaration of Scene class (we aren't using it explicitly so we don't need the include, avoiding the cyclical include)
 
-	// Object in scene
-	class Entity : utils::oop::non_movable
+	class EntityBase : utils::oop::non_movable
 	{
-		friend class Scene;
+	public:
+		EntityBase(std::string display_name = "") :
+			display_name{ display_name }
+		{}
 
-		using Shader = engine::resources::Shader;
-		using Model = engine::resources::Model;
-		using Material = engine::resources::Material;
-		using Component = engine::components::Component;
+	protected:
+		friend class Scene;
 
 		// This is a record for the entity to remember 
 		// - to which scene it is into (current_scene)
@@ -45,14 +45,27 @@ namespace engine::scene
 			std::optional<std::string> instanced_group_id;
 		};
 
-	protected:
+		using Component = engine::components::Component;
+
+		std::string display_name; 
 		Transform _transform;
-		Model* model; 
 		SceneState _scene_state;
 		std::vector<std::unique_ptr<Component>> components; // map should be okay also
+	};
+
+	// Object in scene
+	class Entity : EntityBase
+	{
+		friend class Scene;
+
+		using Shader = engine::resources::Shader;
+		using Model = engine::resources::Model;
+		using Material = engine::resources::Material;
+		using Component = engine::components::Component;
+
 	public:
-		std::string display_name; 
 		Material* material;
+		Model* model; 
 
 		Entity(std::string display_name, Model& drawable, Material& material);
 
@@ -110,7 +123,7 @@ namespace engine::scene
 
 	protected:
 		virtual void prepare_draw() const noexcept;
-		virtual void child_update(float delta_time) noexcept;
+		virtual void specializated_update(float delta_time) noexcept;
 
 		void on_transform_update();
 

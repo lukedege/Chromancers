@@ -39,10 +39,11 @@
 #include "utils/framebuffer.h"
 #include "utils/random.h"
 
-#include "utils/scene/camera.h"
-#include "utils/scene/entity.h"
-#include "utils/scene/scene.h "
-#include "utils/scene/light.h "
+#include "utils/scene/camera.h "
+#include "utils/scene/entity.h "
+#include "utils/scene/scene.h  "
+#include "utils/scene/light.h  "
+#include "utils/scene/player.h "
 
 #include "utils/components/rigidbody_component.h"
 #include "utils/components/paintable_component.h"
@@ -77,6 +78,7 @@ bool capture_mouse = true;
 // Scene
 Scene main_scene;
 std::function<void()> scene_setup;
+Player player;
 
 // parameters for time computation
 float deltaTime = 0.0f;
@@ -156,7 +158,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 std::function<void(bool)> los_paintball = [&](bool precise)
 {
 	Entity* bullet = main_scene.emplace_instanced_entity("bullets", "bullet", "This is a paintball", *sphere_model_ptr, *bullet_material_ptr);
-	bullet->set_position(main_scene.current_camera->position() + main_scene.current_camera->forward() - glm::vec3{0, 0.5f, 0});
+	bullet->set_position(player.gun->transform().position());//main_scene.current_camera->position() + main_scene.current_camera->forward() - glm::vec3{0, 0.5f, 0});
 	bullet->set_size(glm::vec3(paintball_size));
 
 	// setting up collision mask for paintball rigidbodies (to avoid colliding with themselves)
@@ -294,14 +296,14 @@ int main()
 
 #pragma region scene_setup	
 	// Camera setup
-	Camera main_camera = Camera{ glm::vec3{0,0,5} }, topdown_camera;
-	glm::mat4 view = main_camera.viewMatrix();
-	glm::mat4 projection = main_camera.projectionMatrix();
+	Camera topdown_camera;
+	// Player setup
+	player.first_person_camera = Camera{ glm::vec3{0,0,5} };
+	player.viewmodel_offset = {0.3,-0.2,-0.45};
 
 	// Scene setup
-	main_scene.current_camera = &main_camera;
-
-#pragma endregion shader_setup
+	main_scene.current_camera = &player.first_person_camera;
+#pragma endregion scene_setup
 
 #pragma region shader_setup
 	// Shader setup
@@ -350,8 +352,8 @@ int main()
 	for (Shader& shader : all_shaders)
 	{
 		shader.bind();
-		shader.setMat4("projectionMatrix", projection);
-		shader.setVec3("wCameraPos", main_camera.position());
+		shader.setMat4("projectionMatrix", main_scene.current_camera->projectionMatrix());
+		shader.setVec3("wCameraPos", main_scene.current_camera->position());
 	}
 	for (Shader& lit_shader : lit_shaders)
 	{
@@ -403,6 +405,7 @@ int main()
 #pragma region entities_setup
 	// Entities setup
 	Model plane_model{ "models/quad.obj" }, cube_model{ "models/cube.obj" }, sphere_model{ "models/sphere.obj" }, bunny_model{ "models/bunny.obj" };
+	Model gun_model{ "models/gun.obj" };
 
 	Entity* cube        = main_scene.emplace_entity("cube", "brick_cube", cube_model, cube_material);
 	Entity* test_cube   = main_scene.emplace_entity("test_cube", "test_cube", cube_model, test_cube_material);
@@ -414,6 +417,9 @@ int main()
 	Entity* left_room_rwall = main_scene.emplace_entity("wall", "left_room_rightwall", plane_model, left_room_rwall_material);
 	Entity* left_room_bwall = main_scene.emplace_entity("wall", "left_room_backwall", plane_model, left_room_bwall_material);
 	//Entity* bunny       = main_scene.emplace_entity("bunny", "buny", bunny_model, sph_mat);
+
+	Entity gun{ "gun", gun_model, sph_mat};
+	player.gun = &gun;
 
 	sphere_ptr = sphere;
 
@@ -479,7 +485,7 @@ int main()
 	scene_setup();	
 
 	// Physics setup
-	GLDebugDrawer phy_debug_drawer{ main_camera, debug_shader };
+	GLDebugDrawer phy_debug_drawer{ *main_scene.current_camera, debug_shader };
 	physics_engine.addDebugDrawer(&phy_debug_drawer);
 	physics_engine.set_debug_mode(0);
 
@@ -515,6 +521,7 @@ int main()
 	Framebuffer map_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGB, GL_RGB, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
 
 	main_scene.init();
+	player.init();
 
 	while (wdw.is_open())
 	{
@@ -526,7 +533,8 @@ int main()
 		capped_deltaTime = deltaTime < maxSecPerFrame ? deltaTime : maxSecPerFrame;
 		lastFrame = currentFrame;
 
-		main_scene.current_camera = &main_camera;
+		main_scene.current_camera = &player.first_person_camera;
+		player.update();
 
 		if (capture_mouse)
 			glfwSetInputMode(wdw.get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -629,9 +637,15 @@ int main()
 #pragma region draw_world
 		// Render scene
 		main_scene.draw();
+
 		//main_scene.instanced_draw(bullet_material);
 
 #pragma endregion draw_world
+
+		// GUN
+		glClear(GL_DEPTH_BUFFER_BIT);
+		
+		gun.draw();
 
 #pragma region map_draw
 		// MAP
@@ -640,8 +654,8 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		float topdown_height = 20;
-		topdown_camera.set_position(main_camera.position() + glm::vec3{ 0, topdown_height, 0 });
-		topdown_camera.lookAt(main_camera.position());
+		topdown_camera.set_position(player.first_person_camera.position() + glm::vec3{ 0, topdown_height, 0 });
+		topdown_camera.lookAt(player.first_person_camera.position());
 		main_scene.current_camera = &topdown_camera;
 
 		// Update camera info since we swapped to topdown
@@ -658,8 +672,8 @@ int main()
 		// Prepare cursor shader
 		glClear(GL_DEPTH_BUFFER_BIT); // clears depth information, thus everything rendered from now on will be on top https://stackoverflow.com/questions/5526704/how-do-i-keep-an-object-always-in-front-of-everything-else-in-opengl
 
-		cursor.set_position(main_camera.position());
-		cursor.set_rotation({ -90.0f, 0.0f, -main_camera.rotation().y - 90.f });
+		cursor.set_position(player.first_person_camera.position());
+		cursor.set_rotation({ -90.0f, 0.0f, -player.first_person_camera.rotation().y - 90.f });
 
 		cursor.update(deltaTime);
 		cursor.draw();
@@ -698,6 +712,7 @@ int main()
 			ImGui::Separator(); ImGui::Text("Parallax");
 			ImGui::SliderFloat("Height Scale", &cube->material->parallax_heightscale, 0, 0.5, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::SliderFloat("Repeat tex##prlx", &cube->material->uv_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat3("Viewmodel offset", glm::value_ptr(player.viewmodel_offset), -1, 1, "%.2f", 1);
 		}
 
 		if (ImGui::CollapsingHeader("Lights"))
