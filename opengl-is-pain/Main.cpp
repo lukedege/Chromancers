@@ -158,7 +158,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 std::function<void(bool)> los_paintball = [&](bool precise)
 {
 	Entity* bullet = main_scene.emplace_instanced_entity("bullets", "bullet", "This is a paintball", *sphere_model_ptr, *bullet_material_ptr);
-	bullet->set_position(player.gun->transform().position());//main_scene.current_camera->position() + main_scene.current_camera->forward() - glm::vec3{0, 0.5f, 0});
+	bullet->set_position(player.gun->world_transform().position() + player.gun->world_transform().forward() + glm::vec3{0, 0.1f, 0});
 	bullet->set_size(glm::vec3(paintball_size));
 
 	// setting up collision mask for paintball rigidbodies (to avoid colliding with themselves)
@@ -189,17 +189,17 @@ std::function<void(bool)> los_paintball = [&](bool precise)
 void setup_input_keys()
 {
 	// Pressed input
-	Input::instance().add_onPressed_callback(GLFW_KEY_W, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::FORWARD, deltaTime); });
-	Input::instance().add_onPressed_callback(GLFW_KEY_S, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::BACKWARD, deltaTime); });
-	Input::instance().add_onPressed_callback(GLFW_KEY_A, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::LEFT, deltaTime); });
-	Input::instance().add_onPressed_callback(GLFW_KEY_D, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::RIGHT, deltaTime); });
-	Input::instance().add_onPressed_callback(GLFW_KEY_Q, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::DOWN, deltaTime); });
-	Input::instance().add_onPressed_callback(GLFW_KEY_E, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::UP, deltaTime); });
+	Input::instance().add_onPressed_callback(GLFW_KEY_W, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::FORWARD, capped_deltaTime); });
+	Input::instance().add_onPressed_callback(GLFW_KEY_S, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::BACKWARD, capped_deltaTime); });
+	Input::instance().add_onPressed_callback(GLFW_KEY_A, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::LEFT, capped_deltaTime); });
+	Input::instance().add_onPressed_callback(GLFW_KEY_D, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::RIGHT, capped_deltaTime); });
+	Input::instance().add_onPressed_callback(GLFW_KEY_Q, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::DOWN, capped_deltaTime); });
+	Input::instance().add_onPressed_callback(GLFW_KEY_E, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::UP, capped_deltaTime); });
 
-	Input::instance().add_onPressed_callback(GLFW_KEY_LEFT , [&]() { currentLight->position.x -= mov_light_speed * deltaTime; });
-	Input::instance().add_onPressed_callback(GLFW_KEY_RIGHT, [&]() { currentLight->position.x += mov_light_speed * deltaTime; });
-	Input::instance().add_onPressed_callback(GLFW_KEY_UP   , [&]() { currentLight->position.z -= mov_light_speed * deltaTime; });
-	Input::instance().add_onPressed_callback(GLFW_KEY_DOWN , [&]() { currentLight->position.z += mov_light_speed * deltaTime; });
+	Input::instance().add_onPressed_callback(GLFW_KEY_LEFT , [&]() { currentLight->position.x -= mov_light_speed * capped_deltaTime; });
+	Input::instance().add_onPressed_callback(GLFW_KEY_RIGHT, [&]() { currentLight->position.x += mov_light_speed * capped_deltaTime; });
+	Input::instance().add_onPressed_callback(GLFW_KEY_UP   , [&]() { currentLight->position.z -= mov_light_speed * capped_deltaTime; });
+	Input::instance().add_onPressed_callback(GLFW_KEY_DOWN , [&]() { currentLight->position.z += mov_light_speed * capped_deltaTime; });
 
 	Input::instance().add_onPressed_callback(GLFW_MOUSE_BUTTON_RIGHT, [&]()
 		{
@@ -297,9 +297,6 @@ int main()
 #pragma region scene_setup	
 	// Camera setup
 	Camera topdown_camera;
-	// Player setup
-	player.first_person_camera = Camera{ glm::vec3{0,0,5} };
-	player.viewmodel_offset = {0.3,-0.2,-0.45};
 
 	// Scene setup
 	main_scene.current_camera = &player.first_person_camera;
@@ -417,9 +414,12 @@ int main()
 	Entity* left_room_rwall = main_scene.emplace_entity("wall", "left_room_rightwall", plane_model, left_room_rwall_material);
 	Entity* left_room_bwall = main_scene.emplace_entity("wall", "left_room_backwall", plane_model, left_room_bwall_material);
 	//Entity* bunny       = main_scene.emplace_entity("bunny", "buny", bunny_model, sph_mat);
-
-	Entity gun{ "gun", gun_model, sph_mat};
-	player.gun = &gun;
+	Entity* gun = main_scene.emplace_entity("gun", "gun", gun_model, sph_mat);
+	//Entity gun{ "gun", gun_model, sph_mat};
+	
+	// Player setup
+	player.viewmodel_offset = {0.3,-0.2,0.25};
+	player.gun = gun;
 
 	sphere_ptr = sphere;
 
@@ -534,7 +534,6 @@ int main()
 		lastFrame = currentFrame;
 
 		main_scene.current_camera = &player.first_person_camera;
-		player.update();
 
 		if (capture_mouse)
 			glfwSetInputMode(wdw.get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -591,6 +590,8 @@ int main()
 
 		// Update entities
 		main_scene.update(capped_deltaTime);
+		player.update(capped_deltaTime);
+
 #pragma endregion update_world
 
 #pragma region shadow_pass
@@ -644,8 +645,6 @@ int main()
 
 		// GUN
 		glClear(GL_DEPTH_BUFFER_BIT);
-		
-		gun.draw();
 
 #pragma region map_draw
 		// MAP
@@ -655,7 +654,7 @@ int main()
 
 		float topdown_height = 20;
 		topdown_camera.set_position(player.first_person_camera.position() + glm::vec3{ 0, topdown_height, 0 });
-		topdown_camera.lookAt(player.first_person_camera.position());
+		topdown_camera.lookAt(player.first_person_camera.position(), glm::vec3{0,0,1});
 		main_scene.current_camera = &topdown_camera;
 
 		// Update camera info since we swapped to topdown

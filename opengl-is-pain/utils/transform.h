@@ -19,34 +19,33 @@ namespace engine
 {
 	class Transform
 	{
-		//Local space information
 		glm::vec3 _position    { 0.0f, 0.0f, 0.0f };
 		glm::vec3 _orientation { 0.0f, 0.0f, 0.0f }; // euler angles for now
 		glm::vec3 _size        { 1.0f, 1.0f, 1.0f };
 
-		// Local -> World matrix
-		glm::mat4 _world_matrix { 1.0f };
+		// Resultant matrix
+		glm::mat4 _matrix { 1.0f };
 
 		// World axes, inits equal as local axes
-		glm::vec3 world_forward { 0.0f, 0.0f, 1.0f };
-		glm::vec3 world_right   { 1.0f, 0.0f, 0.0f };
-		glm::vec3 world_up      { 0.0f, 1.0f, 0.0f };
+		glm::vec3 _forward { 0.0f, 0.0f, 1.0f };
+		glm::vec3 _right   { 1.0f, 0.0f, 0.0f };
+		glm::vec3 _up      { 0.0f, 1.0f, 0.0f };
 
 		bool dirty = false; // Use when space info is updated to recalculate matrix
 
 	public:
 		Transform() 
 		{
-			update_world_matrix();
+			update_matrix();
 		}
 
 		inline glm::vec3 position   () const noexcept { return _position;    }
 		inline glm::vec3 orientation() const noexcept { return _orientation; }
 		inline glm::vec3 size       () const noexcept { return _size;        }
 
-		inline glm::vec3 forward  () const noexcept { return world_forward; }
-		inline glm::vec3 right    () const noexcept { return world_right; }
-		inline glm::vec3 up       () const noexcept { return world_up; }
+		inline glm::vec3 forward  () const noexcept { return _forward; }
+		inline glm::vec3 right    () const noexcept { return _right; }
+		inline glm::vec3 up       () const noexcept { return _up; }
 
 		void set(const glm::mat4& matrix) noexcept
 		{
@@ -57,28 +56,36 @@ namespace engine
 			_orientation = glm::eulerAngles(rotation);
 
 			glm::mat3 rot_3{rotation};
-			world_forward = glm::normalize(rot_3 * world_forward);
-			world_right   = glm::normalize(rot_3 * world_right  );
-			world_up      = glm::normalize(rot_3 * world_up     );
+			_forward = glm::normalize(rot_3 * _forward);
+			_right   = glm::normalize(rot_3 * _right  );
+			_up      = glm::normalize(rot_3 * _up     );
 
-			_world_matrix = matrix;
+			_matrix = matrix;
 		}
 
-		void set_position(const glm::vec3& new_position   ) { _position = new_position;       update_world_matrix(); }
-		void set_rotation(const glm::vec3& new_orientation) { _orientation = new_orientation; update_world_matrix(); }
-		void set_size    (const glm::vec3& new_size       ) { _size = new_size;               update_world_matrix(); }
+		void set_position(const glm::vec3& new_position   ) { _position = new_position;       update_matrix(); }
+		void set_rotation(const glm::vec3& new_orientation) { _orientation = new_orientation; update_matrix(); }
+		void set_size    (const glm::vec3& new_size       ) { _size = new_size;               update_matrix(); }
 
-		void translate(const glm::vec3& translation) { _position += translation; update_world_matrix(); }
-		void rotate   (const glm::vec3& rotation   ) { _orientation += rotation; update_world_matrix(); }
-		void scale    (const glm::vec3& scale      ) { _size *= scale;           update_world_matrix(); }
+		void translate(const glm::vec3& translation) { _position += translation; update_matrix(); }
+		void rotate   (const glm::vec3& rotation   ) { _orientation += rotation; update_matrix(); }
+		void scale    (const glm::vec3& scale      ) { _size *= scale;           update_matrix(); }
 
-		const glm::mat4& world_matrix() const noexcept
+		const glm::mat4& matrix() const noexcept
 		{	
-			return _world_matrix;
+			return _matrix;
+		}
+
+		friend Transform operator*(const Transform& lhs, const Transform& rhs)
+		{
+			Transform result;
+			glm::mat4 m_result = lhs.matrix() * rhs.matrix();
+			result.set(m_result);
+			return result;
 		}
 
 	private:
-		void update_world_matrix()
+		void update_matrix()
 		{
 			// TODO start using quats
 			//glm::quat rotation_quat {_orientation};
@@ -91,14 +98,16 @@ namespace engine
 			glm::mat4 rotation_matrix = rot_Y * rot_X * rot_Z;
 
 			glm::mat3 rot_3{rotation_matrix};
-			world_forward = glm::normalize(world_forward * rot_3);
-			world_right   = glm::normalize(world_right   * rot_3);
-			world_up      = glm::normalize(world_up      * rot_3);
+			_forward = glm::normalize(_forward * rot_3);
+			_right   = glm::normalize(_right   * rot_3);
+			_up      = glm::normalize(_up      * rot_3);
 
 			glm::mat4 scale_matrix = glm::scale(glm::mat4{ 1.0f }, _size);
 			glm::mat4 translation_matrix = glm::translate(glm::mat4{ 1.0f }, _position);
 
-			_world_matrix = translation_matrix * rotation_matrix * scale_matrix;
+			_matrix = translation_matrix * rotation_matrix * scale_matrix;
 		}
 	};
+
+	
 }

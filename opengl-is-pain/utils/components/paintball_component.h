@@ -57,8 +57,8 @@ namespace engine::components
 
 			if (other_paintable)
 			{
-				glm::vec3 bullet_size = parent->transform().size();
-				glm::vec3 bullet_position = parent->transform().position();
+				glm::vec3 bullet_size = parent->world_transform().size();
+				glm::vec3 bullet_position = parent->world_transform().position();
 				glm::vec3 bullet_direction = glm::normalize(prev_velocity);
 				glm::vec3 bullet_lateral = glm::normalize(glm::cross(bullet_direction, glm::vec3{0, 1, 0})); 
 				glm::vec3 bullet_up = glm::normalize(glm::cross(bullet_direction, bullet_lateral));

@@ -25,7 +25,7 @@ namespace engine::components
 			Component(parent),
 			physics_engine{&phy_engine},
 			rigid_body { create_rigidbody(rb_cinfo, use_transform_size) },
-			is_kinematic {false}
+			is_kinematic {rb_cinfo.mass <= 0}
 		{
 			rigid_body->setUserPointer(&parent); // sets user pointer used when resolving collisions
 		}
@@ -34,7 +34,7 @@ namespace engine::components
 			Component(parent),
 			physics_engine{&phy_engine},
 			rigid_body { create_rigidbody(rb_cinfo, cf, use_transform_size) },
-			is_kinematic {false}
+			is_kinematic {rb_cinfo.mass <= 0}
 		{
 			rigid_body->setUserPointer(&parent); // sets user pointer used when resolving collisions
 		}
@@ -56,7 +56,7 @@ namespace engine::components
 			{
 				GLfloat matrix[16];
 				btTransform bt_transform;
-				glm::vec3 size = parent->transform().size();
+				glm::vec3 size = parent->world_transform().size();
 
 				// we take the transformation matrix of the rigid boby, as calculated by the physics engine
 				rigid_body->getMotionState()->getWorldTransform(bt_transform);
@@ -77,22 +77,22 @@ namespace engine::components
 		// Syncs physics position with parent entity transform
 		void on_transform_update()
 		{
-			reset_transform(parent->transform());
+			reset_transform(parent->world_transform());
 		}
 
 	private:
 		btRigidBody* create_rigidbody(RigidBodyCreateInfo rb_cinfo, bool use_transform_size = false)
 		{
-			if (use_transform_size) rb_cinfo.cs_info.size = parent->transform().size();
+			if (use_transform_size) rb_cinfo.cs_info.size = parent->local_transform().size();
 
-			return physics_engine->addRigidBody(parent->transform().position(), parent->transform().orientation(), rb_cinfo);
+			return physics_engine->addRigidBody(parent->world_transform().position(), parent->world_transform().orientation(), rb_cinfo);
 		}
 
 		btRigidBody* create_rigidbody(RigidBodyCreateInfo rb_cinfo, CollisionFilter cf, bool use_transform_size = false)
 		{
-			if (use_transform_size) rb_cinfo.cs_info.size = parent->transform().size();
+			if (use_transform_size) rb_cinfo.cs_info.size = parent->world_transform().size();
 
-			return physics_engine->addRigidBody(parent->transform().position(), parent->transform().orientation(), rb_cinfo, cf);
+			return physics_engine->addRigidBody(parent->world_transform().position(), parent->world_transform().orientation(), rb_cinfo, cf);
 		}
 
 		void reset_forces()

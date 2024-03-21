@@ -22,8 +22,8 @@ namespace engine::scene
 		float yaw{ YAW }, pitch{ PITCH }, roll{ ROLL };
 
 		// vectors
-		glm::vec3 pos, front, up, right;
-		glm::vec3 world_front {0, 0, -1}, world_up{0, 1, 0};
+		glm::vec3 _position, front, up, right;
+		glm::vec3 world_front {0, 0, 1}, world_up{0, 1, 0};
 
 		// matrix related
 		float fov{ 45.f }, aspect_ratio{ 16.f / 9.f }, near_plane{ .1f }, far_plane { 100.f };
@@ -39,7 +39,7 @@ namespace engine::scene
 		};
 
 		Camera(glm::vec3 pos = {0,0,0}, bool on_ground = true) : 
-			pos{pos}, on_ground{on_ground}
+			_position{pos}, on_ground{on_ground}
 		{
 			updateCameraVectors();
 		}
@@ -48,7 +48,7 @@ namespace engine::scene
 		Camera& operator=(const Camera& copy) = default;
 
 		Camera(Camera&& move) noexcept
-			: pos{ move.pos }, on_ground{ move.on_ground }, world_up{ move.world_up }
+			: _position{ move._position }, on_ground{ move.on_ground }, world_up{ move.world_up }
 			// TODO add yaw, pitch, roll and other variables to move over
 		{
 			updateCameraVectors();
@@ -56,7 +56,7 @@ namespace engine::scene
 
 		Camera& operator=(Camera&& move) noexcept
 		{
-			pos = move.pos;
+			_position = move._position;
 			on_ground = move.on_ground;
 			world_up = move.world_up;
 			updateCameraVectors();
@@ -66,32 +66,33 @@ namespace engine::scene
 		void ProcessKeyboard(Directions dir, float deltaTime)
 		{
 			float vel = mov_speed * deltaTime;
+			glm::vec3 grounded_front = glm::vec3{ front.x, 0, front.z };
 
 			if (dir == Directions::FORWARD )
 			{
-				pos += (on_ground ? world_front : front) * vel;
+				_position += (on_ground ? grounded_front : front) * vel;
 			}
 			if (dir == Directions::BACKWARD)
 			{
-				pos -= (on_ground ? world_front : front) * vel;
+				_position -= (on_ground ? grounded_front : front) * vel;
 			}
 			if (dir == Directions::LEFT )
 			{
-				pos -= right * vel;
+				_position -= right * vel;
 			}
 			if (dir == Directions::RIGHT)
 			{
-				pos += right * vel;
+				_position += right * vel;
 			}
 			if (dir == Directions::UP   && !on_ground)
 			{
-				pos += world_up * vel;
+				_position += world_up * vel;
 			}
 			if (dir == Directions::DOWN && !on_ground)
 			{
-				pos -= world_up * vel;
+				_position -= world_up * vel;
 			}
-			view_matrix = glm::lookAt(pos, pos + front, up);
+			view_matrix = glm::lookAt(_position, _position + front, up);
 		}
 
 		void ProcessMouseMovement(float x_offset, float y_offset, bool pitch_constraint = true)
@@ -125,12 +126,12 @@ namespace engine::scene
 
 		glm::vec3 position()
 		{
-			return pos;
+			return _position;
 		}
 
 		glm::vec3 rotation()
 		{
-			return { roll, yaw, pitch };
+			return { roll, yaw, pitch }; // x, y, z
 		}
 
 		glm::vec3 forward()
@@ -138,15 +139,15 @@ namespace engine::scene
 			return front;
 		}
 
-		void lookAt(const glm::vec3& position)
+		void lookAt(const glm::vec3& target, const glm::vec3 up)
 		{
-			view_matrix = glm::lookAt(pos, position, front);
+			view_matrix = glm::lookAt(_position, target, up);
 		}
 
 		void set_position(const glm::vec3& position)
 		{
-			pos = position;
-			view_matrix = glm::lookAt(pos, pos + front, up);
+			_position = position;
+			view_matrix = glm::lookAt(_position, _position + front, up);
 		}
 
 		void set_fov(float new_fov) { fov = new_fov; updateProjectionMatrix(); }
@@ -155,7 +156,6 @@ namespace engine::scene
 	private:
 		void updateCameraVectors()
 		{
-			// TODO add roll
 			float yaw_r   = glm::radians(yaw  ),
 				  pitch_r = glm::radians(pitch),
 				  roll_r  = glm::radians(roll );
@@ -164,13 +164,13 @@ namespace engine::scene
 			front.y = sin(pitch_r);
 			front.z = sin(yaw_r) * cos(pitch_r);
 
-			world_front = front = glm::normalize(front);
-			world_front.y = 0;
+			//world_front = front = glm::normalize(front);
+			//world_front.y = 0;
 
 			right = glm::normalize(glm::cross(front, world_up));
 			up    = glm::normalize(glm::cross(right, front));
 
-			view_matrix = glm::lookAt(pos, pos + front, up);
+			view_matrix = glm::lookAt(_position, _position + front, up);
 		}
 
 		void updateProjectionMatrix()

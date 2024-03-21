@@ -26,11 +26,6 @@ namespace engine::scene
 
 	class EntityBase : utils::oop::non_movable
 	{
-	public:
-		EntityBase(std::string display_name = "") :
-			display_name{ display_name }
-		{}
-
 	protected:
 		friend class Scene;
 
@@ -46,37 +41,12 @@ namespace engine::scene
 		};
 
 		using Component = engine::components::Component;
-
-		std::string display_name; 
-		Transform _transform;
-		SceneState _scene_state;
-		std::vector<std::unique_ptr<Component>> components; // map should be okay also
-	};
-
-	// Object in scene
-	class Entity : EntityBase
-	{
-		friend class Scene;
-
-		using Shader = engine::resources::Shader;
-		using Model = engine::resources::Model;
-		using Material = engine::resources::Material;
-		using Component = engine::components::Component;
-
 	public:
-		Material* material;
-		Model* model; 
+		EntityBase(std::string display_name = "");
 
-		Entity(std::string display_name, Model& drawable, Material& material);
-
-		~Entity();
-
-		// draws using the provided shader instead of the material
-		void custom_draw(Shader& shader) const noexcept;
+		~EntityBase();
 
 		void init() noexcept;
-
-		void draw() const noexcept;
 
 		void update(float delta_time) noexcept;
 
@@ -108,7 +78,8 @@ namespace engine::scene
 		const SceneState& scene_state() const;
 
 #pragma region transform_stuff
-		const Transform& transform() const noexcept;
+		const Transform& local_transform() const noexcept;
+		const Transform& world_transform() const noexcept;
 
 		void set_position  (const glm::vec3& new_position)    noexcept;
 		void set_rotation  (const glm::vec3& new_orientation) noexcept;
@@ -121,11 +92,62 @@ namespace engine::scene
 		void set_transform (const glm::mat4& matrix, bool trigger_update = true) noexcept;
 #pragma endregion transform_stuff
 
+		EntityBase* parent;
+
 	protected:
-		virtual void prepare_draw() const noexcept;
-		virtual void specializated_update(float delta_time) noexcept;
+		SceneState _scene_state;
+		std::string display_name; 
+
+		Transform _local_transform; // local transform (relative to parent)
+		Transform _world_transform; // world transform (got by calculating local_transform * parent world_transform)
+
+		std::vector<std::unique_ptr<Component>> components; // map should be okay also
 
 		void on_transform_update();
+		void update_world_transform();
+	};
+
+	struct RenderSet
+	{	
+		using Material = engine::resources::Material;
+		using Model    = engine::resources::Model;
+
+		Material* material;
+		Model* model; 
+
+		RenderSet(Model& drawable, Material& material) :
+			material{ &material },
+			model{ &drawable }
+		{}
+	};
+
+	// Object in scene
+	class Entity : public EntityBase
+	{
+		friend class Scene;
+
+		using Shader = engine::resources::Shader;
+		using Model = engine::resources::Model;
+		using Material = engine::resources::Material;
+		using Component = engine::components::Component;
+
+	public:
+		Material* material;
+		Model* model; 
+
+		Entity(std::string display_name, Model& drawable, Material& material);
+
+		// N.B. no need to pass the entity as arg
+		template <typename ComponentType, typename ...Args>
+		void emplace_component(Args&&... args)
+		{
+			components.emplace_back(std::make_unique<ComponentType>(*this, args...));
+		}
+
+		// draws using the provided shader instead of the material
+		void custom_draw(Shader& shader) const noexcept;
+
+		void draw() const noexcept;
 
 	};
 }
