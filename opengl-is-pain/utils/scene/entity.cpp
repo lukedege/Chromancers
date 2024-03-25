@@ -102,7 +102,21 @@ namespace engine::scene
 
 		material->shader->setMat4("modelMatrix", _world_transform.matrix());
 
-		model->draw();
+		//TODO temp, find a better way to do this
+		bool use_model_diffuse = model->has_diffuse();
+
+		if (use_model_diffuse)
+		{
+			material->shader->setInt("diffuse_map", DIFFUSE_TEX_UNIT);
+			material->shader->setInt("sample_diffuse_map", 1);
+			material->shader->setFloat("uv_repeat", 1);
+		}
+			
+		model->draw(use_model_diffuse);
+
+		material->shader->setInt("diffuse_map", 0);
+		material->shader->setInt("sample_diffuse_map", 0);
+
 		material->unbind();
 	}
 

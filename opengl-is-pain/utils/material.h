@@ -5,13 +5,19 @@
 #include "shader.h"
 #include "texture.h"
 
+#define DIFFUSE_TEX_UNIT        0
+#define NORMAL_TEX_UNIT         1
+#define DISPLACEMENT_TEX_UNIT   2
+#define DETAIL_DIFFUSE_TEX_UNIT 3
+#define DETAIL_NORMAL_TEX_UNIT  4
+
 namespace engine::resources
 {
 	class Material
 	{
 		using Color = glm::vec4;
 	public:
-		Shader* shader;
+		Shader* shader              { nullptr };
 		//Color albedo              { 1 }; TODO use in place of diffuse when ambient and specular are gone
 		Texture* diffuse_map        { nullptr };
 		Texture* normal_map         { nullptr };
@@ -59,44 +65,44 @@ namespace engine::resources
 			shader->setFloat("parallax_heightscale", parallax_heightscale);
 
 			shader->setInt("sample_shadow_map", receive_shadows);
-			
+
 			if (diffuse_map)
 			{
 				// activate a texture unit per map
-				glActiveTexture(GL_TEXTURE0);
+				glActiveTexture(GL_TEXTURE0 + DIFFUSE_TEX_UNIT);
 				diffuse_map->bind();
-				shader->setInt("diffuse_map", 0);
+				shader->setInt("diffuse_map", DIFFUSE_TEX_UNIT);
 				shader->setInt("sample_diffuse_map", 1);
 			}
 
 			if (normal_map)
 			{
-				glActiveTexture(GL_TEXTURE1);
+				glActiveTexture(GL_TEXTURE0 + NORMAL_TEX_UNIT);
 				normal_map->bind();
-				shader->setInt("normal_map", 1);
+				shader->setInt("normal_map", NORMAL_TEX_UNIT);
 				shader->setInt("sample_normal_map", 1);
 			}
 			
 			if (displacement_map)
 			{
-				glActiveTexture(GL_TEXTURE2);
+				glActiveTexture(GL_TEXTURE0 + DISPLACEMENT_TEX_UNIT);
 				displacement_map->bind();
-				shader->setInt("displacement_map", 2); 
+				shader->setInt("displacement_map", DISPLACEMENT_TEX_UNIT); 
 				shader->setInt("sample_displacement_map", 1);
 			}
 
 			if (detail_diffuse_map)
 			{
-				glActiveTexture(GL_TEXTURE3);
+				glActiveTexture(GL_TEXTURE0 + DETAIL_DIFFUSE_TEX_UNIT);
 				detail_diffuse_map->bind();
-				shader->setInt("detail_diffuse_map", 3);
+				shader->setInt("detail_diffuse_map", DETAIL_DIFFUSE_TEX_UNIT);
 				shader->setInt("sample_detail_diffuse_map", 1);
 			}
 			if (detail_normal_map)
 			{
-				glActiveTexture(GL_TEXTURE4);
+				glActiveTexture(GL_TEXTURE0 + DETAIL_NORMAL_TEX_UNIT);
 				detail_normal_map->bind();
-				shader->setInt("detail_normal_map", 4);
+				shader->setInt("detail_normal_map", DETAIL_NORMAL_TEX_UNIT);
 				shader->setInt("sample_detail_normal_map", 1);
 			}
 		}

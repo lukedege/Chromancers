@@ -402,7 +402,7 @@ int main()
 #pragma region entities_setup
 	// Entities setup
 	Model plane_model{ "models/quad.obj" }, cube_model{ "models/cube.obj" }, sphere_model{ "models/sphere.obj" }, bunny_model{ "models/bunny.obj" };
-	Model gun_model{ "models/gun.obj" };
+	Model gun_model{ "models/gun/untitled.obj" };
 
 	Entity* cube        = main_scene.emplace_entity("cube", "brick_cube", cube_model, cube_material);
 	Entity* test_cube   = main_scene.emplace_entity("test_cube", "test_cube", cube_model, test_cube_material);
@@ -415,6 +415,7 @@ int main()
 	Entity* left_room_bwall = main_scene.emplace_entity("wall", "left_room_backwall", plane_model, left_room_bwall_material);
 	//Entity* bunny       = main_scene.emplace_entity("bunny", "buny", bunny_model, sph_mat);
 	Entity* gun = main_scene.emplace_entity("gun", "gun", gun_model, sph_mat);
+	//gun->set_size(glm::vec3{0.1f});
 	//Entity gun{ "gun", gun_model, sph_mat};
 	
 	// Player setup

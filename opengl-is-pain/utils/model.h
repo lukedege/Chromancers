@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <optional>
 
 #include <CodeAnalysis/Warnings.h>
 #pragma warning ( push )
@@ -17,6 +18,7 @@
 #pragma warning ( pop )
 
 #include "mesh.h"
+#include "texture.h"
 
 // Model class purpose:
 // 1. Open file from disk
@@ -28,59 +30,89 @@ namespace engine::resources
 {
 	class Model
 	{
+		struct MeshEntry
+		{
+			Mesh mesh;
+			unsigned int material_idx;
+		};
+
 	public:
-		std::vector<Mesh> meshes;
+		std::vector<MeshEntry> meshes;
+		std::vector<std::optional<Texture>> materials;
 
 		// Create model from file
-		Model(const std::string& path) : meshes{ loadModel(path) }
-		{}
+		Model(const std::string& path) { loadModel(path); }
 
 		// Create model with an inital existing mesh
-		Model(Mesh& mesh) : meshes {}
+		Model(Mesh& mesh) : meshes{}
+		{
+			meshes.push_back({ std::move(mesh), 0 });
+		}
+
+		Model(Mesh&& mesh) : meshes{}
+		{
+			meshes.push_back({ std::move(mesh), 0 });
+		}
+		
+		Model(MeshEntry& mesh) : meshes{}
 		{
 			meshes.push_back(std::move(mesh));
 		}
 
-		Model(Mesh&& mesh) : meshes {}
+		Model(MeshEntry&& mesh) : meshes{}
 		{
 			meshes.push_back(std::move(mesh));
 		}
 
 		Model(const Model& copy) = delete;
 		Model& operator=(const Model& copy) noexcept = delete;
-		
+
 		Model(Model&& move) = default;
 		Model& operator=(Model&& move) noexcept = default;
 
-		void draw() const
+		void draw(bool use_own_material = false) const
 		{
-			for (size_t i = 0; i < meshes.size(); i++) { meshes[i].draw(); }
+			for (size_t i = 0; i < meshes.size(); i++)
+			{
+				if (use_own_material && materials[meshes[i].material_idx].has_value())
+				{
+					glActiveTexture(GL_TEXTURE0);
+					materials[meshes[i].material_idx].value().bind();
+				}
+				meshes[i].mesh.draw();
+			}
 		}
 
 		void draw_instanced(size_t amount) const
 		{
-			for (size_t i = 0; i < meshes.size(); i++) { meshes[i].draw_instanced(amount); }
+			for (size_t i = 0; i < meshes.size(); i++) { meshes[i].mesh.draw_instanced(amount); }
 		}
 
-		std::vector<glm::vec3> get_vertices_positions() const 
+		std::vector<glm::vec3> get_vertices_positions() const
 		{
 			std::vector<glm::vec3> vertices;
 
-			for (const Mesh& m : meshes)
-				for (const Vertex& v : m.vertices)
+			for (const MeshEntry& m : meshes)
+				for (const Vertex& v : m.mesh.vertices)
 					vertices.push_back(v.position);
 			return vertices;
 		}
 
+		bool has_diffuse()
+		{
+			// TODO temp, 
+			return materials.size() > 2;
+		}
+
 	private:
-		std::vector<Mesh> loadModel(const std::string& path)
+		void loadModel(const std::string& path)
 		{
 			Assimp::Importer importer;
 
 			// Applying various mesh processing functions to the import by assimp
 			const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate |
 				aiProcess_JoinIdenticalVertices | aiProcess_FlipUVs |
-				aiProcess_GenSmoothNormals | aiProcess_CalcTangentSpace );
+				aiProcess_GenSmoothNormals | aiProcess_CalcTangentSpace);
 
 			if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
 			{
@@ -89,13 +121,15 @@ namespace engine::resources
 				throw std::runtime_error{ "ASSIMP ERROR! "s + importer.GetErrorString() + "\n" };
 			}
 
+			loadMaterials(scene, path);
+
 			// process the scene tree starting from root node down to its descendants
-			return processNode(scene->mRootNode, scene);
+			meshes = processNode(scene->mRootNode, scene);
 		}
 
-		std::vector<Mesh> processNode(const aiNode* node, const aiScene* scene)
+		std::vector<MeshEntry> processNode(const aiNode* node, const aiScene* scene)
 		{
-			std::vector<Mesh> meshes;
+			std::vector<MeshEntry> meshes;
 
 			// Process each node
 			for (size_t i = 0; i < node->mNumMeshes; i++)
@@ -109,7 +143,7 @@ namespace engine::resources
 			// recurse through the nodes children 
 			for (size_t i = 0; i < node->mNumChildren; i++)
 			{
-				std::vector<Mesh> childMeshes{ processNode(node->mChildren[i], scene) };
+				std::vector<MeshEntry> childMeshes{ processNode(node->mChildren[i], scene) };
 				for (size_t i = 0; i < childMeshes.size(); i++)
 				{
 					meshes.emplace_back(std::move(childMeshes[i]));
@@ -118,7 +152,36 @@ namespace engine::resources
 			return meshes;
 		}
 
-		Mesh processMesh(const aiMesh* mesh)
+		void loadMaterials(const aiScene* scene, const std::string& path) 
+		{
+			// Extract the directory part from the file name
+			std::string::size_type SlashIndex = path.find_last_of("/");
+			std::string Dir;
+
+			if (SlashIndex == std::string::npos) { Dir = "."; }
+			else if (SlashIndex == 0) { Dir = "/"; }
+			else { Dir = path.substr(0, SlashIndex); }
+
+			// Initialize the materials
+			materials.resize(scene->mNumMaterials);
+			for (unsigned int i = 0 ; i < scene->mNumMaterials ; i++) {
+				const aiMaterial* pMaterial = scene->mMaterials[i];
+
+				if (pMaterial->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
+					aiString Path;
+
+					if (pMaterial->GetTexture(aiTextureType_DIFFUSE, 0, &Path, NULL, NULL, NULL, NULL, NULL) == AI_SUCCESS) {
+						std::string FullPath = Dir + "/" + Path.data;
+
+						auto it = materials.emplace(materials.begin() + i, Texture{ FullPath, false });
+					}
+				}
+			}
+
+
+		}
+
+		MeshEntry processMesh(const aiMesh* mesh)
 		{
 			std::vector<Vertex> vertices;
 			std::vector<GLuint>  indices;
@@ -175,9 +238,8 @@ namespace engine::resources
 					indices.emplace_back(face.mIndices[j]);
 				}
 			}
-
-			Mesh m{ vertices, indices };
-			return m;
+			
+			return { Mesh{ vertices, indices }, mesh->mMaterialIndex };
 		}
 
 	};

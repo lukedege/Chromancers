@@ -8,6 +8,8 @@
 
 #include <gsl/gsl>
 
+#define DEFAULT_TEX_PATH "textures/default.png"
+
 namespace engine::resources
 {
 	class Texture
@@ -48,10 +50,10 @@ namespace engine::resources
 			create_texture();
 		}
 
-		Texture(const std::string& path) : 
+		Texture(const std::string& path, bool vflip_on_load = false) : 
 			_id{ generate_texture() }
 		{
-			load_texture(path);
+			load_texture(path, vflip_on_load);
 		}
 
 		           Texture(const Texture& copy) = delete;
@@ -95,9 +97,10 @@ namespace engine::resources
 			dispose();
 		}
 
-		void load_texture(const std::string& path) noexcept
+		void load_texture(const std::string& path, bool vflip_on_load = false) noexcept
 		{
-			//stbi_set_flip_vertically_on_load(1);
+			stbi_set_flip_vertically_on_load(vflip_on_load);
+
 			unsigned char* image;
 
 			int w, h, c;
@@ -106,8 +109,9 @@ namespace engine::resources
 
 			if (image == nullptr)
 			{
+				// Load default texture
 				std::cout << "Failed to load texture: " << stbi_failure_reason() << std::endl;
-				return;
+				image = stbi_load(DEFAULT_TEX_PATH, &w, &h, &c, 0);
 			}
 
 			_width    = gsl::narrow_cast<unsigned int>(w);

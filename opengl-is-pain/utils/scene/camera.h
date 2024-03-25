@@ -33,10 +33,6 @@ namespace engine::scene
 		glm::mat4 proj_matrix { glm::perspective(fov, aspect_ratio, near_plane, far_plane) };
 
 	public:
-		enum Directions
-		{
-			FORWARD, BACKWARD, LEFT, RIGHT, UP, DOWN
-		};
 
 		Camera(glm::vec3 pos = {0,0,0}, bool on_ground = true) : 
 			_position{pos}, on_ground{on_ground}
@@ -62,6 +58,46 @@ namespace engine::scene
 			updateCameraVectors();
 			return *this;
 		}
+
+		glm::mat4 viewMatrix()
+		{
+			return view_matrix;
+		}
+		glm::mat4 projectionMatrix()
+		{
+			return proj_matrix;
+		}
+
+		glm::vec3 position()
+		{
+			return _position;
+		}
+		glm::vec3 rotation()
+		{
+			return { roll, yaw, pitch }; // x, y, z
+		}
+		glm::vec3 forward()
+		{
+			return front;
+		}
+
+		void lookAt(const glm::vec3& target, const glm::vec3 up)
+		{
+			view_matrix = glm::lookAt(_position, target, up);
+		}
+		void set_position(const glm::vec3& position)
+		{
+			_position = position;
+			lookAt(_position + front, up);
+		}
+		void set_fov(float new_fov) { fov = new_fov; updateProjectionMatrix(); }
+		void set_aspect_ratio(float new_aspect_ratio) { aspect_ratio = new_aspect_ratio; updateProjectionMatrix(); }
+
+#pragma region input_related
+		enum Directions
+		{
+			FORWARD, BACKWARD, LEFT, RIGHT, UP, DOWN
+		};
 
 		void ProcessKeyboard(Directions dir, float deltaTime)
 		{
@@ -113,45 +149,7 @@ namespace engine::scene
 		{
 			on_ground = !on_ground;
 		}
-
-		glm::mat4 viewMatrix()
-		{
-			return view_matrix;
-		}
-
-		glm::mat4 projectionMatrix()
-		{
-			return proj_matrix;
-		}
-
-		glm::vec3 position()
-		{
-			return _position;
-		}
-
-		glm::vec3 rotation()
-		{
-			return { roll, yaw, pitch }; // x, y, z
-		}
-
-		glm::vec3 forward()
-		{
-			return front;
-		}
-
-		void lookAt(const glm::vec3& target, const glm::vec3 up)
-		{
-			view_matrix = glm::lookAt(_position, target, up);
-		}
-
-		void set_position(const glm::vec3& position)
-		{
-			_position = position;
-			view_matrix = glm::lookAt(_position, _position + front, up);
-		}
-
-		void set_fov(float new_fov) { fov = new_fov; updateProjectionMatrix(); }
-		void set_aspect_ratio(float new_aspect_ratio) { aspect_ratio = new_aspect_ratio; updateProjectionMatrix(); }
+#pragma endregion input_related
 
 	private:
 		void updateCameraVectors()
@@ -170,7 +168,7 @@ namespace engine::scene
 			right = glm::normalize(glm::cross(front, world_up));
 			up    = glm::normalize(glm::cross(right, front));
 
-			view_matrix = glm::lookAt(_position, _position + front, up);
+			lookAt(_position + front, up);
 		}
 
 		void updateProjectionMatrix()
