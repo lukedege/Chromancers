@@ -46,7 +46,7 @@ namespace engine::resources
 		Material() {}
 		Material(Shader& shader) : shader { &shader } {}
 
-		void bind()
+		void bind() const
 		{
 			shader->bind();
 
@@ -107,7 +107,7 @@ namespace engine::resources
 			}
 		}
 
-		void unbind()
+		void unbind() const
 		{
 			// We need to unbind these if we use the same shader for different materials
 			if (diffuse_map)

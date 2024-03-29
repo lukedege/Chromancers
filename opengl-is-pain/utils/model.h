@@ -19,6 +19,7 @@
 
 #include "mesh.h"
 #include "texture.h"
+#include "material.h"
 
 // Model class purpose:
 // 1. Open file from disk
@@ -30,15 +31,29 @@ namespace engine::resources
 {
 	class Model
 	{
+		struct TextureEntry
+		{
+			Texture tex;
+			std::string type;
+			std::string path;  // we store the path of the texture to compare with other textures
+		};
+		struct MaterialEntry
+		{
+			Material material;
+			std::string name;
+			std::vector<TextureEntry*> associated_textures;
+		};
 		struct MeshEntry
 		{
 			Mesh mesh;
-			unsigned int material_idx;
+			unsigned int associated_material_idx; // or MaterialEntry associated_material
 		};
+		
 
 	public:
 		std::vector<MeshEntry> meshes;
-		std::vector<std::optional<Texture>> materials;
+		std::vector<MaterialEntry> materials;
+		std::vector<TextureEntry> textures_loaded;
 
 		// Create model from file
 		Model(const std::string& path) { loadModel(path); }
@@ -53,16 +68,6 @@ namespace engine::resources
 		{
 			meshes.push_back({ std::move(mesh), 0 });
 		}
-		
-		Model(MeshEntry& mesh) : meshes{}
-		{
-			meshes.push_back(std::move(mesh));
-		}
-
-		Model(MeshEntry&& mesh) : meshes{}
-		{
-			meshes.push_back(std::move(mesh));
-		}
 
 		Model(const Model& copy) = delete;
 		Model& operator=(const Model& copy) noexcept = delete;
@@ -70,16 +75,26 @@ namespace engine::resources
 		Model(Model&& move) = default;
 		Model& operator=(Model&& move) noexcept = default;
 
-		void draw(bool use_own_material = false) const
+		void draw() const
 		{
 			for (size_t i = 0; i < meshes.size(); i++)
 			{
-				if (use_own_material && materials[meshes[i].material_idx].has_value())
-				{
-					glActiveTexture(GL_TEXTURE0);
-					materials[meshes[i].material_idx].value().bind();
-				}
 				meshes[i].mesh.draw();
+			}
+		}
+
+		void draw(Shader& shader)
+		{
+			for (size_t i = 0; i < meshes.size(); i++)
+			{
+				if (has_material())
+				{
+					auto& current_mats = materials[meshes[i].associated_material_idx];
+					current_mats.material.shader = &shader;
+					current_mats.material.bind();
+					meshes[i].mesh.draw();
+					current_mats.material.unbind();
+				}
 			}
 		}
 
@@ -98,13 +113,22 @@ namespace engine::resources
 			return vertices;
 		}
 
-		bool has_diffuse()
+		bool has_material() // different from auto-imported default material
 		{
-			// TODO temp, 
-			return materials.size() > 2;
+			return materials.size() > 1;
 		}
 
 	private:
+		Model(MeshEntry& mesh) : meshes{}
+		{
+			meshes.push_back(std::move(mesh));
+		}
+
+		Model(MeshEntry&& mesh) : meshes{}
+		{
+			meshes.push_back(std::move(mesh));
+		}
+
 		void loadModel(const std::string& path)
 		{
 			Assimp::Importer importer;
@@ -164,22 +188,65 @@ namespace engine::resources
 
 			// Initialize the materials
 			materials.resize(scene->mNumMaterials);
-			for (unsigned int i = 0 ; i < scene->mNumMaterials ; i++) {
-				const aiMaterial* pMaterial = scene->mMaterials[i];
+			textures_loaded.reserve(32); // TODO this is a temporary patchfix, better indexing needed instead of using textureentry* for the materials
 
-				if (pMaterial->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
-					aiString Path;
+			// First material is default
+			for (unsigned int i = 0 ; i < scene->mNumMaterials ; i++) 
+			{
+				aiMaterial* pMaterial = scene->mMaterials[i];
+				aiString name = pMaterial->GetName();
 
-					if (pMaterial->GetTexture(aiTextureType_DIFFUSE, 0, &Path, NULL, NULL, NULL, NULL, NULL) == AI_SUCCESS) {
-						std::string FullPath = Dir + "/" + Path.data;
+				MaterialEntry new_mat;
+				new_mat.name = name.C_Str();
+				new_mat.associated_textures = {};
+				std::vector<TextureEntry*> diffuse_tex = loadMaterialTextures(pMaterial, aiTextureType_DIFFUSE, "diffuse_tex", Dir);
+				new_mat.associated_textures.insert(new_mat.associated_textures.end(), diffuse_tex.begin(), diffuse_tex.end());
+				if (diffuse_tex.size() > 0) new_mat.material.diffuse_map = &diffuse_tex[0]->tex;
 
-						auto it = materials.emplace(materials.begin() + i, Texture{ FullPath, false });
-					}
-				}
+				std::vector<TextureEntry*> normals_tex = loadMaterialTextures(pMaterial, aiTextureType_NORMALS, "normals_tex", Dir);
+				new_mat.associated_textures.insert(new_mat.associated_textures.end(), normals_tex.begin(), normals_tex.end());
+				if (normals_tex.size() > 0) new_mat.material.normal_map = &normals_tex[0]->tex;
+
+				
+				new_mat.material.uv_repeat = 1.f;
+
+				// Fill out other material properties
+
+				materials[i] = new_mat;
 			}
 
 
 		}
+
+		std::vector<TextureEntry*> loadMaterialTextures(aiMaterial *mat, aiTextureType type, std::string typeName, std::string base_path)
+		{
+			std::vector<TextureEntry*> textures;
+			for(unsigned int i = 0; i < mat->GetTextureCount(type); i++)
+			{
+				aiString tex_path;
+				mat->GetTexture(type, i, &tex_path);
+				std::string full_path = base_path + "/" + tex_path.data;
+
+				bool skip = false;
+				for(unsigned int j = 0; j < textures_loaded.size(); j++)
+				{
+					if(std::strcmp(textures_loaded[j].path.data(), full_path.c_str()) == 0)
+					{
+						// save ref to texture (idx/ptr?)
+						textures.push_back(&textures_loaded[j]);
+						skip = true; 
+						break;
+					}
+				}
+				if(!skip)
+				{   // if texture hasn't been loaded already, load it
+					TextureEntry* t = &textures_loaded.emplace_back(Texture{ full_path, false }, typeName, full_path); // add to loaded textures
+
+					textures.push_back(t);
+				}
+			}
+			return textures;
+		}  
 
 		MeshEntry processMesh(const aiMesh* mesh)
 		{
