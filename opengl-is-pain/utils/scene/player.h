@@ -17,7 +17,7 @@ namespace engine::scene
 		
 
 		glm::vec3 viewmodel_offset{ 0 };
-		float lerp_speed = 75.f;
+		float lerp_speed = 10.f;
 		//Camera third_person_camera;
 
 		Player() :
@@ -54,7 +54,7 @@ namespace engine::scene
 			//glm::vec3 norm_c_orient = glm::normalize(glm::vec3{ 0, -first_person_camera.rotation().y, first_person_camera.rotation().z });
 			//float angle_dist = glm::angle(norm_p_orient, norm_c_orient);
 
-			float f_ang = std::clamp(10.f * delta_time, 0.f, 1.f);
+			float f_ang = std::clamp(lerp_speed * delta_time, 0.f, 1.f);
 
 			player_entity.set_position(first_person_camera.position());
 			player_entity.set_rotation(glm::mix(player_entity.world_transform().orientation(), { 0, -first_person_camera.rotation().y, first_person_camera.rotation().z}, f_ang));
