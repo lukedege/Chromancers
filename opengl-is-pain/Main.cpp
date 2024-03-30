@@ -675,7 +675,7 @@ int main()
 		cursor.set_position(player.first_person_camera.position());
 		cursor.set_rotation({ -90.0f, 0.0f, -player.first_person_camera.rotation().y - 90.f });
 
-		cursor.update(deltaTime);
+		cursor.update(capped_deltaTime);
 		cursor.draw();
 
 		map_framebuffer.unbind();
