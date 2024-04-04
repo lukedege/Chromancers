@@ -158,7 +158,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 std::function<void(bool)> los_paintball = [&](bool precise)
 {
 	Entity* bullet = main_scene.emplace_instanced_entity("bullets", "bullet", "This is a paintball", *sphere_model_ptr, *bullet_material_ptr);
-	bullet->set_position(player.gun->world_transform().position() + player.gun->world_transform().forward() + glm::vec3{0, 0.1f, 0});
+	bullet->set_position(player.gun_muzzle_world_position() + player.gun_entity->world_transform().forward() * paintball_size /* + player.gun->world_transform().up() * 0.1f */ );
 	bullet->set_size(glm::vec3(paintball_size));
 
 	// setting up collision mask for paintball rigidbodies (to avoid colliding with themselves)
@@ -181,7 +181,7 @@ std::function<void(bool)> los_paintball = [&](bool precise)
 		spread_modifier = normalize(glm::vec3{rng.get_float(-1, 1), rng.get_float(-1, 1), rng.get_float(-1, 1)}) * spread_bias;
 	}
 
-	glm::vec3 shoot_dir = main_scene.current_camera->forward() * speed_modifier + spread_modifier;
+	glm::vec3 shoot_dir = player.gun_entity->world_transform().forward() * speed_modifier + spread_modifier;
 	btVector3 impulse = btVector3(shoot_dir.x, shoot_dir.y, shoot_dir.z);
 	bullet->get_component<RigidBodyComponent>()->rigid_body->applyCentralImpulse(impulse);
 };
@@ -306,20 +306,21 @@ int main()
 	// Shader setup
 	std::vector<const GLchar*> utils_shaders { "shaders/types.glsl", "shaders/constants.glsl" };
 
-	Shader basic_shader      { "shaders/text/generic/basic.vert" ,"shaders/text/generic/basic.frag", 4, 3 };
-	Shader basic_mvp_shader  { "shaders/text/generic/mvp.vert", "shaders/text/generic/basic.frag", 4, 3 };
-	Shader basic_color_shader{ "shaders/text/generic/mvp.vert" , "shaders/text/generic/fullcolor.frag", 4, 3 };
-	Shader debug_shader      { "shaders/text/generic/mvp.vert", "shaders/text/generic/fullcolor.frag", 4, 3 };
-	Shader default_lit       { "shaders/text/default_lit.vert", "shaders/text/default_lit.frag", 4, 3, nullptr, utils_shaders };
-	Shader textured_shader   { "shaders/text/generic/textured.vert" , "shaders/text/generic/textured.frag", 4, 3 };
-	Shader tex_depth_shader  { "shaders/text/generic/textured.vert" , "shaders/text/generic/textured_depth.frag", 4, 3 };
-	Shader painter_shader    { "shaders/text/generic/texpainter.vert" , "shaders/text/generic/texpainter.frag", 4, 3 };
-	Shader shadowmap_shader  { "shaders/text/generic/shadow_map.vert" , "shaders/text/generic/shadow_map.frag", 4, 3 };
-	Shader shadowcube_shader  { "shaders/text/generic/shadow_cube.vert" , "shaders/text/generic/shadow_cube.frag", 4, 3, "shaders/text/generic/shadow_cube.geom" };
+	Shader basic_shader          { "shaders/text/generic/basic.vert" ,"shaders/text/generic/basic.frag", 4, 3 };
+	Shader basic_mvp_shader      { "shaders/text/generic/mvp.vert", "shaders/text/generic/basic.frag", 4, 3 };
+	Shader basic_color_shader    { "shaders/text/generic/mvp.vert" , "shaders/text/generic/fullcolor.frag", 4, 3 };
+	Shader debug_shader          { "shaders/text/generic/mvp.vert", "shaders/text/generic/fullcolor.frag", 4, 3 };
+	Shader default_lit           { "shaders/text/default_lit.vert", "shaders/text/default_lit.frag", 4, 3, nullptr, utils_shaders };
+	Shader default_lit_instanced { "shaders/text/default_lit_instanced.vert", "shaders/text/default_lit.frag", 4, 3, nullptr, utils_shaders };
+	Shader textured_shader       { "shaders/text/generic/textured.vert" , "shaders/text/generic/textured.frag", 4, 3 };
+	Shader tex_depth_shader      { "shaders/text/generic/textured.vert" , "shaders/text/generic/textured_depth.frag", 4, 3 };
+	Shader painter_shader        { "shaders/text/generic/texpainter.vert" , "shaders/text/generic/texpainter.frag", 4, 3 };
+	Shader shadowmap_shader      { "shaders/text/generic/shadow_map.vert" , "shaders/text/generic/shadow_map.frag", 4, 3 };
+	Shader shadowcube_shader     { "shaders/text/generic/shadow_cube.vert" , "shaders/text/generic/shadow_cube.frag", 4, 3, "shaders/text/generic/shadow_cube.geom" };
 
 	std::vector <std::reference_wrapper<Shader>> lit_shaders, all_shaders;
-	lit_shaders.push_back(default_lit);
-	all_shaders.push_back(basic_mvp_shader); all_shaders.push_back(default_lit);
+	lit_shaders.push_back(default_lit);lit_shaders.push_back(default_lit_instanced);
+	all_shaders.push_back(basic_mvp_shader); all_shaders.push_back(default_lit); all_shaders.push_back(default_lit_instanced);
 
 	// Lights setup 
 	DirectionalLight::ShadowMapSettings dir_sm_settings;
@@ -396,7 +397,7 @@ int main()
 
 	Material test_cube_material{ default_lit };
 
-	Material bullet_material{ default_lit };
+	Material bullet_material{ default_lit_instanced };
 
 #pragma endregion materials_setup
 #pragma region entities_setup
@@ -420,7 +421,7 @@ int main()
 	
 	// Player setup
 	player.viewmodel_offset = {0.3,-0.2,0.25};
-	player.gun = gun;
+	player.gun_entity = gun;
 
 	sphere_ptr = sphere;
 
@@ -704,7 +705,7 @@ int main()
 		if (ImGui::CollapsingHeader("Coefficients and scales"))
 		{
 			ImGui::ColorEdit4 ("Paint Color",    glm::value_ptr(paint_color));
-			ImGui::SliderFloat("Paintball size", &paintball_size, 0, 1, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Paintball size", &paintball_size, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
 			
 			ImGui::Checkbox   ("Automatic firing", &autofire);
 			ImGui::Separator(); ImGui::Text("Normal");

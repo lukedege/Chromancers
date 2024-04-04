@@ -26,6 +26,8 @@ namespace engine::scene
 
 	void Scene::init()
 	{
+		glGenBuffers(1, &instanced_ssbo);
+
 		for (auto& [id, entity] : entities)
 		{
 			entity->init();
@@ -56,31 +58,38 @@ namespace engine::scene
 		}
 	}
 
-	void Scene::draw() const
+	void Scene::draw()
 	{
 		// Draw independent entities
 		for (auto& [id, entity] : entities)
 		{
 			entity->draw();
 		}
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glUseProgram(0);
 
 		// Draw instanced groups of entities
 		Material* current_group_material;
 		for (auto& [group_id, instanced_group] : instanced_entities_groups)
 		{
+			instance_group_transforms.clear();
 			// get first entity material, we're assuming all entities in a group share the same material and model
 			if (instanced_group.size() > 0)
 			{
-				current_group_material = instanced_group.begin()->second->material; 
+				current_group_material = instanced_group.begin()->second->material;
 				current_group_material->bind();
 				for (auto& [id, instanced_entity] : instanced_group)
 				{
-					instanced_entity->custom_draw(*current_group_material->shader); 
-					//TODO Real instanced drawing:
-					//TODO fill the shader's ubo/ssbo with each entity transform
+					// Fill data about instanced group transforms
+					instance_group_transforms.push_back(instanced_entity->world_transform().matrix());
+
 				}
-				//TODO perform the instanced draw on the common model of the group
+				// Fill the shader's ubo/ssbo with the gathered transform data
+				utils::graphics::opengl::setup_buffer_object(instanced_ssbo, GL_SHADER_STORAGE_BUFFER, 0, sizeof(glm::mat4), instance_group_transforms.size(), glm::value_ptr(instance_group_transforms[0]));
 				
+				// Perform the instanced draw on the common model of the group
+				instanced_group.begin()->second->model->draw_instanced(instance_group_transforms.size());
+
 				current_group_material->unbind();
 			}
 		}

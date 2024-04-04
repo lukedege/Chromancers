@@ -274,5 +274,8 @@
     <None Include="shaders\text\generic\texpainter.vert">
       <Filter>Shaders\text\generic</Filter>
     </None>
+    <None Include="shaders\text\default_lit_instanced.vert">
+      <Filter>Shaders\text</Filter>
+    </None>
   </ItemGroup>
 </Project>

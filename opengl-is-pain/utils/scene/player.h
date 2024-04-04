@@ -7,22 +7,22 @@
 
 namespace engine::scene
 {
-	struct Player
+	class Player
 	{
-		
+	public:
 		EntityBase player_entity;
-		Entity* gun;
+		Entity* gun_entity;
 
 		Camera first_person_camera;
-		
 
 		glm::vec3 viewmodel_offset{ 0 };
+		
 		float lerp_speed = 10.f;
 		//Camera third_person_camera;
 
 		Player() :
 			player_entity{"PlayerObject"},
-			gun{nullptr},
+			gun_entity{nullptr},
 			first_person_camera{ glm::vec3{0,0,5} }
 		{
 
@@ -30,8 +30,11 @@ namespace engine::scene
 
 		void init()
 		{
-			gun->parent = &player_entity;
-			gun->rotate(glm::vec3{0, 90.f, 0});
+			if (gun_entity)
+			{
+				gun_entity->parent = &player_entity;
+				gun_entity->rotate(glm::vec3{0, 90.f, 0});
+			}
 			
 			player_entity.set_position(first_person_camera.position());
 			player_entity.set_rotation({ 0, -first_person_camera.rotation().y, first_person_camera.rotation().z});
@@ -42,7 +45,15 @@ namespace engine::scene
 			sync_to_cam(delta_time);
 		}
 
+		glm::vec3 gun_muzzle_world_position()
+		{
+			glm::mat4 gun_world_transform = gun_entity ? gun_entity->world_transform().matrix() : glm::mat4{1.f};
+			return glm::vec3 { gun_world_transform * glm::vec4 { local_muzzle_position, 1.f } };
+		}
+
 	private:
+		glm::vec3 local_muzzle_position { 0.0f, 0.1f, 0.67f };
+
 		void sync_to_cam(float delta_time)
 		{
 			
@@ -59,7 +70,10 @@ namespace engine::scene
 			player_entity.set_position(first_person_camera.position());
 			player_entity.set_rotation(glm::mix(player_entity.world_transform().orientation(), { 0, -first_person_camera.rotation().y, first_person_camera.rotation().z}, f_ang));
 
-			gun->set_position(viewmodel_offset);
+			if (gun_entity)
+			{
+				gun_entity->set_position(viewmodel_offset);
+			}
 
 			//utils::io::info("player pos", glm::to_string(player_entity.local_transform().position()), " ", glm::to_string(player_entity.world_transform().position()));
 			//utils::io::info("gun pos", glm::to_string(gun->local_transform().position()), " ", glm::to_string(gun->world_transform().position()));

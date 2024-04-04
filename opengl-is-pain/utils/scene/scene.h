@@ -9,6 +9,7 @@
 #include "../random.h"
 #include "../shader.h"
 #include "../material.h"
+#include "../utils.h"
 
 #include "camera.h"
 #include "entity.h"
@@ -41,9 +42,14 @@ namespace engine::scene
 		std::unordered_set<std::string> marked_for_removal; 
 		std::unordered_set<std::pair<std::string, std::string>, details::string_pair_hash> marked_for_removal_instanced; 
 
+		GLuint instanced_ssbo{ 0 }; // or ssbo
+		std::vector<glm::mat4> instance_group_transforms;
+
 	public:
-		Camera* current_camera;
+		Camera* current_camera{ nullptr };
 		utils::random::generator rng;
+
+		Scene() {}
 
 		template <typename ...Args>
 		Entity* emplace_entity(std::string entity_id, Args&&... args)
@@ -83,7 +89,7 @@ namespace engine::scene
 
 		void update(float deltaTime);
 
-		void draw() const;
+		void draw();
 
 		void custom_draw(Shader& shader) const;
 

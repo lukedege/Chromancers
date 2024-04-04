@@ -78,9 +78,8 @@ namespace utils::math
 
 namespace utils::graphics::opengl
 {
-	inline void setup_buffer_object(GLuint& buffer_object, GLenum target, int bind_index, void* data, size_t alloc_size)
+	inline void setup_buffer_object(GLuint& buffer_object, GLenum target, int bind_index, size_t alloc_size, void* data)
 	{
-		glGenBuffers(1, &buffer_object);
 		glBindBuffer(target, buffer_object);
 
 		glBufferData(target, alloc_size, NULL, GL_DYNAMIC_DRAW); // allocate alloc_size bytes of memory
@@ -91,6 +90,12 @@ namespace utils::graphics::opengl
 
 		glBindBuffer(target, 0);
 	}
+
+	inline void setup_buffer_object(GLuint& buffer_object, GLenum target, int bind_index, size_t element_size, size_t element_amount, void* data)
+	{
+		size_t alloc_size = element_size * element_amount;
+		setup_buffer_object(buffer_object, target, bind_index, alloc_size, data);
+	}	
 
 	inline void update_buffer_object(GLuint& buffer_object, GLenum target, size_t offset, size_t element_size, size_t element_amount, void* data)
 	{
