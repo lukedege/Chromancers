@@ -61,11 +61,6 @@ namespace engine::components
 				// we take the transformation matrix of the rigid boby, as calculated by the physics engine
 				rigid_body->getMotionState()->getWorldTransform(bt_transform);
 
-				//btVector3 gravity = btVector3(0, -9.82f, 0);
-				//rigid_body->applyCentralForce(-gravity);
-				//btVector3 imploc = bt_transform * btVector3(0, 0, 0.01f);
-				//rigid_body->applyForce(gravity, imploc);
-
 				// we convert the Bullet matrix (transform) to an array of floats
 				bt_transform.getOpenGLMatrix(matrix);
 				

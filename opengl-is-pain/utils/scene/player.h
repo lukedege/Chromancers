@@ -24,7 +24,6 @@ namespace engine::scene
 		Entity* gun_entity;
 		Model* bullet_model;
 		Material* bullet_material;
-		PhysicsEngine<Entity>* physics_engine;
 
 		Camera first_person_camera;		
 		float lerp_speed = 10.f;
@@ -48,10 +47,6 @@ namespace engine::scene
 			{
 				gun_entity->parent = &player_entity;
 				gun_entity->rotate(glm::vec3{0, 90.f, 0});
-			}
-			if (physics_engine)
-			{
-				cs_bullet = create_projectile_collision_shape(*physics_engine);
 			}
 			
 			player_entity.set_position(first_person_camera.position());
@@ -85,8 +80,6 @@ namespace engine::scene
 					CollisionFilter paintball_cf{ 1 << 7, ~(1 << 7) }; // this means "Paintball group is 1 << 7 (128), mask is everything but paintball group (inverse of the group bit)"
 
 					// create compound collision shape for bullet
-					//bullet->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1.0f, 0.1f, 0.1f, {ColliderShape::GIVEN}, cs_bullet }, paintball_cf, false);
-					//bullet->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1.0f, 0.1f, 0.1f, {ColliderShape::SPHERE, glm::vec3{paintball_size} } }, paintball_cf, false);
 					bullet->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1.0f, 0.1f, 0.1f, {ColliderShape::BOX, glm::vec3{paintball_size, paintball_size, paintball_size*2}} }, paintball_cf, false);
 					bullet->emplace_component<PaintballComponent>(paint_color);
 
@@ -119,60 +112,9 @@ namespace engine::scene
 
 	private:
 		glm::vec3 local_muzzle_position { 0.0f, 0.1f, 0.67f };
-		btCollisionShape* cs_bullet;
 		
-		btCollisionShape* create_projectile_collision_shape(PhysicsEngine<Entity>& physics_engine)
-		{
-			//create a few dynamic rigidbodies
-			// Re-using the same collision is better for memory usage and performance
-			btBoxShape* cube = new btBoxShape(btVector3(paintball_size,paintball_size,paintball_size));
-			physics_engine.collisionShapes.push_back(cube);
-			btBoxShape* cube2 = new btBoxShape(btVector3(paintball_size*0.5, paintball_size*0.5, paintball_size));
-			physics_engine.collisionShapes.push_back(cube2);
-		
-			// create a new compound shape for making an L-beam from `cube`s
-			btCompoundShape* compoundShape = new btCompoundShape();
-		
-			btTransform transform;
-		
-			// add cubes in an L-beam fashion to the compound shape
-			transform.setIdentity();
-			transform.setOrigin(btVector3(0, 0, -paintball_size*0.5));
-			compoundShape->addChildShape(transform, cube);
-		
-			transform.setIdentity();
-			transform.setOrigin(btVector3(0, 0, paintball_size*0.5));
-			compoundShape->addChildShape(transform, cube2);
-		
-			btScalar masses[2] = {1000, 1};
-			btTransform principal;
-			btVector3 inertia;
-			compoundShape->calculatePrincipalAxisTransform(masses, principal, inertia);
-
-			// new compund shape to store
-			btCompoundShape* compound2 = new btCompoundShape();
-			physics_engine.collisionShapes.push_back(compound2);
-		
-			// recompute the shift to make sure the compound shape is re-aligned
-			for (int i = 0; i < compoundShape->getNumChildShapes(); i++)
-				compound2->addChildShape(compoundShape->getChildTransform(i) * principal.inverse(),
-										 compoundShape->getChildShape(i));
-			delete compoundShape;
-		
-			return compound2;
-		}
-
 		void sync_to_cam(float delta_time)
 		{
-			
-			//float dist = glm::distance(player_entity.world_transform().position(), first_person_camera.position());
-			//float f_pos = std::clamp(((dist+0.1f) + (1/(dist+0.1f)))  * 8 * delta_time, 0.f, 1.f);
-			//player_entity.set_position(glm::mix(player_entity.world_transform().position(), first_person_camera.position(), f_pos));
-			
-			//glm::vec3 norm_p_orient = glm::normalize(player_entity.world_transform().orientation());
-			//glm::vec3 norm_c_orient = glm::normalize(glm::vec3{ 0, -first_person_camera.rotation().y, first_person_camera.rotation().z });
-			//float angle_dist = glm::angle(norm_p_orient, norm_c_orient);
-
 			float f_ang = std::clamp(lerp_speed * delta_time, 0.f, 1.f);
 
 			player_entity.set_position(first_person_camera.position());
@@ -182,10 +124,6 @@ namespace engine::scene
 			{
 				gun_entity->set_position(viewmodel_offset);
 			}
-
-			//utils::io::info("player pos", glm::to_string(player_entity.local_transform().position()), " ", glm::to_string(player_entity.world_transform().position()));
-			//utils::io::info("gun pos", glm::to_string(gun->local_transform().position()), " ", glm::to_string(gun->world_transform().position()));
-			//utils::io::info("cam pos", glm::to_string(first_person_camera.position()), " ", glm::to_string(first_person_camera.position()));
 		}
 	};
 }

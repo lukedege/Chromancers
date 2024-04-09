@@ -45,6 +45,14 @@ namespace engine::components
 			if (lifetime <= 0.f)
 				expire();
 			//utils::io::info("Curr. lin. vel. : ", current_velocity.x, ", ", current_velocity.y, ", ", current_velocity.z);
+			
+			// cancel out gravity
+			btVector3 gravity = btVector3(0, -9.82f, 0);
+			parent_rb->applyCentralForce(-gravity);
+
+			// emulate offset center of mass
+			btVector3 imploc = parent_rb->getWorldTransform().getBasis() * btVector3(0, -0.01f, -0.005f);
+			parent_rb->applyForce(gravity, imploc);
 		}
 
 		int type()

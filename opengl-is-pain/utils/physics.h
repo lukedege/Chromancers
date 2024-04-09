@@ -28,14 +28,28 @@ namespace engine::physics
         Camera* camera;
         Shader* shader;
 
+		GLuint vao, vbo, ebo;
+
     public:
         GLDebugDrawer(Camera& camera, Shader& shader) :
             m_debugMode(0),
             camera(&camera),
             shader(&shader)
-        {}
+        {
+			glGenVertexArrays(1, &vao);
+            glGenBuffers(1, &vbo);
+            glGenBuffers(1, &ebo);
+		}
 
-        virtual void   drawLine(const btVector3& from, const btVector3& to, const btVector3& color)
+		~GLDebugDrawer()
+		{
+            //delete buffers
+            glDeleteVertexArrays(1, &vao);
+            glDeleteBuffers(1, &vbo);
+            glDeleteBuffers(1, &ebo);
+		}
+
+        virtual void drawLine(const btVector3& from, const btVector3& to, const btVector3& color)
         {
             GLfloat vertices[6]{};
             vertices[0] = from.x(); vertices[3] = to.x();
@@ -44,12 +58,6 @@ namespace engine::physics
 
             glm::vec3 colors = { 1, 0, 0 };
             GLuint indices[] = { 0,1 };
-
-            GLuint vao, vbo, ebo;
-
-            glGenVertexArrays(1, &vao);
-            glGenBuffers(1, &vbo);
-            glGenBuffers(1, &ebo);
 
             glBindVertexArray(vao);
 
@@ -80,11 +88,8 @@ namespace engine::physics
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
             glDrawElements(GL_LINES, 2, GL_UNSIGNED_INT, 0);
             glBindVertexArray(0);
-
-            //delete buffers
-            glDeleteVertexArrays(1, &vao);
-            glDeleteBuffers(1, &vbo);
-            glDeleteBuffers(1, &ebo);
+			
+            shader->unbind();
         }
 
         virtual void   drawSphere(const btVector3& p, btScalar radius, const btVector3& color) {}

@@ -385,7 +385,6 @@ int main()
 	player.gun_entity = gun;
 	player.bullet_model = &bullet_model;
 	player.bullet_material = &bullet_material;
-	player.physics_engine = &physics_engine;
 
 	sphere_ptr = sphere;
 
@@ -453,7 +452,7 @@ int main()
 	// Physics setup
 	GLDebugDrawer phy_debug_drawer{ *main_scene.current_camera, debug_shader };
 	physics_engine.addDebugDrawer(&phy_debug_drawer);
-	physics_engine.set_debug_mode(1);
+	physics_engine.set_debug_mode(0);
 
 	floor_plane->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{100.0f, 0.01f, 100.0f}}}, false );
 	wall_plane ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
