@@ -53,7 +53,7 @@ namespace engine
 			glm::vec3 skew;
 			glm::vec4 perspective;
 			glm::decompose(matrix, _size, rotation, _position, skew, perspective);
-			_orientation = glm::eulerAngles(rotation);
+			_orientation = glm::degrees(glm::eulerAngles(rotation));
 
 			glm::mat3 rot_3{rotation};
 			_forward = glm::normalize(rot_3 * _forward);
@@ -63,9 +63,9 @@ namespace engine
 			_matrix = matrix;
 		}
 
-		void set_position(const glm::vec3& new_position   ) { _position = new_position;       update_matrix(); }
-		void set_rotation(const glm::vec3& new_orientation) { _orientation = new_orientation; update_matrix(); }
-		void set_size    (const glm::vec3& new_size       ) { _size = new_size;               update_matrix(); }
+		void set_position   (const glm::vec3& new_position   ) { _position = new_position;       update_matrix(); }
+		void set_orientation(const glm::vec3& new_orientation) { _orientation = new_orientation; update_matrix(); }
+		void set_size       (const glm::vec3& new_size       ) { _size = new_size;               update_matrix(); }
 
 		void translate(const glm::vec3& translation) { _position += translation; update_matrix(); }
 		void rotate   (const glm::vec3& rotation   ) { _orientation += rotation; update_matrix(); }

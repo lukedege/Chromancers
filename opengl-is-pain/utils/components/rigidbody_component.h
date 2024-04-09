@@ -61,11 +61,18 @@ namespace engine::components
 				// we take the transformation matrix of the rigid boby, as calculated by the physics engine
 				rigid_body->getMotionState()->getWorldTransform(bt_transform);
 
+				//btVector3 gravity = btVector3(0, -9.82f, 0);
+				//rigid_body->applyCentralForce(-gravity);
+				//btVector3 imploc = bt_transform * btVector3(0, 0, 0.01f);
+				//rigid_body->applyForce(gravity, imploc);
+
 				// we convert the Bullet matrix (transform) to an array of floats
 				bt_transform.getOpenGLMatrix(matrix);
-
+				
 				// Bullet matrix provides rotations and translations: it does not consider scale
-				parent->set_transform(glm::make_mat4(matrix) * glm::scale(glm::mat4{ 1.0f }, size), false);
+				glm::mat4 updated_transform = glm::make_mat4(matrix) * glm::scale(glm::mat4{ 1.0f }, size);
+
+				parent->set_transform(updated_transform, false);
 			}
 		}
 

@@ -79,6 +79,7 @@ bool capture_mouse = true;
 Scene main_scene;
 std::function<void()> scene_setup;
 Player player;
+bool autofire = true;
 
 // parameters for time computation
 float deltaTime = 0.0f;
@@ -108,20 +109,12 @@ PhysicsEngine<Entity> physics_engine;
 float maxSecPerFrame = 1.0f / 60.0f;
 float capped_deltaTime;
 
-// Paint
-glm::vec4 paint_color{1.f, 1.f, 0.f, 1.f};
-float paintball_size = 0.1f;
-bool autofire = true;
-
 // Random
 utils::random::generator rng;
 
 // Temporary 
 GLint shadow_texture_unit = 5;
 Entity* sphere_ptr;
-Model* sphere_model_ptr;
-Material* bullet_material_ptr;
-
 
 // TODOs 
 
@@ -154,38 +147,6 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 	}
 }
 
-// Creates and launches a paintball, if precise is true then there will be no spread among fired bullets 
-std::function<void(bool)> los_paintball = [&](bool precise)
-{
-	Entity* bullet = main_scene.emplace_instanced_entity("bullets", "bullet", "This is a paintball", *sphere_model_ptr, *bullet_material_ptr);
-	bullet->set_position(player.gun_muzzle_world_position() + player.gun_entity->world_transform().forward() * paintball_size /* + player.gun->world_transform().up() * 0.1f */ );
-	bullet->set_size(glm::vec3(paintball_size));
-
-	// setting up collision mask for paintball rigidbodies (to avoid colliding with themselves)
-	CollisionFilter paintball_cf{ 1 << 7, ~(1 << 7) }; // this means "Paintball group is 1 << 7 (128), mask is everything but paintball group (inverse of the group bit)"
-
-	bullet->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1.0f, 1.0f, 1.0f, {ColliderShape::SPHERE, glm::vec3{1}} }, paintball_cf, true);
-	bullet->emplace_component<PaintballComponent>(paint_color);
-
-	bullet->init();
-
-	float speed_modifier = 20.f;
-	glm::vec3 spread_modifier {0};
-
-	if (!precise)
-	{
-		float speed_bias = 2.0f;
-		float spread_bias = 1.5f;
-		float speed_spread = rng.get_float(-1, 1) * speed_bias; // get float between -bias and +bias
-		speed_modifier = 20.f + speed_spread;
-		spread_modifier = normalize(glm::vec3{rng.get_float(-1, 1), rng.get_float(-1, 1), rng.get_float(-1, 1)}) * spread_bias;
-	}
-
-	glm::vec3 shoot_dir = player.gun_entity->world_transform().forward() * speed_modifier + spread_modifier;
-	btVector3 impulse = btVector3(shoot_dir.x, shoot_dir.y, shoot_dir.z);
-	bullet->get_component<RigidBodyComponent>()->rigid_body->applyCentralImpulse(impulse);
-};
-
 void setup_input_keys()
 {
 	// Pressed input
@@ -207,7 +168,7 @@ void setup_input_keys()
 			if (!autofire) return;
 
 			// Fire precisely since it's single fire
-			los_paintball(!autofire);
+			player.shoot(!autofire, physics_engine);
 		});
 
 	// Toggled input
@@ -230,7 +191,7 @@ void setup_input_keys()
 			if (autofire) return;
 
 			// Fire with spread since it's autofire
-			los_paintball(!autofire);
+			player.shoot(!autofire, physics_engine);
 		});
 }
 
@@ -403,7 +364,7 @@ int main()
 #pragma region entities_setup
 	// Entities setup
 	Model plane_model{ "models/quad.obj" }, cube_model{ "models/cube.obj" }, sphere_model{ "models/sphere.obj" }, bunny_model{ "models/bunny.obj" };
-	Model gun_model{ "models/gun/untitled.obj" };
+	Model gun_model{ "models/gun/gun.obj" }; Model bullet_model{ "models/drop.obj" };
 
 	Entity* cube        = main_scene.emplace_entity("cube", "brick_cube", cube_model, cube_material);
 	Entity* test_cube   = main_scene.emplace_entity("test_cube", "test_cube", cube_model, test_cube_material);
@@ -422,6 +383,9 @@ int main()
 	// Player setup
 	player.viewmodel_offset = {0.3,-0.2,0.25};
 	player.gun_entity = gun;
+	player.bullet_model = &bullet_model;
+	player.bullet_material = &bullet_material;
+	player.physics_engine = &physics_engine;
 
 	sphere_ptr = sphere;
 
@@ -450,28 +414,28 @@ int main()
 		floor_plane->set_size(glm::vec3(100.0f, 0.1f, 100.0f));
 
 		wall_plane->set_position(glm::vec3(0.0f, 4.0f, -10.0f));
-		wall_plane->set_rotation(glm::vec3(90.0f, 0.0f, 0.f));
+		wall_plane->set_orientation(glm::vec3(90.0f, 0.0f, 0.f));
 		wall_plane->set_size(glm::vec3(10.0f, 0.1f, 5.0f));
 
 		left_room_lwall->set_position(glm::vec3(-10.0f, 4.0f, 0.0f));
-		left_room_lwall->set_rotation(glm::vec3(90.0f, 0.0f, 0.f));
+		left_room_lwall->set_orientation(glm::vec3(90.0f, 0.0f, 0.f));
 		left_room_lwall->set_size(glm::vec3(5.0f, 0.1f, 5.0f));
 
 		left_room_rwall->set_position(glm::vec3(-10.0f, 4.0f, 10.0f));
-		left_room_rwall->set_rotation(glm::vec3(90.0f, 0.0f, 0.f));
+		left_room_rwall->set_orientation(glm::vec3(90.0f, 0.0f, 0.f));
 		left_room_rwall->set_size(glm::vec3(5.0f, 0.1f, 5.0f));
 
 		left_room_bwall->set_position(glm::vec3(-15.0f, 4.0f, 5.f));
-		left_room_bwall->set_rotation(glm::vec3(90.0f, 90.0f, 0.f));
+		left_room_bwall->set_orientation(glm::vec3(90.0f, 90.0f, 0.f));
 		left_room_bwall->set_size(glm::vec3(5.0f, 0.1f, 5.0f));
 
 		cube->set_position(glm::vec3(0.0f, 3.0f, 0.0f));
-		cube->set_rotation(glm::vec3(0.0f, 0.0f, 0.0f));
+		cube->set_orientation(glm::vec3(0.0f, 0.0f, 0.0f));
 
 		test_cube->set_position(glm::vec3(-12.0f, 0.0f, 5.f));
 
 		sphere->set_position(glm::vec3(0.0f, 0.0f, 0.0f));
-		sphere->set_rotation(glm::vec3(0.0f, 0.0f, 0.0f));
+		sphere->set_orientation(glm::vec3(0.0f, 0.0f, 0.0f));
 		sphere->set_size(glm::vec3(0.25f));
 
 		//bunny->set_position(glm::vec3(-5.0f, 3.0f, 0.0f));
@@ -489,19 +453,19 @@ int main()
 	// Physics setup
 	GLDebugDrawer phy_debug_drawer{ *main_scene.current_camera, debug_shader };
 	physics_engine.addDebugDrawer(&phy_debug_drawer);
-	physics_engine.set_debug_mode(0);
+	physics_engine.set_debug_mode(1);
 
 	floor_plane->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{100.0f, 0.01f, 100.0f}}}, false );
 	wall_plane ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
 	test_cube  ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 0.1f, 0.1f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
 	cube       ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 30.0f, 0.1f, 0.1f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
-	sphere     ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1.0f, 1.0f, 1.0f, {ColliderShape::SPHERE, glm::vec3{1}} }, true);
+	//sphere     ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1.0f, 1.0f, 1.0f, {ColliderShape::SPHERE, glm::vec3{1}} }, true);
 
 	left_room_lwall->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
 	left_room_rwall->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
 	left_room_bwall->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
 
-	std::vector<glm::vec3> bunny_mesh_vertices = bunny_model.get_vertices_positions();
+	//std::vector<glm::vec3> bunny_mesh_vertices = bunny_model.get_vertices_positions();
 	//bunny      ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 10.0f, 1.0f, 1.0f,
 	//	ColliderShapeCreateInfo{ ColliderShape::HULL, glm::vec3{1}, &bunny_mesh_vertices } }, false);
 
@@ -514,9 +478,6 @@ int main()
 	left_room_rwall->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
 	left_room_bwall->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
 	
-	// Bullet stuff
-	sphere_model_ptr = &sphere_model;
-	bullet_material_ptr = &bullet_material;
 #pragma endregion entities_setup
 
 	// Framebuffers
@@ -674,7 +635,7 @@ int main()
 		glClear(GL_DEPTH_BUFFER_BIT); // clears depth information, thus everything rendered from now on will be on top https://stackoverflow.com/questions/5526704/how-do-i-keep-an-object-always-in-front-of-everything-else-in-opengl
 
 		cursor.set_position(player.first_person_camera.position());
-		cursor.set_rotation({ -90.0f, 0.0f, -player.first_person_camera.rotation().y - 90.f });
+		cursor.set_orientation({ -90.0f, 0.0f, -player.first_person_camera.rotation().y - 90.f });
 
 		cursor.update(capped_deltaTime);
 		cursor.draw();
@@ -704,8 +665,8 @@ int main()
 		ImGui::Text(fps_counter.c_str());
 		if (ImGui::CollapsingHeader("Coefficients and scales"))
 		{
-			ImGui::ColorEdit4 ("Paint Color",    glm::value_ptr(paint_color));
-			ImGui::SliderFloat("Paintball size", &paintball_size, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::ColorEdit4 ("Paint Color",    glm::value_ptr(player.paint_color));
+			ImGui::SliderFloat("Paintball size", &player.paintball_size, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
 			
 			ImGui::Checkbox   ("Automatic firing", &autofire);
 			ImGui::Separator(); ImGui::Text("Normal");

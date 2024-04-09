@@ -52,12 +52,13 @@ namespace engine::scene
 	const Transform& EntityBase::local_transform() const noexcept { return _local_transform; }
 	const Transform& EntityBase::world_transform() const noexcept { return _world_transform; }
 
-	void EntityBase::set_position  (const glm::vec3& new_position)    noexcept { _local_transform.set_position(new_position);    on_transform_update(); }
-	void EntityBase::set_rotation  (const glm::vec3& new_orientation) noexcept { _local_transform.set_rotation(new_orientation); on_transform_update(); }
-	void EntityBase::set_size      (const glm::vec3& new_size)        noexcept { _local_transform.set_size(new_size);            on_transform_update(); }
-	void EntityBase::translate     (const glm::vec3& translation)     noexcept { _local_transform.translate(translation); on_transform_update(); }
-	void EntityBase::rotate        (const glm::vec3& rotation)        noexcept { _local_transform.rotate(rotation);       on_transform_update(); }
-	void EntityBase::scale         (const glm::vec3& scale)           noexcept { _local_transform.scale(scale);           on_transform_update(); }
+	void EntityBase::set_position    (const glm::vec3& new_position)    noexcept { _local_transform.set_position(new_position);       on_transform_update(); }
+	void EntityBase::set_orientation (const glm::vec3& new_orientation) noexcept { _local_transform.set_orientation(new_orientation); on_transform_update(); }
+	void EntityBase::set_size        (const glm::vec3& new_size)        noexcept { _local_transform.set_size(new_size);               on_transform_update(); }
+
+	void EntityBase::translate       (const glm::vec3& translation)     noexcept { _local_transform.translate(translation); on_transform_update(); }
+	void EntityBase::rotate          (const glm::vec3& rotation)        noexcept { _local_transform.rotate(rotation);       on_transform_update(); }
+	void EntityBase::scale           (const glm::vec3& scale)           noexcept { _local_transform.scale(scale);           on_transform_update(); }
 
 	void EntityBase::set_transform (const glm::mat4& matrix, bool trigger_component_update) noexcept 
 	{ 

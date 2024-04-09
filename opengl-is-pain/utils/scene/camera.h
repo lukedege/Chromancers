@@ -139,7 +139,7 @@ namespace engine::scene
 
 			if (pitch_constraint) // avoids gimbal lock
 			{
-				glm::clamp(pitch, -89.f, 89.f);
+				pitch = glm::clamp(pitch, -89.f, 89.f);
 			}
 
 			updateCameraVectors();

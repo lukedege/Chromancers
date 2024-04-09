@@ -104,7 +104,7 @@ namespace engine::physics
     };
 
     //enum to identify the 2 considered Collision Shapes
-    enum ColliderShape { SPHERE, BOX, HULL };
+    enum ColliderShape { SPHERE, BOX, HULL, GIVEN };
 
     struct ColliderShapeCreateInfo
     {
@@ -119,6 +119,7 @@ namespace engine::physics
         float friction     { 0.1f };
         float restitution  { 0.1f };
         ColliderShapeCreateInfo cs_info;
+		btCollisionShape* cs{ nullptr }; // if not nullptr, will be used for the rigidbody, ignoring cs_info
     };
 
     struct CollisionFilter
@@ -132,7 +133,7 @@ namespace engine::physics
     {
     public:
         btDiscreteDynamicsWorld* dynamicsWorld; // the main physical simulation class
-        //btAlignedObjectArray<btCollisionShape*> collisionShapes; // a vector for all the Collision Shapes of the scene
+        btAlignedObjectArray<btCollisionShape*> collisionShapes; // a vector for all the Collision Shapes of the scene
         btDefaultCollisionConfiguration* collisionConfiguration; // setup for the collision manager
         btCollisionDispatcher* dispatcher; // collision manager
         btBroadphaseInterface* overlappingPairCache; // method for the broadphase collision detection
@@ -222,7 +223,7 @@ namespace engine::physics
                 collision_shape = new btSphereShape(cs_info.size.x); // If nothing, use sphere collider
 
             // we add this Collision Shape to the vector
-            //collisionShapes.push_back(collision_shape);
+            collisionShapes.push_back(collision_shape);
 
             return collision_shape;
         }
@@ -350,8 +351,12 @@ namespace engine::physics
             // we set the initial position (it must be equal to the position of the corresponding model of the scene)
             objTransform.setOrigin(position);
 
-            // We create the collision shape
-            btCollisionShape* collision_shape = createCollisionShape(rb_info.cs_info);
+            // If a collision shape is provided we will adopt it and ignore cs creation info
+			btCollisionShape* collision_shape;
+			if (rb_info.cs)
+				collision_shape = rb_info.cs; 
+			else 
+				collision_shape = createCollisionShape(rb_info.cs_info);
 
             // if objects has mass = 0 -> then it is static (it does not move and it is not subject to forces)
             btScalar mass = rb_info.mass;
@@ -424,7 +429,7 @@ namespace engine::physics
             delete collisionConfiguration;
             collisionConfiguration = nullptr;
 
-            //collisionShapes.clear();
+            collisionShapes.clear();
         }
     };
 

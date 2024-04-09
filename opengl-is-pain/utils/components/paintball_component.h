@@ -6,6 +6,8 @@
 #include "../scene/entity.h"
 #include "../io.h"
 
+#include "utils/components/paintable_component.h"
+
 namespace engine::components
 {
 	class PaintballComponent : public Component

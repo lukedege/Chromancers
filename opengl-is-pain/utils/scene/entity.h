@@ -82,7 +82,7 @@ namespace engine::scene
 		const Transform& world_transform() const noexcept;
 
 		void set_position  (const glm::vec3& new_position)    noexcept;
-		void set_rotation  (const glm::vec3& new_orientation) noexcept;
+		void set_orientation  (const glm::vec3& new_orientation) noexcept;
 		void set_size      (const glm::vec3& new_size)        noexcept;
 
 		void translate     (const glm::vec3& translation)     noexcept;
