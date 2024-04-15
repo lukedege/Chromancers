@@ -4,7 +4,6 @@
 
 #include <gsl/gsl>
 
-
 // GL libraries
 #ifdef _WIN32
 #define APIENTRY __stdcall
@@ -21,13 +20,6 @@
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
-
-// macros
-#define MAX_POINT_LIGHTS 3
-#define MAX_SPOT_LIGHTS  3
-#define MAX_DIR_LIGHTS   3
-#define MAX_LIGHTS MAX_POINT_LIGHTS+MAX_SPOT_LIGHTS+MAX_DIR_LIGHTS
-//#define DEBUG_UNIFORM
 
 // utils libraries
 #include "utils/shader.h"
@@ -97,32 +89,13 @@ bool wireframe = false;
 PointLight* currentLight;
 float mov_light_speed = 5.f;
 
-// Scene material/lighting setup 
-glm::vec3 ambient{ 0.1f, 0.1f, 0.1f }, diffuse{ 1.0f, 1.0f, 1.0f }, specular{ 1.0f, 1.0f, 1.0f };
-float kD = 0.5f, kS = 0.4f, kA = 0.1f; // Generally we'd like a normalized sum of these coefficients Kd + Ks + Ka = 1
-float shininess = 25.f;
-float alpha = 0.2f;
-float F0 = 0.9f;
-
 // Physics
 PhysicsEngine<Entity> physics_engine;
 float maxSecPerFrame = 1.0f / 60.0f;
 float capped_deltaTime;
 
-// Random
-utils::random::generator rng;
+/////////////////// INPUT functions ///////////////////////
 
-// Temporary 
-GLint shadow_texture_unit = 5;
-Entity* sphere_ptr;
-
-// TODOs 
-
-//////////////////////////////////////////
-
-// HELPERS
-
-// INPUT
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
 	if (action == GLFW_PRESS)
@@ -267,17 +240,17 @@ int main()
 	// Shader setup
 	std::vector<const GLchar*> utils_shaders { "shaders/types.glsl", "shaders/constants.glsl" };
 
-	Shader basic_shader          { "shaders/text/generic/basic.vert" ,"shaders/text/generic/basic.frag", 4, 3 };
-	Shader basic_mvp_shader      { "shaders/text/generic/mvp.vert", "shaders/text/generic/basic.frag", 4, 3 };
-	Shader basic_color_shader    { "shaders/text/generic/mvp.vert" , "shaders/text/generic/fullcolor.frag", 4, 3 };
-	Shader debug_shader          { "shaders/text/generic/mvp.vert", "shaders/text/generic/fullcolor.frag", 4, 3 };
-	Shader default_lit           { "shaders/text/default_lit.vert", "shaders/text/default_lit.frag", 4, 3, nullptr, utils_shaders };
-	Shader default_lit_instanced { "shaders/text/default_lit_instanced.vert", "shaders/text/default_lit.frag", 4, 3, nullptr, utils_shaders };
-	Shader textured_shader       { "shaders/text/generic/textured.vert" , "shaders/text/generic/textured.frag", 4, 3 };
-	Shader tex_depth_shader      { "shaders/text/generic/textured.vert" , "shaders/text/generic/textured_depth.frag", 4, 3 };
-	Shader painter_shader        { "shaders/text/generic/texpainter.vert" , "shaders/text/generic/texpainter.frag", 4, 3 };
-	Shader shadowmap_shader      { "shaders/text/generic/shadow_map.vert" , "shaders/text/generic/shadow_map.frag", 4, 3 };
-	Shader shadowcube_shader     { "shaders/text/generic/shadow_cube.vert" , "shaders/text/generic/shadow_cube.frag", 4, 3, "shaders/text/generic/shadow_cube.geom" };
+	Shader basic_mvp_shader      { "basic_mvp_shader", "shaders/text/generic/mvp.vert", "shaders/text/generic/basic.frag", 4, 3 };
+	Shader debug_shader          { "debug_shader", "shaders/text/generic/mvp.vert", "shaders/text/generic/fullcolor.frag", 4, 3 };
+
+	Shader default_lit           { "default_lit", "shaders/text/default_lit.vert", "shaders/text/default_lit.frag", 4, 3, nullptr, utils_shaders };
+	Shader default_lit_instanced { "default_lit_instanced", "shaders/text/default_lit_instanced.vert", "shaders/text/default_lit.frag", 4, 3, nullptr, utils_shaders };
+
+	Shader textured_shader       { "textured_shader", "shaders/text/generic/textured.vert" , "shaders/text/generic/textured.frag", 4, 3 };
+	Shader painter_shader        { "painter_shader", "shaders/text/generic/texpainter.vert" , "shaders/text/generic/texpainter.frag", 4, 3 };
+
+	Shader shadowmap_shader      { "shadowmap_shader", "shaders/text/generic/shadow_map.vert" , "shaders/text/generic/shadow_map.frag", 4, 3 };
+	Shader shadowcube_shader     { "shadowcube_shader", "shaders/text/generic/shadow_cube.vert" , "shaders/text/generic/shadow_cube.frag", 4, 3, "shaders/text/generic/shadow_cube.geom" };
 
 	std::vector <std::reference_wrapper<Shader>> lit_shaders, all_shaders;
 	lit_shaders.push_back(default_lit);lit_shaders.push_back(default_lit_instanced);
@@ -338,7 +311,7 @@ int main()
 	Material grey_bricks{ default_lit };
 	grey_bricks.diffuse_map = &greybricks_diffuse_tex; grey_bricks.normal_map = &greybricks_normal_tex;
 
-	Material sph_mat{ default_lit };
+	Material sph_mat { default_lit };
 
 	Material basic_mat{ basic_mvp_shader };
 
@@ -357,12 +330,14 @@ int main()
 	cube_material.uv_repeat = 3.f;
 
 	Material test_cube_material{ default_lit };
+	Material gun_mat { default_lit };
+	Material buny_mat{ default_lit };
 
 	Material bullet_material{ default_lit_instanced };
 
 #pragma endregion materials_setup
 #pragma region entities_setup
-	// Entities setup
+	// Scene entities setup
 	Model plane_model{ "models/quad.obj" }, cube_model{ "models/cube.obj" }, sphere_model{ "models/sphere.obj" }, bunny_model{ "models/bunny.obj" };
 	Model gun_model{ "models/gun/gun.obj" }; Model bullet_model{ "models/drop.obj" };
 
@@ -375,24 +350,14 @@ int main()
 	Entity* left_room_lwall = main_scene.emplace_entity("wall", "left_room_leftwall", plane_model, left_room_lwall_material);
 	Entity* left_room_rwall = main_scene.emplace_entity("wall", "left_room_rightwall", plane_model, left_room_rwall_material);
 	Entity* left_room_bwall = main_scene.emplace_entity("wall", "left_room_backwall", plane_model, left_room_bwall_material);
-	//Entity* bunny       = main_scene.emplace_entity("bunny", "buny", bunny_model, sph_mat);
-	Entity* gun = main_scene.emplace_entity("gun", "gun", gun_model, sph_mat);
-	//gun->set_size(glm::vec3{0.1f});
-	//Entity gun{ "gun", gun_model, sph_mat};
-	
-	// Player setup
-	player.viewmodel_offset = {0.3,-0.2,0.25};
-	player.gun_entity = gun;
-	player.bullet_model = &bullet_model;
-	player.bullet_material = &bullet_material;
+	Entity* bunny       = main_scene.emplace_entity("bunny", "buny", bunny_model, buny_mat);	
 
-	sphere_ptr = sphere;
-
+	// Cursor setup
 	Model triangle_mesh{ Mesh::simple_triangle_mesh() };
 	Model quad_mesh{ Mesh::simple_quad_mesh() };
 	Entity cursor{ "cursor", triangle_mesh, basic_mat };
 
-	// Lightcubes
+	// Lightcubes setup
 	std::vector<Material> lightcube_materials; lightcube_materials.resize(point_lights.size());
 	std::vector<Entity*> lightcube_entites; lightcube_entites.resize(point_lights.size());
 	for (size_t i = 0; i < point_lights.size(); i++)
@@ -406,7 +371,7 @@ int main()
 		lightcube_entites[i] = main_scene.emplace_entity("light_cube", "light_cube", cube_model, lightcube_materials[i]);
 	}
 
-	// Entities setup in scene
+	// Scene entities setup 
 	scene_setup = [&]()
 	{
 		floor_plane->set_position(glm::vec3(0.0f, -1.0f, 0.0f));
@@ -437,8 +402,8 @@ int main()
 		sphere->set_orientation(glm::vec3(0.0f, 0.0f, 0.0f));
 		sphere->set_size(glm::vec3(0.25f));
 
-		//bunny->set_position(glm::vec3(-5.0f, 3.0f, 0.0f));
-		//bunny->set_size(glm::vec3(1.f));
+		bunny->set_position(glm::vec3(5.0f, 3.0f, 0.0f));
+		bunny->set_size(glm::vec3(1.f));
 
 		for (auto& lightcube_entity : lightcube_entites)
 		{
@@ -447,7 +412,16 @@ int main()
 
 		cursor.set_size(glm::vec3(3.0f));
 	};
-	scene_setup();	
+	scene_setup();
+
+	// Player setup
+	Entity gun{"gun", gun_model, gun_mat};
+	
+	player.viewmodel_offset = {0.3,-0.2,0.25};
+	player.gun_entity = &gun;
+	player.bullet_model = &bullet_model;
+	player.bullet_material = &bullet_material;
+	player.current_scene = &main_scene;
 
 	// Physics setup
 	GLDebugDrawer phy_debug_drawer{ *main_scene.current_camera, debug_shader };
@@ -458,20 +432,21 @@ int main()
 	wall_plane ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
 	test_cube  ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 0.1f, 0.1f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
 	cube       ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 30.0f, 0.1f, 0.1f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
-	//sphere     ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1.0f, 1.0f, 1.0f, {ColliderShape::SPHERE, glm::vec3{1}} }, true);
+	sphere     ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1.0f, 1.0f, 1.0f, {ColliderShape::SPHERE, glm::vec3{1}} }, true);
 
 	left_room_lwall->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
 	left_room_rwall->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
 	left_room_bwall->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
 
-	//std::vector<glm::vec3> bunny_mesh_vertices = bunny_model.get_vertices_positions();
-	//bunny      ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 10.0f, 1.0f, 1.0f,
-	//	ColliderShapeCreateInfo{ ColliderShape::HULL, glm::vec3{1}, &bunny_mesh_vertices } }, false);
+	std::vector<glm::vec3> bunny_mesh_vertices = bunny_model.get_vertices_positions();
+	bunny          ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1000.0f, 1.0f, 1.0f,
+		ColliderShapeCreateInfo{ ColliderShape::HULL, glm::vec3{1}, &bunny_mesh_vertices } }, false);
 
 	test_cube      ->emplace_component<PaintableComponent>(painter_shader, 128, 128, &splat_tex, &splat_normal_tex);
 	wall_plane     ->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
 	cube           ->emplace_component<PaintableComponent>(painter_shader, 128, 128, &splat_tex, &splat_normal_tex);
 	floor_plane    ->emplace_component<PaintableComponent>(painter_shader, 4096, 4096, &splat_tex, &splat_normal_tex);
+	bunny          ->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
 
 	left_room_lwall->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
 	left_room_rwall->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
@@ -576,7 +551,7 @@ int main()
 			// Set sampler locations for directional shadow maps
 			for (int i = 0; i < dir_shadow_locs.size(); i++)
 			{
-				int tex_offset = shadow_texture_unit + i;
+				int tex_offset = SHADOW_TEX_UNIT + i;
 				dir_shadow_locs[i] = tex_offset;
 				glActiveTexture(GL_TEXTURE0 + tex_offset);
 				glBindTexture(GL_TEXTURE_2D, i < dir_lights.size() ? dir_lights[i]->get_shadowmap().id() : 0);
@@ -584,7 +559,7 @@ int main()
 			// Set sampler locations for point shadow maps
 			for (int i = 0; i < point_shadow_locs.size(); i++)
 			{
-				int tex_offset = shadow_texture_unit + dir_shadow_locs.size() + i;
+				int tex_offset = SHADOW_TEX_UNIT + dir_shadow_locs.size() + i;
 				point_shadow_locs[i] = tex_offset;
 				glActiveTexture(GL_TEXTURE0 + tex_offset);
 				glBindTexture(GL_TEXTURE_CUBE_MAP, i < point_lights.size() ? point_lights[i]->depthCubemap : 0);
@@ -601,14 +576,14 @@ int main()
 		// Render scene
 		main_scene.draw();
 
-		//main_scene.instanced_draw(bullet_material);
+		// Player (the gun, specifically) should be drawn on top of the world to avoid clipping 
+		glClear(GL_DEPTH_BUFFER_BIT);
+		player.draw();
 
 #pragma endregion draw_world
 
-		// GUN
-		glClear(GL_DEPTH_BUFFER_BIT);
-
 #pragma region map_draw
+
 		// MAP
 		map_framebuffer.bind();
 		glClearColor(0.26f, 0.98f, 0.26f, 1.0f); //the "clear" color for the default frame buffer
@@ -631,7 +606,7 @@ int main()
 		main_scene.draw();
 
 		// Prepare cursor shader
-		glClear(GL_DEPTH_BUFFER_BIT); // clears depth information, thus everything rendered from now on will be on top https://stackoverflow.com/questions/5526704/how-do-i-keep-an-object-always-in-front-of-everything-else-in-opengl
+		glClear(GL_DEPTH_BUFFER_BIT);
 
 		cursor.set_position(player.first_person_camera.position());
 		cursor.set_orientation({ -90.0f, 0.0f, -player.first_person_camera.rotation().y - 90.f });
@@ -662,6 +637,8 @@ int main()
 		ImGui::Begin("Settings");
 		std::string fps_counter = "Approximate FPS: " + std::to_string(ImGui::GetIO().Framerate);
 		ImGui::Text(fps_counter.c_str());
+
+		// Various settings
 		if (ImGui::CollapsingHeader("Coefficients and scales"))
 		{
 			ImGui::ColorEdit4 ("Paint Color",    glm::value_ptr(player.paint_color));
@@ -676,6 +653,7 @@ int main()
 			ImGui::SliderFloat3("Viewmodel offset", glm::value_ptr(player.viewmodel_offset), -1, 1, "%.2f", 1);
 		}
 
+		// Light settings
 		if (ImGui::CollapsingHeader("Lights"))
 		{
 			ImGui::PushID(&point_lights);

@@ -44,8 +44,7 @@ namespace engine::components
 			lifetime -= delta_time;
 			if (lifetime <= 0.f)
 				expire();
-			//utils::io::info("Curr. lin. vel. : ", current_velocity.x, ", ", current_velocity.y, ", ", current_velocity.z);
-			
+
 			// cancel out gravity
 			btVector3 gravity = btVector3(0, -9.82f, 0);
 			parent_rb->applyCentralForce(-gravity);

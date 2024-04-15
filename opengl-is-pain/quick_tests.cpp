@@ -73,7 +73,7 @@ int mainz()
 	// Setup keys
 	setup_keys(wdw);
 
-	Shader painter_shader{ "shaders/text/generic/texpainter.vert" ,"shaders/text/generic/texpainter.frag", 4, 3 };
+	Shader painter_shader{ "", "shaders/text/generic/texpainter.vert" ,"shaders/text/generic/texpainter.frag", 4, 3 };
 	Model cube_model{ "models/cube.obj" }, sphere_model{ "models/sphere.obj" }, bunny_model{ "models/bunny.obj" };
 
 	Camera cam;

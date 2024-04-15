@@ -22,6 +22,7 @@ namespace engine::scene
 	public:
 		EntityBase player_entity;
 		Entity* gun_entity;
+		Scene* current_scene;
 		Model* bullet_model;
 		Material* bullet_material;
 
@@ -31,7 +32,7 @@ namespace engine::scene
 		
 		glm::vec3 viewmodel_offset{ 0 };
 		float paintball_size{ 0.1f };
-		glm::vec4 paint_color{ 1.f, 1.f, 0.f, 1.f };
+		glm::vec4 paint_color{ 1.f, 0.85f, 0.f, 1.f };
 
 		Player() :
 			player_entity{"PlayerObject"},
@@ -43,6 +44,8 @@ namespace engine::scene
 
 		void init()
 		{
+			gun_entity->init();
+
 			if (gun_entity)
 			{
 				gun_entity->parent = &player_entity;
@@ -56,17 +59,22 @@ namespace engine::scene
 		void update(float delta_time)
 		{	
 			sync_to_cam(delta_time);
+			gun_entity->update(delta_time);
+		}
+
+		void draw()
+		{
+			gun_entity->draw();
 		}
 
 		// Creates and launches a paintball, if precise is true then there will be no spread among fired bullets 
 		void shoot(bool precise, PhysicsEngine<Entity>& physics_engine) // TODO temp parameters
 		{
-			if (gun_entity)
+			if (gun_entity && current_scene)
 			{
-				Scene* current_scene = gun_entity->scene_state().current_scene;
 				auto& rng = current_scene->rng; // TODO temp
 
-				if (current_scene && bullet_model && bullet_material) // TODO temp, make a better check
+				if (bullet_model && bullet_material) // TODO temp, make a better check
 				{
 					Entity* bullet = current_scene->emplace_instanced_entity("bullets", "bullet", "This is a paintball", *bullet_model, *bullet_material);
 

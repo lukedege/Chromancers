@@ -99,16 +99,24 @@ namespace engine::scene
 
 	void Entity::draw() const noexcept
 	{
-		material->bind();
+		if (!(material->shader)) { utils::io::error("ENTITY - Material has no shader"); return; }
 
-		material->shader->setMat4("modelMatrix", _world_transform.matrix());
+		Shader& current_shader = *material->shader; // TODO check material has always a shader
+
+		current_shader.bind();
+		current_shader.setMat4("modelMatrix", _world_transform.matrix());
 
 		if (model->has_material())
-			model->draw(*material->shader);
+		{
+			model->draw(current_shader);
+		}
 		else
+		{
+			material->bind();
 			model->draw();
+			material->unbind();
+		}
 
-		material->unbind();
 	}
 
 	// draws using the provided shader instead of the material

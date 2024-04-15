@@ -10,6 +10,7 @@
 #define DISPLACEMENT_TEX_UNIT   2
 #define DETAIL_DIFFUSE_TEX_UNIT 3
 #define DETAIL_NORMAL_TEX_UNIT  4
+#define SHADOW_TEX_UNIT         5
 
 namespace engine::resources
 {
@@ -48,6 +49,8 @@ namespace engine::resources
 
 		void bind() const
 		{
+			if (!shader) { utils::io::error("MATERIAL - Shader not provided"); return; }
+			
 			shader->bind();
 
 			shader->setVec4("ambient_color", ambient_color);
@@ -109,6 +112,10 @@ namespace engine::resources
 
 		void unbind() const
 		{
+			if (!shader) { utils::io::error("MATERIAL - Shader not provided"); return; }
+
+			// Mirroring OpenGL state usage, we should have the shader bound at this point
+			
 			// We need to unbind these if we use the same shader for different materials
 			if (diffuse_map)
 			{

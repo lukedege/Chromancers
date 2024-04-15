@@ -107,20 +107,6 @@ namespace engine::scene
 		void update_world_transform();
 	};
 
-	struct RenderSet
-	{	
-		using Material = engine::resources::Material;
-		using Model    = engine::resources::Model;
-
-		Material* material;
-		Model* model; 
-
-		RenderSet(Model& drawable, Material& material) :
-			material{ &material },
-			model{ &drawable }
-		{}
-	};
-
 	// Object in scene
 	class Entity : public EntityBase
 	{

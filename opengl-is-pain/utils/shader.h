@@ -28,9 +28,11 @@ namespace engine::resources
 		GLuint glMinorVersion;
 		std::string vertPath, fragPath;
 		GLuint _program;
+		std::string _name;
 
 	public:
-		Shader(const GLchar* vertPath, const GLchar* fragPath, GLuint glMajor, GLuint glMinor, const GLchar* geomPath = 0, std::vector<const GLchar*> utilPaths = {}) :
+		Shader(std::string name, const GLchar* vertPath, const GLchar* fragPath, GLuint glMajor, GLuint glMinor, const GLchar* geomPath = 0, std::vector<const GLchar*> utilPaths = {}) :
+			_name{ name },
 			_program{ glCreateProgram() }, glMajorVersion{ glMajor }, glMinorVersion{ glMinor },
 			vertPath{ vertPath }, fragPath{ fragPath }
 		{
@@ -81,10 +83,12 @@ namespace engine::resources
 			dispose();
 		}
 
-		void bind()   const noexcept { glUseProgram(_program); }
-		void unbind() const noexcept { glUseProgram(0); }
+		void bind()   const noexcept { /*utils::io::info(  "binding ", _name);*/ glUseProgram(_program); }
+		void unbind() const noexcept { /*utils::io::info("unbinding ", _name);*/ glUseProgram(0); }
 
 		GLint program() const noexcept { return _program; };
+
+		std::string name() const noexcept { return _name; };
 
 		std::vector<std::string> findSubroutines(GLenum shaderType)
 		{
