@@ -19,12 +19,6 @@
     <Filter Include="Source Files\Libraries">
       <UniqueIdentifier>{724c58f5-434d-4ec1-9b34-b16587b4cde6}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\old">
-      <UniqueIdentifier>{57a948ab-3953-44ba-b50c-d026e61e4585}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Shaders\spv">
-      <UniqueIdentifier>{8761cc1d-f6ff-4ed2-a538-5024a8151df0}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\Libraries\imgui">
       <UniqueIdentifier>{d85dde33-c73b-4f1a-ae25-e072ea9203cf}</UniqueIdentifier>
     </Filter>
@@ -86,9 +80,6 @@
     </ClCompile>
     <ClCompile Include="stb_image.cpp">
       <Filter>Source Files\Libraries\stb_image</Filter>
-    </ClCompile>
-    <ClCompile Include="Main_spv.cpp">
-      <Filter>Source Files\old</Filter>
     </ClCompile>
     <ClCompile Include="utils\scene\scene.cpp">
       <Filter>Source Files\utils\scene</Filter>
@@ -175,77 +166,23 @@
     <None Include="shaders\types.glsl">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="shaders\spv\buny_lights.frag">
-      <Filter>Shaders\spv</Filter>
-    </None>
-    <None Include="shaders\spv\buny_lights.vert">
-      <Filter>Shaders\spv</Filter>
-    </None>
-    <None Include="shaders\text\scene\floor.frag">
-      <Filter>Shaders\text\scene</Filter>
-    </None>
-    <None Include="shaders\text\scene\floor.vert">
-      <Filter>Shaders\text\scene</Filter>
-    </None>
     <None Include="shaders\text\generic\basic.frag">
       <Filter>Shaders\text\generic</Filter>
     </None>
     <None Include="shaders\text\generic\basic.vert">
       <Filter>Shaders\text\generic</Filter>
     </None>
-    <None Include="shaders\text\generic\BP_normal_mapping.frag">
-      <Filter>Shaders\text\generic</Filter>
-    </None>
-    <None Include="shaders\text\generic\BP_normal_mapping.vert">
-      <Filter>Shaders\text\generic</Filter>
-    </None>
-    <None Include="shaders\text\generic\BP_parallax_mapping.frag">
-      <Filter>Shaders\text\generic</Filter>
-    </None>
-    <None Include="shaders\text\generic\BP_parallax_mapping.vert">
-      <Filter>Shaders\text\generic</Filter>
-    </None>
-    <None Include="shaders\text\generic\deform.vert">
-      <Filter>Shaders\text\generic</Filter>
-    </None>
     <None Include="shaders\text\generic\fullcolor.frag">
-      <Filter>Shaders\text\generic</Filter>
-    </None>
-    <None Include="shaders\text\generic\glow.frag">
-      <Filter>Shaders\text\generic</Filter>
-    </None>
-    <None Include="shaders\text\generic\illumination_models.frag">
-      <Filter>Shaders\text\generic</Filter>
-    </None>
-    <None Include="shaders\text\generic\illumination_models.vert">
-      <Filter>Shaders\text\generic</Filter>
-    </None>
-    <None Include="shaders\text\generic\illumination_models_tx.frag">
-      <Filter>Shaders\text\generic</Filter>
-    </None>
-    <None Include="shaders\text\generic\illumination_models_tx.vert">
       <Filter>Shaders\text\generic</Filter>
     </None>
     <None Include="shaders\text\generic\mvp.vert">
       <Filter>Shaders\text\generic</Filter>
     </None>
-    <None Include="shaders\text\generic\noise.frag">
-      <Filter>Shaders\text\generic</Filter>
-    </None>
     <None Include="shaders\text\generic\normals.frag">
-      <Filter>Shaders\text\generic</Filter>
-    </None>
-    <None Include="shaders\text\generic\random_patterns.frag">
       <Filter>Shaders\text\generic</Filter>
     </None>
     <None Include="shaders\text\generic\uvs.frag">
       <Filter>Shaders\text\generic</Filter>
-    </None>
-    <None Include="shaders\text\scene\cube.frag">
-      <Filter>Shaders\text\scene</Filter>
-    </None>
-    <None Include="shaders\text\scene\cube.vert">
-      <Filter>Shaders\text\scene</Filter>
     </None>
     <None Include="shaders\text\default_lit.frag">
       <Filter>Shaders\text</Filter>
@@ -265,9 +202,6 @@
     <None Include="shaders\text\generic\shadow_map.vert">
       <Filter>Shaders\text\generic</Filter>
     </None>
-    <None Include="shaders\text\generic\textured_depth.frag">
-      <Filter>Shaders\text\generic</Filter>
-    </None>
     <None Include="shaders\text\generic\texpainter.frag">
       <Filter>Shaders\text\generic</Filter>
     </None>
@@ -276,6 +210,9 @@
     </None>
     <None Include="shaders\text\default_lit_instanced.vert">
       <Filter>Shaders\text</Filter>
+    </None>
+    <None Include="shaders\text\scene\paintball.frag">
+      <Filter>Shaders\text\scene</Filter>
     </None>
   </ItemGroup>
 </Project>

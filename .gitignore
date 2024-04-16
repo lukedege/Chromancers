@@ -1,9 +1,6 @@
 ## CUSTOM BEG ##
 log.txt
-opengl-is-pain/textures/cubemaps
-opengl-is-pain/shaders/temp
-opengl-is-pain/models
-opengl-is-pain/temp
+chromancers/models
 *.bmp
 
 ## CUSTOM END ##

@@ -140,7 +140,6 @@ void setup_input_keys()
 			// This control is a workaround to avoid triggering both onRelease and onPressed callbacks at the same time
 			if (!hold_to_fire) return;
 
-			// Fire precisely since it's single fire
 			player.shoot(!hold_to_fire, physics_engine);
 		});
 
@@ -163,7 +162,6 @@ void setup_input_keys()
 			// This control is a workaround to avoid triggering both onRelease and onPressed callbacks at the same time
 			if (hold_to_fire) return;
 
-			// Fire with spread since it's autofire
 			player.shoot(!hold_to_fire, physics_engine);
 		});
 }

@@ -23,9 +23,9 @@
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{c80d9f0c-91ba-46c2-8c9d-2004dee7a728}</ProjectGuid>
-    <RootNamespace>opengl-is-pain</RootNamespace>
+    <RootNamespace>chromancers</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>opengl-is-pain</ProjectName>
+    <ProjectName>chromancers</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -162,7 +162,6 @@
     <ClCompile Include="..\..\..\Libraries\imgui-1.88\imgui_tables.cpp" />
     <ClCompile Include="..\..\..\Libraries\imgui-1.88\imgui_widgets.cpp" />
     <ClCompile Include="Main.cpp" />
-    <ClCompile Include="Main_spv.cpp" />
     <ClCompile Include="quick_tests.cpp" />
     <ClCompile Include="stb_image.cpp" />
     <ClCompile Include="utils\scene\entity.cpp" />
@@ -195,40 +194,22 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\constants.glsl" />
-    <None Include="shaders\spv\buny_lights.frag" />
-    <None Include="shaders\spv\buny_lights.vert" />
     <None Include="shaders\text\default_lit.frag" />
     <None Include="shaders\text\default_lit.vert" />
     <None Include="shaders\text\default_lit_instanced.vert" />
     <None Include="shaders\text\generic\basic.frag" />
     <None Include="shaders\text\generic\basic.vert" />
-    <None Include="shaders\text\generic\BP_normal_mapping.frag" />
-    <None Include="shaders\text\generic\BP_normal_mapping.vert" />
-    <None Include="shaders\text\generic\BP_parallax_mapping.frag" />
-    <None Include="shaders\text\generic\BP_parallax_mapping.vert" />
-    <None Include="shaders\text\generic\deform.vert" />
     <None Include="shaders\text\generic\fullcolor.frag" />
-    <None Include="shaders\text\generic\glow.frag" />
-    <None Include="shaders\text\generic\illumination_models.frag" />
-    <None Include="shaders\text\generic\illumination_models.vert" />
-    <None Include="shaders\text\generic\illumination_models_tx.frag" />
-    <None Include="shaders\text\generic\illumination_models_tx.vert" />
     <None Include="shaders\text\generic\mvp.vert" />
-    <None Include="shaders\text\generic\noise.frag" />
     <None Include="shaders\text\generic\normals.frag" />
-    <None Include="shaders\text\generic\random_patterns.frag" />
     <None Include="shaders\text\generic\shadow_map.frag" />
     <None Include="shaders\text\generic\shadow_map.vert" />
     <None Include="shaders\text\generic\texpainter.frag" />
     <None Include="shaders\text\generic\texpainter.vert" />
     <None Include="shaders\text\generic\textured.frag" />
     <None Include="shaders\text\generic\textured.vert" />
-    <None Include="shaders\text\generic\textured_depth.frag" />
     <None Include="shaders\text\generic\uvs.frag" />
-    <None Include="shaders\text\scene\cube.frag" />
-    <None Include="shaders\text\scene\cube.vert" />
-    <None Include="shaders\text\scene\floor.frag" />
-    <None Include="shaders\text\scene\floor.vert" />
+    <None Include="shaders\text\scene\paintball.frag" />
     <None Include="shaders\types.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
