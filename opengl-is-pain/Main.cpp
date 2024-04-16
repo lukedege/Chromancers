@@ -71,7 +71,7 @@ bool capture_mouse = true;
 Scene main_scene;
 std::function<void()> scene_setup;
 Player player;
-bool autofire = true;
+bool hold_to_fire = true;
 
 // parameters for time computation
 float deltaTime = 0.0f;
@@ -138,10 +138,10 @@ void setup_input_keys()
 	Input::instance().add_onPressed_callback(GLFW_MOUSE_BUTTON_RIGHT, [&]()
 		{
 			// This control is a workaround to avoid triggering both onRelease and onPressed callbacks at the same time
-			if (!autofire) return;
+			if (!hold_to_fire) return;
 
 			// Fire precisely since it's single fire
-			player.shoot(!autofire, physics_engine);
+			player.shoot(!hold_to_fire, physics_engine);
 		});
 
 	// Toggled input
@@ -161,10 +161,10 @@ void setup_input_keys()
 	Input::instance().add_onRelease_callback(GLFW_MOUSE_BUTTON_RIGHT, [&]()
 		{
 			// This control is a workaround to avoid triggering both onRelease and onPressed callbacks at the same time
-			if (autofire) return;
+			if (hold_to_fire) return;
 
 			// Fire with spread since it's autofire
-			player.shoot(!autofire, physics_engine);
+			player.shoot(!hold_to_fire, physics_engine);
 		});
 }
 
@@ -639,17 +639,24 @@ int main()
 		ImGui::Text(fps_counter.c_str());
 
 		// Various settings
-		if (ImGui::CollapsingHeader("Coefficients and scales"))
+		if (ImGui::CollapsingHeader("Paintgun settings"))
 		{
 			ImGui::ColorEdit4 ("Paint Color",    glm::value_ptr(player.paint_color));
-			ImGui::SliderFloat("Paintball size", &player.paintball_size, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-			
-			ImGui::Checkbox   ("Automatic firing", &autofire);
-			ImGui::Separator(); ImGui::Text("Normal");
-			ImGui::SliderFloat("Repeat tex##norm", &floor_plane->material->uv_repeat, 0, 3000, " % .1f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::Separator(); ImGui::Text("Parallax");
-			ImGui::SliderFloat("Height Scale", &cube->material->parallax_heightscale, 0, 0.5, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Repeat tex##prlx", &cube->material->uv_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
+
+			ImGui::Separator(); ImGui::Text("Paintball");
+			ImGui::SliderFloat("Weight", &player.paintball_weight, 0, 10, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Size", &player.paintball_size, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Min size variation", &player.size_variation_min_multiplier, 0, 2, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Max size variation", &player.size_variation_max_multiplier, 0, 2, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+
+			ImGui::Separator(); ImGui::Text("Gun properties");
+			ImGui::SliderFloat("Muzzle speed", &player.muzzle_speed, 0, 100, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Muzzle spread", &player.muzzle_spread, 0, 3, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+			unsigned int rps_min = 1, rps_max = 200;
+			ImGui::SliderScalar("Rounds per Sec", ImGuiDataType_U32, &player.rounds_per_second, &rps_min, &rps_max, " %d", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::Checkbox   ("Hold to fire", &hold_to_fire);
+
+			ImGui::Separator(); ImGui::Text("Gun model");
 			ImGui::SliderFloat3("Viewmodel offset", glm::value_ptr(player.viewmodel_offset), -1, 1, "%.2f", 1);
 		}
 
@@ -699,6 +706,17 @@ int main()
 				}
 			}
 			ImGui::PopID();
+		}
+
+		// Other settings
+		if (ImGui::CollapsingHeader("Coefficients and scales"))
+		{
+			ImGui::Text("Normal");
+			ImGui::SliderFloat("Repeat tex##norm", &floor_plane->material->uv_repeat, 0, 3000, " % .1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::Separator(); 
+			ImGui::Text("Parallax");
+			ImGui::SliderFloat("Height Scale", &cube->material->parallax_heightscale, 0, 0.5, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Repeat tex##prlx", &cube->material->uv_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
 		}
 
 		ImGui::End();

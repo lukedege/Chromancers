@@ -29,10 +29,24 @@ namespace engine::scene
 		Camera first_person_camera;		
 		float lerp_speed = 10.f;
 		
+		glm::vec4 paint_color{ 1.f, 0.85f, 0.f, 1.f };
+		
+		float paintball_weight { 1.f };
+		float paintball_size   { 0.1f };
+		float size_variation_min_multiplier{ 1.f };
+		float size_variation_max_multiplier{ 1.f };
+
+		unsigned int rounds_per_second{ 100 };
+		float muzzle_speed  { 20.f };
+		float muzzle_spread { 1.5f };
 		
 		glm::vec3 viewmodel_offset{ 0 };
-		float paintball_size{ 0.1f };
-		glm::vec4 paint_color{ 1.f, 0.85f, 0.f, 1.f };
+
+	private:
+		float fire_cooldown_timer { 1.f/rounds_per_second };
+
+	public:
+
 
 		Player() :
 			player_entity{"PlayerObject"},
@@ -60,6 +74,10 @@ namespace engine::scene
 		{	
 			sync_to_cam(delta_time);
 			gun_entity->update(delta_time);
+
+			// we freeze the value to avoid underflows
+			if (fire_cooldown_timer <= 0) { fire_cooldown_timer = 0; }
+			else { fire_cooldown_timer -= delta_time; }
 		}
 
 		void draw()
@@ -70,7 +88,7 @@ namespace engine::scene
 		// Creates and launches a paintball, if precise is true then there will be no spread among fired bullets 
 		void shoot(bool precise, PhysicsEngine<Entity>& physics_engine) // TODO temp parameters
 		{
-			if (gun_entity && current_scene)
+			if (gun_entity && current_scene && fire_cooldown_timer <= 0)
 			{
 				auto& rng = current_scene->rng; // TODO temp
 
@@ -82,33 +100,36 @@ namespace engine::scene
 					glm::vec3 ori = player_entity.world_transform().orientation();
 					glm::vec3 bullet_orientation = glm::vec3{ ori.z, ori.y, ori.x } - glm::vec3{0, 90.f, 0};
 					bullet->set_orientation(bullet_orientation);
-					bullet->set_size(glm::vec3(paintball_size));
+
+					glm::vec3 paintball_final_size = glm::vec3(paintball_size) * rng.get_float(size_variation_min_multiplier, size_variation_max_multiplier);
+					bullet->set_size(paintball_final_size); 
 
 					// setting up collision mask for paintball rigidbodies (to avoid colliding with themselves)
 					CollisionFilter paintball_cf{ 1 << 7, ~(1 << 7) }; // this means "Paintball group is 1 << 7 (128), mask is everything but paintball group (inverse of the group bit)"
 
 					// create compound collision shape for bullet
-					bullet->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1.0f, 0.1f, 0.1f, {ColliderShape::BOX, glm::vec3{paintball_size, paintball_size, paintball_size*2}} }, paintball_cf, false);
+					bullet->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ paintball_weight, 0.1f, 0.1f, {ColliderShape::BOX, glm::vec3{paintball_size, paintball_size, paintball_size*2}} }, paintball_cf, false);
 					bullet->emplace_component<PaintballComponent>(paint_color);
 
 					bullet->init();
 
-					float speed_modifier = 20.f;
+					float speed_modifier = muzzle_speed;
 					glm::vec3 spread_modifier {0};
 
 					if (!precise)
 					{
 						float speed_bias = 2.0f;
-						float spread_bias = 1.5f;
+						float spread_bias = muzzle_spread;
 						float speed_spread = rng.get_float(-1, 1) * speed_bias; // get float between -bias and +bias
-						speed_modifier = 20.f + speed_spread;
-						spread_modifier = normalize(glm::vec3{rng.get_float(-1, 1), rng.get_float(-1, 1), rng.get_float(-1, 1)})* spread_bias;
+						speed_modifier += speed_spread;
+						spread_modifier = normalize(glm::vec3{rng.get_float(-1, 1), rng.get_float(-1, 1), rng.get_float(-1, 1)}) * spread_bias;
 					}
 
 					glm::vec3 shoot_dir = gun_entity->world_transform().forward() * speed_modifier + spread_modifier;
 					btVector3 impulse = btVector3(shoot_dir.x, shoot_dir.y, shoot_dir.z);
 					bullet->get_component<RigidBodyComponent>()->rigid_body->applyCentralImpulse(impulse);
 				}
+				fire_cooldown_timer = 1.f/rounds_per_second;
 			}
 		}
 
