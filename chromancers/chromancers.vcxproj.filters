@@ -37,16 +37,22 @@
     <Filter Include="Header Files\utils">
       <UniqueIdentifier>{345ca657-24f9-4b76-9980-6a687ac5678c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\utils\scene">
-      <UniqueIdentifier>{34e2fd4a-248c-4f43-b37d-917ca88dfc0d}</UniqueIdentifier>
+    <Filter Include="Header Files\engine">
+      <UniqueIdentifier>{200477e2-b3ff-47fe-b6a8-362214094fee}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\utils\components">
+    <Filter Include="Header Files\engine\components">
       <UniqueIdentifier>{85af7629-f612-4ce0-ade6-a7b5781f0615}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\utils">
-      <UniqueIdentifier>{6c8de759-7066-4173-8f1b-c3a0ede1535d}</UniqueIdentifier>
+    <Filter Include="Header Files\engine\scene">
+      <UniqueIdentifier>{34e2fd4a-248c-4f43-b37d-917ca88dfc0d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\utils\scene">
+    <Filter Include="Header Files\engine\resources">
+      <UniqueIdentifier>{be774aa7-bad7-493f-a83f-fe2def10bcdb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\engine">
+      <UniqueIdentifier>{3f7b1509-d3f0-4e06-a40f-17cee23ffa45}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\engine\scene">
       <UniqueIdentifier>{40570fbc-c4c6-4956-a6fb-a21fb5fc9e2d}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -82,33 +88,21 @@
       <Filter>Source Files\Libraries\stb_image</Filter>
     </ClCompile>
     <ClCompile Include="utils\scene\scene.cpp">
-      <Filter>Source Files\utils\scene</Filter>
+      <Filter>Source Files\engine\scene</Filter>
     </ClCompile>
     <ClCompile Include="utils\scene\entity.cpp">
-      <Filter>Source Files\utils\scene</Filter>
+      <Filter>Source Files\engine\scene</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="utils\scene\camera.h">
-      <Filter>Header Files\utils\scene</Filter>
+      <Filter>Header Files\engine\scene</Filter>
     </ClInclude>
     <ClInclude Include="utils\scene\entity.h">
-      <Filter>Header Files\utils\scene</Filter>
+      <Filter>Header Files\engine\scene</Filter>
     </ClInclude>
     <ClInclude Include="utils\scene\light.h">
-      <Filter>Header Files\utils\scene</Filter>
-    </ClInclude>
-    <ClInclude Include="utils\mesh.h">
-      <Filter>Header Files\utils</Filter>
-    </ClInclude>
-    <ClInclude Include="utils\model.h">
-      <Filter>Header Files\utils</Filter>
-    </ClInclude>
-    <ClInclude Include="utils\shader.h">
-      <Filter>Header Files\utils</Filter>
-    </ClInclude>
-    <ClInclude Include="utils\texture.h">
-      <Filter>Header Files\utils</Filter>
+      <Filter>Header Files\engine\scene</Filter>
     </ClInclude>
     <ClInclude Include="utils\utils.h">
       <Filter>Header Files\utils</Filter>
@@ -117,31 +111,16 @@
       <Filter>Header Files\utils</Filter>
     </ClInclude>
     <ClInclude Include="utils\scene\scene.h">
-      <Filter>Header Files\utils\scene</Filter>
-    </ClInclude>
-    <ClInclude Include="utils\physics.h">
-      <Filter>Header Files\utils</Filter>
-    </ClInclude>
-    <ClInclude Include="utils\material.h">
-      <Filter>Header Files\utils</Filter>
-    </ClInclude>
-    <ClInclude Include="utils\input.h">
-      <Filter>Header Files\utils</Filter>
-    </ClInclude>
-    <ClInclude Include="utils\component.h">
-      <Filter>Header Files\utils</Filter>
+      <Filter>Header Files\engine\scene</Filter>
     </ClInclude>
     <ClInclude Include="utils\components\rigidbody_component.h">
-      <Filter>Header Files\utils\components</Filter>
-    </ClInclude>
-    <ClInclude Include="utils\transform.h">
-      <Filter>Header Files\utils</Filter>
+      <Filter>Header Files\engine\components</Filter>
     </ClInclude>
     <ClInclude Include="utils\framebuffer.h">
       <Filter>Header Files\utils</Filter>
     </ClInclude>
     <ClInclude Include="utils\components\paintable_component.h">
-      <Filter>Header Files\utils\components</Filter>
+      <Filter>Header Files\engine\components</Filter>
     </ClInclude>
     <ClInclude Include="utils\oop.h">
       <Filter>Header Files\utils</Filter>
@@ -150,13 +129,40 @@
       <Filter>Header Files\utils</Filter>
     </ClInclude>
     <ClInclude Include="utils\components\paintball_component.h">
-      <Filter>Header Files\utils\components</Filter>
+      <Filter>Header Files\engine\components</Filter>
     </ClInclude>
     <ClInclude Include="utils\random.h">
       <Filter>Header Files\utils</Filter>
     </ClInclude>
     <ClInclude Include="utils\scene\player.h">
-      <Filter>Header Files\utils\scene</Filter>
+      <Filter>Header Files\engine\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\input.h">
+      <Filter>Header Files\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\physics.h">
+      <Filter>Header Files\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\transform.h">
+      <Filter>Header Files\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\material.h">
+      <Filter>Header Files\engine\resources</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\mesh.h">
+      <Filter>Header Files\engine\resources</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\model.h">
+      <Filter>Header Files\engine\resources</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\texture.h">
+      <Filter>Header Files\engine\resources</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\shader.h">
+      <Filter>Header Files\engine\resources</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\component.h">
+      <Filter>Header Files\engine\components</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

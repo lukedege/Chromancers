@@ -47,9 +47,9 @@ namespace engine::scene
 
 	public:
 		Camera* current_camera{ nullptr };
-		utils::random::generator rng;
+		utils::random::generator& rng;
 
-		Scene() {}
+		Scene(utils::random::generator& rng) : rng{rng} {}
 
 		template <typename ...Args>
 		Entity* emplace_entity(std::string entity_id, Args&&... args)

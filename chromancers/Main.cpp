@@ -67,8 +67,16 @@ float cursor_x, cursor_y;
 bool firstMouse = true;
 bool capture_mouse = true;
 
+// Random
+utils::random::generator rng;
+
+// Physics
+PhysicsEngine<Entity> physics_engine;
+float maxSecPerFrame = 1.0f / 60.0f;
+float capped_deltaTime;
+
 // Scene
-Scene main_scene;
+Scene main_scene{ rng };
 std::function<void()> scene_setup;
 Player player;
 bool hold_to_fire = true;
@@ -88,11 +96,6 @@ bool wireframe = false;
 // Lights
 PointLight* currentLight;
 float mov_light_speed = 5.f;
-
-// Physics
-PhysicsEngine<Entity> physics_engine;
-float maxSecPerFrame = 1.0f / 60.0f;
-float capped_deltaTime;
 
 /////////////////// INPUT functions ///////////////////////
 
@@ -140,7 +143,7 @@ void setup_input_keys()
 			// This control is a workaround to avoid triggering both onRelease and onPressed callbacks at the same time
 			if (!hold_to_fire) return;
 
-			player.shoot(!hold_to_fire, physics_engine);
+			player.shoot(physics_engine, rng);
 		});
 
 	// Toggled input
@@ -162,7 +165,7 @@ void setup_input_keys()
 			// This control is a workaround to avoid triggering both onRelease and onPressed callbacks at the same time
 			if (hold_to_fire) return;
 
-			player.shoot(!hold_to_fire, physics_engine);
+			player.shoot(physics_engine, rng);
 		});
 }
 
@@ -417,8 +420,8 @@ int main()
 	
 	player.viewmodel_offset = {0.3,-0.2,0.25};
 	player.gun_entity = &gun;
-	player.bullet_model = &bullet_model;
-	player.bullet_material = &bullet_material;
+	player.paintball_model = &bullet_model;
+	player.paintball_material = &bullet_material;
 	player.current_scene = &main_scene;
 
 	// Physics setup
@@ -543,11 +546,14 @@ int main()
 		// Update lit shaders to add the computed shadowmap(s)
 		std::array<GLint, MAX_DIR_LIGHTS> dir_shadow_locs;
 		std::array<GLint, MAX_POINT_LIGHTS> point_shadow_locs;
+		int dir_shadow_locs_amount = gsl::narrow<int>(dir_shadow_locs.size());
+		int point_shadow_locs_amount = gsl::narrow<int>(point_shadow_locs.size());
+
 		for (Shader& lit_shader : lit_shaders)
 		{
 			lit_shader.bind();
 			// Set sampler locations for directional shadow maps
-			for (int i = 0; i < dir_shadow_locs.size(); i++)
+			for (int i = 0; i < dir_shadow_locs_amount; i++)
 			{
 				int tex_offset = SHADOW_TEX_UNIT + i;
 				dir_shadow_locs[i] = tex_offset;
@@ -555,16 +561,16 @@ int main()
 				glBindTexture(GL_TEXTURE_2D, i < dir_lights.size() ? dir_lights[i]->get_shadowmap().id() : 0);
 			}
 			// Set sampler locations for point shadow maps
-			for (int i = 0; i < point_shadow_locs.size(); i++)
+			for (int i = 0; i < point_shadow_locs_amount; i++)
 			{
-				int tex_offset = SHADOW_TEX_UNIT + dir_shadow_locs.size() + i;
+				int tex_offset = SHADOW_TEX_UNIT + dir_shadow_locs_amount + i;
 				point_shadow_locs[i] = tex_offset;
 				glActiveTexture(GL_TEXTURE0 + tex_offset);
 				glBindTexture(GL_TEXTURE_CUBE_MAP, i < point_lights.size() ? point_lights[i]->depthCubemap : 0);
 			}
 
-			lit_shader.setIntV("directional_shadow_maps", gsl::narrow<int>(dir_shadow_locs.size()), dir_shadow_locs.data());
-			lit_shader.setIntV("point_shadow_maps", gsl::narrow<int>(point_shadow_locs.size()), point_shadow_locs.data());
+			lit_shader.setIntV("directional_shadow_maps", dir_shadow_locs_amount, dir_shadow_locs.data());
+			lit_shader.setIntV("point_shadow_maps", point_shadow_locs_amount, point_shadow_locs.data());
 			lit_shader.unbind();
 		}
 
@@ -661,11 +667,11 @@ int main()
 		// Light settings
 		if (ImGui::CollapsingHeader("Lights"))
 		{
-			ImGui::PushID(&point_lights);
 			ImGui::Indent();
+			ImGui::PushID(&point_lights);
 			if (ImGui::CollapsingHeader("Pointlights"))
 			{
-				for (size_t i = 0; i < point_lights.size(); i++)
+				for (int i = 0; i < point_lights.size(); i++)
 				{
 					ImGui::PushID(i);
 					std::string light_label = "Point light n." + std::to_string(i);
@@ -677,7 +683,7 @@ int main()
 
 					ImGui::SliderFloat("Att_const", &point_lights[i]->attenuation_constant, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 					ImGui::SliderFloat("Att_lin", &point_lights[i]->attenuation_linear, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-					ImGui::SliderFloat("Att_quad", &point_lights[i]->attenuation_quadratic, 0, 0.1, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+					ImGui::SliderFloat("Att_quad", &point_lights[i]->attenuation_quadratic, 0, 0.1f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 
 					ImGui::PopID();
 				}
@@ -687,7 +693,7 @@ int main()
 			ImGui::PushID(&dir_lights);
 			if (ImGui::CollapsingHeader("Dir lights"))
 			{
-				for (size_t i = 0; i < dir_lights.size(); i++)
+				for (int i = 0; i < dir_lights.size(); i++)
 				{
 					ImGui::PushID(i);
 					std::string light_label = "Directional light n." + std::to_string(i);
@@ -704,6 +710,7 @@ int main()
 				}
 			}
 			ImGui::PopID();
+			ImGui::Unindent();
 		}
 
 		// Other settings
