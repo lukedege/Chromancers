@@ -220,5 +220,26 @@
     <None Include="shaders\text\scene\paintball.frag">
       <Filter>Shaders\text\scene</Filter>
     </None>
+    <None Include="shaders\text\generic\paintblur.frag">
+      <Filter>Shaders\text\generic</Filter>
+    </None>
+    <None Include="shaders\text\generic\paintstep.frag">
+      <Filter>Shaders\text\generic</Filter>
+    </None>
+    <None Include="shaders\text\generic\merge_fbo.frag">
+      <Filter>Shaders\text\generic</Filter>
+    </None>
+    <None Include="shaders\text\generic\postprocess.vert">
+      <Filter>Shaders\text\generic</Filter>
+    </None>
+    <None Include="shaders\text\generic\shadow_cube.vert">
+      <Filter>Shaders\text\generic</Filter>
+    </None>
+    <None Include="shaders\text\generic\shadow_cube.frag">
+      <Filter>Shaders\text\generic</Filter>
+    </None>
+    <None Include="shaders\text\generic\shadow_cube.geom">
+      <Filter>Shaders\text\generic</Filter>
+    </None>
   </ItemGroup>
 </Project>

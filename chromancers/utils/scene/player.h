@@ -23,6 +23,8 @@ namespace engine::scene
 		EntityBase player_entity;
 		Entity*    gun_entity    {nullptr};
 		Scene*     current_scene {nullptr};
+		PhysicsEngine<Entity>& physics_engine;
+		utils::random::generator& rng;
 
 		Model*    paintball_model    {nullptr};
 		Material* paintball_material {nullptr};
@@ -48,9 +50,11 @@ namespace engine::scene
 
 	public:
 
-		Player() :
+		Player(PhysicsEngine<Entity>& physics_engine, utils::random::generator& rng) :
 			player_entity{"PlayerObject"},
-			first_person_camera{ glm::vec3{0,0,5} }
+			first_person_camera{ glm::vec3{0,0,5} },
+			physics_engine{physics_engine},
+			rng{rng}
 		{}
 
 		void init()
@@ -83,48 +87,15 @@ namespace engine::scene
 		}
 
 		// Creates and launches a paintball
-		void shoot(PhysicsEngine<Entity>& physics_engine, utils::random::generator& rng) // TODO temp parameters
+		void shoot()
 		{
 			if (gun_entity && current_scene && fire_cooldown_timer <= 0)
 			{
 				if (paintball_model && paintball_material) // TODO temp, make a better check
 				{
-					Entity* paintball = current_scene->emplace_instanced_entity("paintballs", "paintball", "This is a paintball", *paintball_model, *paintball_material);
-
-					paintball->set_position(gun_muzzle_world_position() + gun_entity->world_transform().forward() * paintball_size * 2.f);
-
-					glm::vec3 ori = player_entity.world_transform().orientation();
-					glm::vec3 paintball_final_orientation = glm::vec3{ ori.z, ori.y, ori.x } - glm::vec3{0, 90.f, 0};
-					paintball->set_orientation(paintball_final_orientation);
-
-					glm::vec3 paintball_final_size = glm::vec3(paintball_size) * rng.get_float(size_variation_min_multiplier, size_variation_max_multiplier);
-					paintball->set_size(paintball_final_size); 
-
-					// setting up collision mask for paintball rigidbodies (to avoid colliding with themselves)
-					CollisionFilter paintball_cf{ 1 << 7, ~(1 << 7) }; // this means "Paintball group is 1 << 7 (128), mask is everything but paintball group (inverse of the group bit)"
-
-					// create compound collision shape for bullet
-					paintball->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ paintball_weight, 0.1f, 0.1f, {ColliderShape::BOX, glm::vec3{paintball_size, paintball_size, paintball_size*2}} }, paintball_cf, false);
-					paintball->emplace_component<PaintballComponent>(paint_color);
-
-					paintball->init();
-
-					// calculate speed and spread modifiers
-					float speed_modifier = muzzle_speed;
-					glm::vec3 spread_modifier {0};
-
-					float speed_bias = 2.0f;
-					float spread_bias = muzzle_spread;
-					float speed_spread = rng.get_float(-1, 1) * speed_bias; // get float between -bias and +bias
-					speed_modifier += speed_spread;
-					spread_modifier = normalize(glm::vec3{rng.get_float(-1, 1), rng.get_float(-1, 1), rng.get_float(-1, 1)}) * spread_bias;
-
-					// calculate and apply impulse to paintball
-					glm::vec3 shoot_dir = gun_entity->world_transform().forward() * speed_modifier + spread_modifier;
-					btVector3 impulse = btVector3(shoot_dir.x, shoot_dir.y, shoot_dir.z);
-					paintball->get_component<RigidBodyComponent>()->rigid_body->applyCentralImpulse(impulse);
-
+					shoot_paintball();
 				}
+				
 				// reset cooldown after shooting
 				fire_cooldown_timer = 1.f/rounds_per_second;
 			}
@@ -150,6 +121,43 @@ namespace engine::scene
 			{
 				gun_entity->set_position(viewmodel_offset);
 			}
+		}
+
+		void shoot_paintball()
+		{
+			Entity* paintball = current_scene->emplace_instanced_entity("paintballs", "paintball", "This is a paintball", *paintball_model, *paintball_material);
+
+			paintball->set_position(gun_muzzle_world_position() + gun_entity->world_transform().forward() * paintball_size * 2.f);
+
+			glm::vec3 ori = player_entity.world_transform().orientation();
+			glm::vec3 paintball_final_orientation = glm::vec3{ ori.z, ori.y, ori.x } - glm::vec3{0, 90.f, 0};
+			paintball->set_orientation(paintball_final_orientation);
+
+			glm::vec3 paintball_final_size = glm::vec3(paintball_size) * rng.get_float(size_variation_min_multiplier, size_variation_max_multiplier);
+			paintball->set_size(paintball_final_size); 
+
+			// setting up collision mask for paintball rigidbodies (to avoid colliding with themselves)
+			CollisionFilter paintball_cf{ 1 << 7, ~(1 << 7) }; // this means "Paintball group is 1 << 7 (128), mask is everything but paintball group (inverse of the group bit)"
+
+			// add the related components
+			paintball->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ paintball_weight, 0.1f, 0.1f, {ColliderShape::BOX, glm::vec3{paintball_size, paintball_size, paintball_size*2}} }, paintball_cf, false);
+			paintball->emplace_component<PaintballComponent>(paint_color);
+
+			paintball->init();
+
+			// calculate speed and spread modifiers
+			float speed_modifier = muzzle_speed;
+			glm::vec3 spread_modifier {0};
+
+			float speed_bias = 2.0f;
+			float spread_bias = muzzle_spread;
+			//float speed_spread = rng.get_float(-1, 1) * speed_bias; // get float between -bias and +bias
+			spread_modifier = normalize(glm::vec3{rng.get_float(-1, 1), rng.get_float(-1, 1), rng.get_float(-1, 1)}) * spread_bias;
+
+			// calculate and apply impulse to paintball
+			glm::vec3 shoot_dir = gun_entity->world_transform().forward() * speed_modifier + spread_modifier;
+			btVector3 impulse = btVector3(shoot_dir.x, shoot_dir.y, shoot_dir.z);
+			paintball->get_component<RigidBodyComponent>()->rigid_body->applyCentralImpulse(impulse);
 		}
 	};
 }

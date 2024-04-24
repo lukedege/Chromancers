@@ -78,7 +78,7 @@ float capped_deltaTime;
 // Scene
 Scene main_scene{ rng };
 std::function<void()> scene_setup;
-Player player;
+Player player{ physics_engine, rng };
 bool hold_to_fire = true;
 
 // parameters for time computation
@@ -143,7 +143,7 @@ void setup_input_keys()
 			// This control is a workaround to avoid triggering both onRelease and onPressed callbacks at the same time
 			if (!hold_to_fire) return;
 
-			player.shoot(physics_engine, rng);
+			player.shoot();
 		});
 
 	// Toggled input
@@ -165,7 +165,7 @@ void setup_input_keys()
 			// This control is a workaround to avoid triggering both onRelease and onPressed callbacks at the same time
 			if (hold_to_fire) return;
 
-			player.shoot(physics_engine, rng);
+			player.shoot();
 		});
 }
 
@@ -248,14 +248,23 @@ int main()
 	Shader default_lit_instanced { "default_lit_instanced", "shaders/text/default_lit_instanced.vert", "shaders/text/default_lit.frag", 4, 3, nullptr, utils_shaders };
 
 	Shader textured_shader       { "textured_shader", "shaders/text/generic/textured.vert" , "shaders/text/generic/textured.frag", 4, 3 };
+
 	Shader painter_shader        { "painter_shader", "shaders/text/generic/texpainter.vert" , "shaders/text/generic/texpainter.frag", 4, 3 };
 
 	Shader shadowmap_shader      { "shadowmap_shader", "shaders/text/generic/shadow_map.vert" , "shaders/text/generic/shadow_map.frag", 4, 3 };
 	Shader shadowcube_shader     { "shadowcube_shader", "shaders/text/generic/shadow_cube.vert" , "shaders/text/generic/shadow_cube.frag", 4, 3, "shaders/text/generic/shadow_cube.geom" };
 
+	Shader paintball_shader { "paintball_shader", "shaders/text/default_lit_instanced.vert", "shaders/text/scene/paintball.frag", 4, 3, nullptr, utils_shaders };
+
+	// Post-fx
+	Shader paintblur_shader      { "paintblur_shader", "shaders/text/generic/postprocess.vert" , "shaders/text/generic/paintblur.frag", 4, 3 };
+	Shader paintstep_shader      { "paintstep_shader", "shaders/text/generic/postprocess.vert" , "shaders/text/generic/paintstep.frag", 4, 3 };
+	
+	Shader mergefbo_shader       { "mergefbo_shader", "shaders/text/generic/postprocess.vert" , "shaders/text/generic/merge_fbo.frag", 4, 3 };
+
 	std::vector <std::reference_wrapper<Shader>> lit_shaders, all_shaders;
-	lit_shaders.push_back(default_lit);lit_shaders.push_back(default_lit_instanced);
-	all_shaders.push_back(basic_mvp_shader); all_shaders.push_back(default_lit); all_shaders.push_back(default_lit_instanced);
+	lit_shaders.push_back(default_lit); lit_shaders.push_back(default_lit_instanced); lit_shaders.push_back(paintball_shader);
+	all_shaders.push_back(basic_mvp_shader); all_shaders.push_back(default_lit); all_shaders.push_back(default_lit_instanced); all_shaders.push_back(paintball_shader);
 
 	// Lights setup 
 	DirectionalLight::ShadowMapSettings dir_sm_settings;
@@ -334,13 +343,14 @@ int main()
 	Material gun_mat { default_lit };
 	Material buny_mat{ default_lit };
 
-	Material bullet_material{ default_lit_instanced };
+	Material paintball_material{ paintball_shader };
+	paintball_material.shininess = 32.f; paintball_material.kA = 0.25f; paintball_material.receive_shadows = false;
 
 #pragma endregion materials_setup
 #pragma region entities_setup
 	// Scene entities setup
 	Model plane_model{ "models/quad.obj" }, cube_model{ "models/cube.obj" }, sphere_model{ "models/sphere.obj" }, bunny_model{ "models/bunny.obj" };
-	Model gun_model{ "models/gun/gun.obj" }; Model bullet_model{ "models/drop.obj" };
+	Model gun_model{ "models/gun/gun.obj" }; Model paintball_model{ "models/drop.obj" }; 
 
 	Entity* cube        = main_scene.emplace_entity("cube", "brick_cube", cube_model, cube_material);
 	Entity* test_cube   = main_scene.emplace_entity("test_cube", "test_cube", cube_model, test_cube_material);
@@ -420,8 +430,8 @@ int main()
 	
 	player.viewmodel_offset = {0.3,-0.2,0.25};
 	player.gun_entity = &gun;
-	player.paintball_model = &bullet_model;
-	player.paintball_material = &bullet_material;
+	player.paintball_model = &paintball_model;
+	player.paintball_material = &paintball_material;
 	player.current_scene = &main_scene;
 
 	// Physics setup
@@ -456,7 +466,15 @@ int main()
 #pragma endregion entities_setup
 
 	// Framebuffers
-	Framebuffer map_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGB, GL_RGB, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
+	Framebuffer world_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
+	Framebuffer paintballs_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
+
+	Framebuffer postfx0_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
+	Framebuffer postfx1_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
+
+	Framebuffer map_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
+
+	Framebuffer present_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
 
 	main_scene.init();
 	player.init();
@@ -519,6 +537,8 @@ int main()
 			lightcube_entites[i]->set_position(point_lights[i]->position);
 			lightcube_entites[i]->material->ambient_color = point_lights[i]->color;
 		}
+
+		paintball_material.ambient_color = player.paint_color; 
 #pragma endregion setup_loop
 
 #pragma region update_world
@@ -533,7 +553,7 @@ int main()
 #pragma endregion update_world
 
 #pragma region shadow_pass
-		
+
 		for (auto& light : dir_lights)
 		{
 			light->compute_shadowmap(main_scene);
@@ -578,50 +598,164 @@ int main()
 
 #pragma region draw_world
 		// Render scene
-		main_scene.draw();
+		world_framebuffer.bind();
+		{
+			glClearColor(0.26f, 0.46f, 0.98f, 1.0f); // bluish
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			main_scene.draw_except({ "paintballs" });
 
-		// Player (the gun, specifically) should be drawn on top of the world to avoid clipping 
-		glClear(GL_DEPTH_BUFFER_BIT);
-		player.draw();
+			// TODO Player (the gun, specifically) should be drawn on top of the world to avoid clipping 
+			player.draw();
+		}
+		world_framebuffer.unbind();
+
+		// Draw paintballs in their own framebuffer
+		paintballs_framebuffer.bind();
+		{
+			glClearColor(0, 0, 0, 0);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			main_scene.draw_only({ "paintballs" });
+		}
+		paintballs_framebuffer.unbind();
+
+		// Do postprocessing on paintballs framebuffer
+		postfx0_framebuffer.bind();
+		{
+			glClearColor(0, 0, 0, 0);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+			paintblur_shader.bind();
+			{
+				glActiveTexture(GL_TEXTURE0);
+				paintballs_framebuffer.get_color_attachment().bind();
+				paintblur_shader.setInt("image", 0);
+				paintblur_shader.setBool("horizontal", true);
+				quad_mesh.draw();
+
+				//glActiveTexture(GL_TEXTURE0);
+				//postfx_framebuffer.get_color_attachment().bind();
+				//paintblur_shader.setInt("image", 0);
+				//paintblur_shader.setBool("horizontal", false);
+				//quad_mesh.draw();
+			}
+			paintblur_shader.unbind();
+		}
+		postfx0_framebuffer.unbind();
+
+		// TODO check if its really necessary to do multiple blurring passes
+		std::vector<std::reference_wrapper<Framebuffer>> postfx_fbos; postfx_fbos.push_back(postfx0_framebuffer); postfx_fbos.push_back(postfx1_framebuffer);
+		paintblur_shader.bind();
+		{
+			for (int i = 0; i < 9; i++)
+			{
+				int horizontal = i % 2;
+				postfx_fbos[horizontal].get().bind();
+				{
+					glActiveTexture(GL_TEXTURE0);
+					postfx_fbos[!horizontal].get().get_color_attachment().bind();
+					paintblur_shader.setInt("image", 0);
+					paintblur_shader.setBool("horizontal", horizontal);
+					quad_mesh.draw();
+				}
+				postfx_fbos[horizontal].get().unbind();
+			}
+		}
+		paintblur_shader.unbind();
+
+		// We play with color and alpha levels of the blurred paintballs to make them look more organic and liquidy
+		postfx1_framebuffer.bind();
+		{
+			glClearColor(0, 0, 0, 0);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+			paintstep_shader.bind();
+			{
+				glActiveTexture(GL_TEXTURE0);
+				postfx0_framebuffer.get_color_attachment().bind();
+				paintstep_shader.setInt("image", 0);
+				quad_mesh.draw();
+			}
+			paintstep_shader.unbind();
+		}
+		postfx1_framebuffer.unbind();
+
+		// Merge world and post-processed paintball framebuffers
+		present_framebuffer.bind();
+		{
+			glClearColor(0, 0, 0, 0);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+			mergefbo_shader.bind();
+			{
+				glActiveTexture(GL_TEXTURE0);
+				world_framebuffer.get_color_attachment().bind();
+				mergefbo_shader.setInt("fbo0_color", 0);
+
+				glActiveTexture(GL_TEXTURE1);
+				world_framebuffer.get_depth_attachment().bind();
+				mergefbo_shader.setInt("fbo0_depth", 1);
+
+				glActiveTexture(GL_TEXTURE2);
+				postfx1_framebuffer.get_color_attachment().bind();
+				mergefbo_shader.setInt("fbo1_color", 2);
+
+				glActiveTexture(GL_TEXTURE3);
+				paintballs_framebuffer.get_depth_attachment().bind(); // N.B. we use the paintballs depth buffer because we lost the depth info while processing it!!
+				mergefbo_shader.setInt("fbo1_depth", 3);
+
+				quad_mesh.draw();
+			}
+			mergefbo_shader.unbind();
+		}
+		present_framebuffer.unbind();
 
 #pragma endregion draw_world
 
 #pragma region map_draw
 
 		// MAP
+		
 		map_framebuffer.bind();
-		glClearColor(0.26f, 0.98f, 0.26f, 1.0f); //the "clear" color for the default frame buffer
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		float topdown_height = 20;
-		topdown_camera.set_position(player.first_person_camera.position() + glm::vec3{ 0, topdown_height, 0 });
-		topdown_camera.lookAt(player.first_person_camera.position(), glm::vec3{0,0,1});
-		main_scene.current_camera = &topdown_camera;
-
-		// Update camera info since we swapped to topdown
-		for (Shader& shader : all_shaders)
 		{
-			shader.bind();
-			shader.setVec3("wCameraPos", main_scene.current_camera->position());
-			shader.setMat4("viewMatrix", main_scene.current_camera->viewMatrix());
+			glClearColor(0.26f, 0.46f, 0.98f, 1.0f); // bluish
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+			float topdown_height = 20;
+			topdown_camera.set_position(player.first_person_camera.position() + glm::vec3{ 0, topdown_height, 0 });
+			topdown_camera.lookAt(player.first_person_camera.position(), glm::vec3{0, 0, 1});
+			main_scene.current_camera = &topdown_camera;
+
+			// Update camera info since we swapped to topdown
+			for (Shader& shader : all_shaders)
+			{
+				shader.bind();
+				shader.setVec3("wCameraPos", main_scene.current_camera->position());
+				shader.setMat4("viewMatrix", main_scene.current_camera->viewMatrix());
+			}
+
+			// Redraw all scene objects from map pov
+			main_scene.draw_except({"paintballs"});
+
+			// Prepare cursor shader
+			glClear(GL_DEPTH_BUFFER_BIT);
+
+			cursor.set_position(player.first_person_camera.position());
+			cursor.set_orientation({ -90.0f, 0.0f, -player.first_person_camera.rotation().y - 90.f });
+
+			cursor.update(capped_deltaTime);
+			cursor.draw();
 		}
-
-		// Redraw all scene objects from map pov
-		main_scene.draw();
-
-		// Prepare cursor shader
-		glClear(GL_DEPTH_BUFFER_BIT);
-
-		cursor.set_position(player.first_person_camera.position());
-		cursor.set_orientation({ -90.0f, 0.0f, -player.first_person_camera.rotation().y - 90.f });
-
-		cursor.update(capped_deltaTime);
-		cursor.draw();
-
 		map_framebuffer.unbind();
 
-		// we render now into the smaller map viewport
-		glDisable(GL_DEPTH_TEST); // draw on top of everything
+#pragma endregion map_draw
+
+#pragma region present
+
+		// World present onto default framebuffer
+		glBlitNamedFramebuffer(present_framebuffer.id(), 0, 0, 0, ws.width, ws.height, 0, 0, ws.width, ws.height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+		// Map present : we render now into the smaller map viewport
+		glClear(GL_DEPTH_BUFFER_BIT);
 		glViewport(ws.width - map_framebuffer.width() / 4 - 10, ws.height - map_framebuffer.height() / 4 - 10, map_framebuffer.width() / 4, map_framebuffer.height() / 4);
 		textured_shader.bind();
 		glActiveTexture(GL_TEXTURE0);
@@ -629,8 +763,8 @@ int main()
 		quad_mesh.draw();
 		textured_shader.unbind();
 		glViewport(0, 0, ws.width, ws.height);
-		glEnable(GL_DEPTH_TEST); 
-#pragma endregion map_draw
+
+#pragma endregion present
 
 #pragma region imgui_draw
 		// ImGUI window creation

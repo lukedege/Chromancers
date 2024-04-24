@@ -274,7 +274,7 @@ namespace engine::resources
 			}
 			catch (const std::exception& e)
 			{
-				std::cerr << e.what() << '\n';
+				utils::io::error("SHADER FILE: error while loading ", sourcePath, "\n\t -> ", e.what());
 			}
 
 			// Pre-process for merged text compilation 

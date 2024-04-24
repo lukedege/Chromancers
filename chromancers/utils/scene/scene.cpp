@@ -58,7 +58,59 @@ namespace engine::scene
 		}
 	}
 
+	// Draw the complete scene
 	void Scene::draw()
+	{
+		draw_internal(entities, instanced_entities_groups);
+	}
+
+	// Draw only if the id is in the provided vector
+	void Scene::draw_only(const std::vector<std::string>& ids_to_draw)
+	{
+		entity_map draw_entities;
+		entity_group_map draw_groups;
+
+		for (std::string id_to_draw : ids_to_draw)
+		{
+			auto it = entities.find(id_to_draw);
+			if(it != entities.end())
+			{
+				draw_entities[id_to_draw] = it->second;
+			}
+
+			auto it_g = instanced_entities_groups.find(id_to_draw);
+			if(it_g != instanced_entities_groups.end())
+			{
+				draw_groups[id_to_draw] = it_g->second;
+			}
+		}
+
+		draw_internal(draw_entities, draw_groups);
+	}
+
+	void Scene::draw_except(const std::vector<std::string>& ids_to_not_draw)
+	{
+		entity_map draw_entities = entities;
+		entity_group_map draw_groups = instanced_entities_groups;
+
+		for (std::string id_to_draw : ids_to_not_draw)
+		{
+			draw_entities.erase(id_to_draw);
+			draw_groups.erase(id_to_draw);
+		}
+
+		draw_internal(draw_entities, draw_groups);
+	}
+
+	void Scene::custom_draw(Shader& shader) const
+	{
+		for (auto& [id, entity] : entities)
+		{
+			entity->custom_draw(shader);
+		}
+	}
+
+	void Scene::draw_internal(entity_map entities, entity_group_map instanced_entities_groups)
 	{
 		// Draw independent entities
 		for (auto& [id, entity] : entities)
@@ -93,14 +145,6 @@ namespace engine::scene
 
 				current_group_material->unbind();
 			}
-		}
-	}
-
-	void Scene::custom_draw(Shader& shader) const
-	{
-		for (auto& [id, entity] : entities)
-		{
-			entity->custom_draw(shader);
 		}
 	}
 }

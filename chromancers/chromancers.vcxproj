@@ -200,8 +200,15 @@
     <None Include="shaders\text\generic\basic.frag" />
     <None Include="shaders\text\generic\basic.vert" />
     <None Include="shaders\text\generic\fullcolor.frag" />
+    <None Include="shaders\text\generic\merge_fbo.frag" />
     <None Include="shaders\text\generic\mvp.vert" />
     <None Include="shaders\text\generic\normals.frag" />
+    <None Include="shaders\text\generic\paintblur.frag" />
+    <None Include="shaders\text\generic\paintstep.frag" />
+    <None Include="shaders\text\generic\postprocess.vert" />
+    <None Include="shaders\text\generic\shadow_cube.frag" />
+    <None Include="shaders\text\generic\shadow_cube.geom" />
+    <None Include="shaders\text\generic\shadow_cube.vert" />
     <None Include="shaders\text\generic\shadow_map.frag" />
     <None Include="shaders\text\generic\shadow_map.vert" />
     <None Include="shaders\text\generic\texpainter.frag" />

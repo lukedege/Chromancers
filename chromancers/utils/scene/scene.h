@@ -33,17 +33,22 @@ namespace engine::scene
 		using Shader = engine::resources::Shader;
 		using Material = engine::resources::Material;
 
+		using entity_map = std::unordered_map<std::string, std::shared_ptr<Entity>>; // unique pointers to elements in the vector will be valid even after the vector is resized 
+		using entity_group_map = std::unordered_map<std::string, entity_map>; // assume for now that they use the same material
+
 		// Entities which will be drawn indipendently with their own material
-		std::unordered_map<std::string, std::unique_ptr<Entity>> entities; // unique pointers to elements in the vector will be valid even after the vector is resized 
+		entity_map entities; 
 
 		// Groups of entities which will be drawn together in instanced mode, sharing a material (thus a shader)
-		std::unordered_map<std::string, std::unordered_map<std::string, std::unique_ptr<Entity>>> instanced_entities_groups; // TODO assume for now that they use the same material
+		entity_group_map instanced_entities_groups; 
 		
 		std::unordered_set<std::string> marked_for_removal; 
 		std::unordered_set<std::pair<std::string, std::string>, details::string_pair_hash> marked_for_removal_instanced; 
 
 		GLuint instanced_ssbo{ 0 }; // or ssbo
 		std::vector<glm::mat4> instance_group_transforms;
+
+		void draw_internal(entity_map entities, entity_group_map instanced_entities_groups);
 
 	public:
 		Camera* current_camera{ nullptr };
@@ -55,7 +60,7 @@ namespace engine::scene
 		Entity* emplace_entity(std::string entity_id, Args&&... args)
 		{
 			std::string final_id = try_get_unique_string_id(entities, entity_id);
-			auto add_result = entities.emplace(final_id, std::make_unique<Entity>( args... ));
+			auto add_result = entities.emplace(final_id, std::make_shared<Entity>( args... ));
 			Entity* newly_added_entity = add_result.first->second.get(); // emplace returns (pair <iterator, bool>) -> (pair <key, value>) -> value -> field
 
 			// Setting up entity's scene state
@@ -70,7 +75,7 @@ namespace engine::scene
 		Entity* emplace_instanced_entity(std::string group_id, std::string entity_id, Args&&... args)
 		{
 			std::string final_entity_id = try_get_unique_string_id(instanced_entities_groups[group_id], entity_id);
-			auto add_result = instanced_entities_groups[group_id].emplace(final_entity_id, std::make_unique<Entity>(args...));
+			auto add_result = instanced_entities_groups[group_id].emplace(final_entity_id, std::make_shared<Entity>(args...));
 			Entity* newly_added_entity = add_result.first->second.get(); // emplace returns (pair <iterator, bool>) -> (pair <key, value>) -> value -> field
 			
 			// Setting up entity's scene state
@@ -90,6 +95,10 @@ namespace engine::scene
 		void update(float deltaTime);
 
 		void draw();
+
+		void draw_only (const std::vector<std::string>& ids_to_draw);
+
+		void draw_except(const std::vector<std::string>& ids_to_not_draw);
 
 		void custom_draw(Shader& shader) const;
 

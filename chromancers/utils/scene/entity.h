@@ -92,7 +92,7 @@ namespace engine::scene
 		void set_transform (const glm::mat4& matrix, bool trigger_update = true) noexcept;
 #pragma endregion transform_stuff
 
-		EntityBase* parent;
+		EntityBase* parent{ nullptr };
 
 	protected:
 		SceneState _scene_state;

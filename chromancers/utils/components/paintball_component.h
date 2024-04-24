@@ -66,18 +66,18 @@ namespace engine::components
 
 			if (other_paintable)
 			{
-				glm::vec3 bullet_size = parent->world_transform().size();
-				glm::vec3 bullet_position = parent->world_transform().position();
-				glm::vec3 bullet_direction = glm::normalize(prev_velocity);
-				glm::vec3 bullet_lateral = glm::normalize(glm::cross(bullet_direction, glm::vec3{0, 1, 0})); 
-				glm::vec3 bullet_up = glm::normalize(glm::cross(bullet_direction, bullet_lateral));
+				glm::vec3 paintball_size = parent->world_transform().size();
+				glm::vec3 paintball_position = parent->world_transform().position();
+				glm::vec3 paintball_direction = glm::normalize(prev_velocity);
+				glm::vec3 paintball_lateral = glm::normalize(glm::cross(paintball_direction, glm::vec3{0, 1, 0})); 
+				glm::vec3 paintball_up = glm::normalize(glm::cross(paintball_direction, paintball_lateral));
 				
 				// Create paintspace viewprojection
-				float paint_near_plane = 0.05f, paint_far_plane = 5.f, frustum_size = bullet_size.x * 2, distance_bias = 1.f;
+				float paint_near_plane = 0.05f, paint_far_plane = 5.f, frustum_size = paintball_size.x * 2, distance_bias = 1.f;
 				glm::mat4 paintProjection = glm::ortho(-frustum_size, frustum_size, -frustum_size, frustum_size, paint_near_plane, paint_far_plane);
-				glm::mat4 paintView = glm::lookAt(bullet_position - bullet_direction * distance_bias, bullet_position + bullet_direction, bullet_up);
+				glm::mat4 paintView = glm::lookAt(paintball_position - paintball_direction * distance_bias, paintball_position + paintball_direction, paintball_up);
 
-				other_paintable->update_paintmap(paintProjection * paintView, bullet_direction, paint_color);
+				other_paintable->update_paintmap(paintProjection * paintView, paintball_direction, paint_color);
 			}
 
 			// Set for destruction
