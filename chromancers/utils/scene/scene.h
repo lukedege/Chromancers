@@ -48,7 +48,7 @@ namespace engine::scene
 		GLuint instanced_ssbo{ 0 }; // or ssbo
 		std::vector<glm::mat4> instance_group_transforms;
 
-		void draw_internal(entity_map entities, entity_group_map instanced_entities_groups);
+		void draw_internal(entity_map entities, entity_group_map instanced_entities_groups, Shader* custom_shader = nullptr);
 
 	public:
 		Camera* current_camera{ nullptr };
@@ -96,9 +96,9 @@ namespace engine::scene
 
 		void draw();
 
-		void draw_only (const std::vector<std::string>& ids_to_draw);
+		void draw_only (const std::vector<std::string>& ids_to_draw, Shader* custom_shader = nullptr);
 
-		void draw_except(const std::vector<std::string>& ids_to_not_draw);
+		void draw_except(const std::vector<std::string>& ids_to_not_draw, Shader* custom_shader = nullptr);
 
 		void custom_draw(Shader& shader) const;
 

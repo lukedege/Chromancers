@@ -24,7 +24,7 @@ out VS_OUT
 	vec3 twCameraPos; 
 	vec3 twNormal;
 
-	// light space data (l = transformed by lightProjMatrix * lightViewMatrix)
+	// light space data (l = transformed by lightProjMatrix * lightViewMatrix) (needed for shadow calcs)
 	vec4 lwDirFragPos[MAX_DIR_LIGHTS]; // fragment position in light space for directional lights
 
 	// the output variable for UV coordinates

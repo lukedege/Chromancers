@@ -203,7 +203,7 @@ namespace engine::resources
 				if (shaderType == GL_VERTEX_SHADER)        shader_type = "VERTEX";
 				else if (shaderType == GL_FRAGMENT_SHADER) shader_type = "FRAGMENT";
 				else if (shaderType == GL_GEOMETRY_SHADER) shader_type = "GEOMETRY";
-				utils::io::error("SHADER ", shader_type, " - compilation failed \n", infoLog);
+				utils::io::error("SHADER ", shader_type, " - compilation failed for shader ", _name, " \n", infoLog);
 			}
 		}
 

@@ -216,7 +216,6 @@
     <None Include="shaders\text\generic\textured.frag" />
     <None Include="shaders\text\generic\textured.vert" />
     <None Include="shaders\text\generic\uvs.frag" />
-    <None Include="shaders\text\scene\paintball.frag" />
     <None Include="shaders\types.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

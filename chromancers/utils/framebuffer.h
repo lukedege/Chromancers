@@ -1,6 +1,8 @@
 #pragma once
 
 #include <glad.h>
+#include <array>
+#include <set>
 
 #include "texture.h"
 #include "window.h"
@@ -65,20 +67,22 @@ namespace utils::graphics::opengl
 			glDeleteFramebuffers(1, &_id);
 		}
 	};
+
 	class Framebuffer
 	{
 		using Texture = engine::resources::Texture;
+		unsigned int color_attachment_base_index = GL_COLOR_ATTACHMENT0;
 
 	public:
 		Framebuffer(unsigned int width = 512, unsigned int height = 512, 
-			Texture::FormatInfo color_att_format_info = Texture::FormatInfo::sample_color_attachment_info(), 
+			Texture::FormatInfo primary_color_att_format_info = Texture::FormatInfo::sample_color_attachment_info(), 
 			Texture::FormatInfo depth_att_format_info = Texture::FormatInfo::sample_depth_attachment_info()) :
 			_id{ generate_framebuffer() },
 			_width  { width  }, 
 			_height { height },
-			color_attachment { create_color_attachment(width, height, color_att_format_info) },
+			color_attachments{ create_color_attachment(0, width, height, primary_color_att_format_info) },
+			active_color_attachments { color_attachment_base_index },
 			depth_attachment { create_depth_attachment(width, height, depth_att_format_info) }
-			//depth_buffer     { /*create_depth_buffer()*/} // you need this only when not using a depth attachment
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, _id);
 
@@ -94,7 +98,7 @@ namespace utils::graphics::opengl
 			_id     { move._id },
 			_width  { move._width  }, 
 			_height { move._height },
-			color_attachment { std::move(move.color_attachment) },
+			color_attachments { std::move(move.color_attachments) },
 			depth_attachment { std::move(move.depth_attachment) }
 		{
 			move._id = 0;
@@ -110,7 +114,7 @@ namespace utils::graphics::opengl
 				_id = move._id;
 				_width  = move._width ; 
 				_height = move._height;
-				color_attachment = std::move(move.color_attachment);
+				color_attachments = std::move(move.color_attachments);
 				depth_attachment = std::move(move.depth_attachment);
 
 				move._id = 0;
@@ -137,6 +141,9 @@ namespace utils::graphics::opengl
 
 			glViewport(0, 0, _width, _height);
 			glBindFramebuffer(GL_FRAMEBUFFER, _id);
+
+			std::vector<unsigned int> attachments{active_color_attachments.begin(), active_color_attachments.end()};
+			glDrawBuffers(attachments.size(), attachments.data());
 		}
 
 		void unbind()
@@ -145,9 +152,25 @@ namespace utils::graphics::opengl
 			glViewport(0, 0, old_width, old_height);
 		}
 
-		Texture& get_color_attachment()
+		Texture& get_color_attachment(unsigned int index)
 		{
-			return color_attachment;
+			if (!active_color_attachments.count(color_attachment_base_index + index))
+				utils::io::warn("FRAMEBUFFER - Color attachment at ", index, " wasn't properly set!");
+			return color_attachments[index];
+		}
+
+		Texture& set_color_attachment(unsigned int index, Texture::FormatInfo color_att_format_info)
+		{
+			unsigned int idx = index;
+			if (idx > color_attachments.size())
+			{
+				utils::io::error("FRAMEBUFFER - Attachment index out of bounds, defaulting to zero");
+				idx = 0;
+			}
+
+			color_attachments[idx] = create_color_attachment(idx, _width, _height, color_att_format_info);
+			active_color_attachments.insert(color_attachment_base_index + idx);
+			return color_attachments[idx];
 		}
 
 		Texture& get_depth_attachment()
@@ -162,9 +185,10 @@ namespace utils::graphics::opengl
 		GLuint _id;
 		unsigned int _width, _height;
 		unsigned int old_width, old_height; // stores the glviewport values before binding
-		Texture color_attachment; // can/will be an array when supporting multiple color attachments, for now one is enough (and necessary for framebuffer completion)
+
+		std::array<Texture, 8> color_attachments; // Minimum value is 8 for OpenGL 3.x+ spec, GL macros goes up to 32 
+		std::set<unsigned int> active_color_attachments;
 		Texture depth_attachment;
-		//GLuint  depth_buffer; // you need this only when not using a depth attachment
 
 		GLuint generate_framebuffer()
 		{
@@ -173,16 +197,14 @@ namespace utils::graphics::opengl
 			return framebuffer;
 		}
 
-		Texture create_color_attachment(unsigned int width, unsigned int height, Texture::FormatInfo color_att_format_info)
+		Texture create_color_attachment(GLuint attachment_index, unsigned int width, unsigned int height, Texture::FormatInfo color_att_format_info)
 		{
-			GLuint attachment_number = 0; // for when multiple attachments are implemented
-
 			Texture new_color_attachment{ width, height, color_att_format_info };
 
 			glBindFramebuffer(GL_FRAMEBUFFER, _id);
 			glBindTexture(GL_TEXTURE_2D, new_color_attachment.id());
 
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachment_number, GL_TEXTURE_2D, new_color_attachment.id(), 0);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, color_attachment_base_index + attachment_index, GL_TEXTURE_2D, new_color_attachment.id(), 0);
 			
 			glBindTexture(GL_TEXTURE_2D, 0);
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -201,7 +223,7 @@ namespace utils::graphics::opengl
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 			float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 			glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-
+			
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, new_depth_attachment.id(), 0);
 
 			glBindTexture(GL_TEXTURE_2D, 0);
@@ -209,28 +231,10 @@ namespace utils::graphics::opengl
 
 			return new_depth_attachment;
 		}
-		
-		GLuint create_depth_buffer()
-		{
-			GLuint depth_buffer;
-			glGenRenderbuffers(1, &depth_buffer);
-
-			glBindFramebuffer(GL_FRAMEBUFFER, _id);
-			glBindRenderbuffer(GL_RENDERBUFFER, depth_buffer);
-			
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, _width, _height); // maybe also only depth
-			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depth_buffer);
-			
-			glBindRenderbuffer(GL_RENDERBUFFER, 0);
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-			return depth_buffer;
-		}
 
 		void dispose()
 		{
 			glDeleteFramebuffers(1, &_id);
-			//glDeleteRenderbuffers(1, &depth_buffer);
 		}
 	};
 }

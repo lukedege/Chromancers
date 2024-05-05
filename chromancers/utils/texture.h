@@ -41,7 +41,7 @@ namespace engine::resources
 		GLuint _id;
 	public:
 
-		Texture(unsigned int width, unsigned int height, Texture::FormatInfo tx_format_info) :
+		Texture(unsigned int width = 512, unsigned int height = 512, Texture::FormatInfo tx_format_info = Texture::FormatInfo::sample_color_attachment_info()) :
 			_id{ generate_texture() },
 			_width      { width  },
 			_height     { height },

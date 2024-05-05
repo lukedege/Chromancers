@@ -254,7 +254,8 @@ int main()
 	Shader shadowmap_shader      { "shadowmap_shader", "shaders/text/generic/shadow_map.vert" , "shaders/text/generic/shadow_map.frag", 4, 3 };
 	Shader shadowcube_shader     { "shadowcube_shader", "shaders/text/generic/shadow_cube.vert" , "shaders/text/generic/shadow_cube.frag", 4, 3, "shaders/text/generic/shadow_cube.geom" };
 
-	Shader paintball_shader { "paintball_shader", "shaders/text/default_lit_instanced.vert", "shaders/text/scene/paintball.frag", 4, 3, nullptr, utils_shaders };
+	Shader paintball_geometry_shader { "paintball_geom_shader", "shaders/text/scene/paintball_geometry.vert", "shaders/text/scene/paintball_geometry.frag", 4, 3 };
+	Shader paintball_lighting_shader { "paintball_light_shader", "shaders/text/scene/paintball_lighting.vert", "shaders/text/scene/paintball_lighting.frag", 4, 3, nullptr, utils_shaders };
 
 	// Post-fx
 	Shader paintblur_shader      { "paintblur_shader", "shaders/text/generic/postprocess.vert" , "shaders/text/generic/paintblur.frag", 4, 3 };
@@ -263,8 +264,9 @@ int main()
 	Shader mergefbo_shader       { "mergefbo_shader", "shaders/text/generic/postprocess.vert" , "shaders/text/generic/merge_fbo.frag", 4, 3 };
 
 	std::vector <std::reference_wrapper<Shader>> lit_shaders, all_shaders;
-	lit_shaders.push_back(default_lit); lit_shaders.push_back(default_lit_instanced); lit_shaders.push_back(paintball_shader);
-	all_shaders.push_back(basic_mvp_shader); all_shaders.push_back(default_lit); all_shaders.push_back(default_lit_instanced); all_shaders.push_back(paintball_shader);
+	lit_shaders.push_back(default_lit); lit_shaders.push_back(default_lit_instanced); lit_shaders.push_back(paintball_lighting_shader);
+	all_shaders.push_back(basic_mvp_shader); all_shaders.push_back(default_lit); all_shaders.push_back(default_lit_instanced); 
+	all_shaders.push_back(paintball_geometry_shader); all_shaders.push_back(paintball_lighting_shader);
 
 	// Lights setup 
 	DirectionalLight::ShadowMapSettings dir_sm_settings;
@@ -343,7 +345,7 @@ int main()
 	Material gun_mat { default_lit };
 	Material buny_mat{ default_lit };
 
-	Material paintball_material{ paintball_shader };
+	Material paintball_material{ default_lit_instanced };
 	paintball_material.shininess = 32.f; paintball_material.kA = 0.25f; paintball_material.receive_shadows = false;
 
 #pragma endregion materials_setup
@@ -468,9 +470,15 @@ int main()
 	// Framebuffers
 	Framebuffer world_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
 	Framebuffer paintballs_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
+	
+	Framebuffer paintballs_geom_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
+	Texture& g_color = paintballs_geom_framebuffer.get_color_attachment(0);
+	Texture& g_wFragPos = paintballs_geom_framebuffer.set_color_attachment(1, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE});
+	Texture& g_wNormal  = paintballs_geom_framebuffer.set_color_attachment(2, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE});
 
 	Framebuffer postfx0_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
 	Framebuffer postfx1_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
+	Framebuffer postfx2_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
 
 	Framebuffer map_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
 
@@ -618,6 +626,15 @@ int main()
 		}
 		paintballs_framebuffer.unbind();
 
+		// Draw paintballs geometry in their own framebuffer
+		paintballs_geom_framebuffer.bind();
+		{
+			glClearColor(0, 0, 0, 0);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			main_scene.draw_only({ "paintballs" }, &paintball_geometry_shader);
+		}
+		paintballs_geom_framebuffer.unbind();
+
 		// Do postprocessing on paintballs framebuffer
 		postfx0_framebuffer.bind();
 		{
@@ -627,7 +644,7 @@ int main()
 			paintblur_shader.bind();
 			{
 				glActiveTexture(GL_TEXTURE0);
-				paintballs_framebuffer.get_color_attachment().bind();
+				g_color.bind();
 				paintblur_shader.setInt("image", 0);
 				paintblur_shader.setBool("horizontal", true);
 				quad_mesh.draw();
@@ -652,7 +669,7 @@ int main()
 				postfx_fbos[horizontal].get().bind();
 				{
 					glActiveTexture(GL_TEXTURE0);
-					postfx_fbos[!horizontal].get().get_color_attachment().bind();
+					postfx_fbos[!horizontal].get().get_color_attachment(0).bind();
 					paintblur_shader.setInt("image", 0);
 					paintblur_shader.setBool("horizontal", horizontal);
 					quad_mesh.draw();
@@ -671,13 +688,47 @@ int main()
 			paintstep_shader.bind();
 			{
 				glActiveTexture(GL_TEXTURE0);
-				postfx0_framebuffer.get_color_attachment().bind();
+				postfx0_framebuffer.get_color_attachment(0).bind();
 				paintstep_shader.setInt("image", 0);
+				paintstep_shader.setVec4("color", player.paint_color);
 				quad_mesh.draw();
 			}
 			paintstep_shader.unbind();
 		}
 		postfx1_framebuffer.unbind();
+
+		// Calculate deferred lighting for paintballs
+		postfx2_framebuffer.bind();
+		{
+			glClearColor(0, 0, 0, 0);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+			paintball_lighting_shader.bind();
+			{	
+				glActiveTexture(GL_TEXTURE0);
+				g_wFragPos.bind();
+				paintball_lighting_shader.setInt("g_wFragpos", 0);
+
+				glActiveTexture(GL_TEXTURE1);
+				g_wNormal.bind();
+				paintball_lighting_shader.setInt("g_wNormal", 1);
+
+				paintball_lighting_shader.setVec4("ambient_color", paintball_material.ambient_color);
+				paintball_lighting_shader.setVec4("diffuse_color", paintball_material.diffuse_color);
+				paintball_lighting_shader.setVec4("specular_color", paintball_material.specular_color);
+
+				paintball_lighting_shader.setFloat("kA", paintball_material.kA);
+				paintball_lighting_shader.setFloat("kD", paintball_material.kD);
+				paintball_lighting_shader.setFloat("kS", paintball_material.kS);
+
+				paintball_lighting_shader.setFloat("shininess", paintball_material.shininess);
+
+				quad_mesh.draw();
+			}
+			paintball_lighting_shader.unbind();
+		}
+		postfx2_framebuffer.unbind();
+		
 
 		// Merge world and post-processed paintball framebuffers
 		present_framebuffer.bind();
@@ -688,7 +739,7 @@ int main()
 			mergefbo_shader.bind();
 			{
 				glActiveTexture(GL_TEXTURE0);
-				world_framebuffer.get_color_attachment().bind();
+				world_framebuffer.get_color_attachment(0).bind();
 				mergefbo_shader.setInt("fbo0_color", 0);
 
 				glActiveTexture(GL_TEXTURE1);
@@ -696,7 +747,7 @@ int main()
 				mergefbo_shader.setInt("fbo0_depth", 1);
 
 				glActiveTexture(GL_TEXTURE2);
-				postfx1_framebuffer.get_color_attachment().bind();
+				postfx2_framebuffer.get_color_attachment(0).bind();
 				mergefbo_shader.setInt("fbo1_color", 2);
 
 				glActiveTexture(GL_TEXTURE3);
@@ -759,7 +810,7 @@ int main()
 		glViewport(ws.width - map_framebuffer.width() / 4 - 10, ws.height - map_framebuffer.height() / 4 - 10, map_framebuffer.width() / 4, map_framebuffer.height() / 4);
 		textured_shader.bind();
 		glActiveTexture(GL_TEXTURE0);
-		map_framebuffer.get_color_attachment().bind();
+		map_framebuffer.get_color_attachment(0).bind();
 		quad_mesh.draw();
 		textured_shader.unbind();
 		glViewport(0, 0, ws.width, ws.height);
