@@ -32,8 +32,8 @@ namespace engine::components
 			parent_rb = parent->get_component<RigidBodyComponent>()->rigid_body;
 			if (!parent_rb) utils::io::warn("PaintballComponent - RigidBody component not found: a RigidBody component is required for this component to work.");
 
+			parent->material->ambient_color = paint_color;
 			parent->material->diffuse_color = paint_color;
-			parent->material->shininess = 512.f;
 		}
 
 		void update(float delta_time)

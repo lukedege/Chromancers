@@ -346,7 +346,9 @@ int main()
 	Material buny_mat{ default_lit };
 
 	Material paintball_material{ default_lit_instanced };
-	paintball_material.shininess = 32.f; paintball_material.kA = 0.25f; paintball_material.receive_shadows = false;
+	paintball_material.shininess = 64.f; paintball_material.kA = 0.17f; paintball_material.kD = 0.17f; paintball_material.kS = 0.5f; 
+	paintball_material.receive_shadows = false;
+	paintball_material.diffuse_color = player.paint_color; paintball_material.ambient_color = player.paint_color;
 
 #pragma endregion materials_setup
 #pragma region entities_setup
@@ -484,6 +486,11 @@ int main()
 
 	Framebuffer present_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
 
+	// Uniforms TODO temp
+	float paintstep_shader_threshold = 0.1f;
+	float paintblur_shader_blurstrength = 1.f;
+	int paintblur_blurpasses = 4;
+
 	main_scene.init();
 	player.init();
 
@@ -546,7 +553,6 @@ int main()
 			lightcube_entites[i]->material->ambient_color = point_lights[i]->color;
 		}
 
-		paintball_material.ambient_color = player.paint_color; 
 #pragma endregion setup_loop
 
 #pragma region update_world
@@ -627,6 +633,7 @@ int main()
 		paintballs_framebuffer.unbind();
 
 		// Draw paintballs geometry in their own framebuffer
+		/*
 		paintballs_geom_framebuffer.bind();
 		{
 			glClearColor(0, 0, 0, 0);
@@ -634,53 +641,65 @@ int main()
 			main_scene.draw_only({ "paintballs" }, &paintball_geometry_shader);
 		}
 		paintballs_geom_framebuffer.unbind();
+		*/
 
 		// Do postprocessing on paintballs framebuffer
-		postfx0_framebuffer.bind();
-		{
-			glClearColor(0, 0, 0, 0);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-			paintblur_shader.bind();
-			{
-				glActiveTexture(GL_TEXTURE0);
-				g_color.bind();
-				paintblur_shader.setInt("image", 0);
-				paintblur_shader.setBool("horizontal", true);
-				quad_mesh.draw();
-
-				//glActiveTexture(GL_TEXTURE0);
-				//postfx_framebuffer.get_color_attachment().bind();
-				//paintblur_shader.setInt("image", 0);
-				//paintblur_shader.setBool("horizontal", false);
-				//quad_mesh.draw();
-			}
-			paintblur_shader.unbind();
-		}
-		postfx0_framebuffer.unbind();
+		//postfx0_framebuffer.bind();
+		//{
+		//	glClearColor(0, 0, 0, 0);
+		//	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		//
+		//	paintblur_shader.bind();
+		//	{
+		//		glActiveTexture(GL_TEXTURE0);
+		//		paintballs_framebuffer.get_color_attachment(0).bind();
+		//		paintblur_shader.setInt("image", 0);
+		//		paintblur_shader.setBool("horizontal", true);
+		//		paintblur_shader.setFloat("blur_strength", paintblur_shader_blurstrength);
+		//		quad_mesh.draw();
+		//
+		//		//glActiveTexture(GL_TEXTURE0);
+		//		//postfx_framebuffer.get_color_attachment().bind();
+		//		//paintblur_shader.setInt("image", 0);
+		//		//paintblur_shader.setBool("horizontal", false);
+		//		//quad_mesh.draw();
+		//	}
+		//	paintblur_shader.unbind();
+		//}
+		//postfx0_framebuffer.unbind();
 
 		// TODO check if its really necessary to do multiple blurring passes
-		std::vector<std::reference_wrapper<Framebuffer>> postfx_fbos; postfx_fbos.push_back(postfx0_framebuffer); postfx_fbos.push_back(postfx1_framebuffer);
+		std::vector<Framebuffer*> postfx_fbos; postfx_fbos.push_back(&postfx0_framebuffer); postfx_fbos.push_back(&postfx1_framebuffer);
 		paintblur_shader.bind();
 		{
-			for (int i = 0; i < 9; i++)
+			for (int i = 0; i < paintblur_blurpasses; i++)
 			{
-				int horizontal = i % 2;
-				postfx_fbos[horizontal].get().bind();
+				bool horizontal = i % 2;
+				Framebuffer* destination_fb = postfx_fbos[horizontal] ;
+				Framebuffer* source_fb      = postfx_fbos[!horizontal];
+
+				if (i == 0)
+					source_fb = &paintballs_framebuffer;
+
+				destination_fb->bind();
 				{
+					glClearColor(0, 0, 0, 0);
+					glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 					glActiveTexture(GL_TEXTURE0);
-					postfx_fbos[!horizontal].get().get_color_attachment(0).bind();
+					source_fb->get_color_attachment().bind();
 					paintblur_shader.setInt("image", 0);
 					paintblur_shader.setBool("horizontal", horizontal);
+					paintblur_shader.setFloat("blur_strength", paintblur_shader_blurstrength);
 					quad_mesh.draw();
 				}
-				postfx_fbos[horizontal].get().unbind();
+				destination_fb->unbind();
 			}
 		}
 		paintblur_shader.unbind();
 
 		// We play with color and alpha levels of the blurred paintballs to make them look more organic and liquidy
-		postfx1_framebuffer.bind();
+		postfx2_framebuffer.bind();
 		{
 			glClearColor(0, 0, 0, 0);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -691,13 +710,15 @@ int main()
 				postfx0_framebuffer.get_color_attachment(0).bind();
 				paintstep_shader.setInt("image", 0);
 				paintstep_shader.setVec4("color", player.paint_color);
+				paintstep_shader.setFloat("th", paintstep_shader_threshold);
 				quad_mesh.draw();
 			}
 			paintstep_shader.unbind();
 		}
-		postfx1_framebuffer.unbind();
+		postfx2_framebuffer.unbind();
 
 		// Calculate deferred lighting for paintballs
+		/*
 		postfx2_framebuffer.bind();
 		{
 			glClearColor(0, 0, 0, 0);
@@ -728,7 +749,7 @@ int main()
 			paintball_lighting_shader.unbind();
 		}
 		postfx2_framebuffer.unbind();
-		
+		*/
 
 		// Merge world and post-processed paintball framebuffers
 		present_framebuffer.bind();
@@ -831,6 +852,21 @@ int main()
 		if (ImGui::CollapsingHeader("Paintgun settings"))
 		{
 			ImGui::ColorEdit4 ("Paint Color",    glm::value_ptr(player.paint_color));
+			//TODO temp maybe
+			{
+				ImGui::SliderFloat("kA", &paintball_material.kA, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("kD", &paintball_material.kD, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("kS", &paintball_material.kS, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::ColorEdit4("Ambient",  glm::value_ptr (paintball_material.ambient_color));
+				ImGui::ColorEdit4("Diffuse",  glm::value_ptr (paintball_material.diffuse_color));
+				ImGui::ColorEdit4("Specular", glm::value_ptr (paintball_material.specular_color));
+				ImGui::SliderFloat("Shininess", &paintball_material.shininess, 0, 128.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::Checkbox("Receive shadows", &paintball_material.receive_shadows);
+				ImGui::Separator();
+				ImGui::SliderInt("Blur passes", &paintblur_blurpasses, 0, 31, "%d", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("Blur Strength", &paintblur_shader_blurstrength, 0, 16.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("Thresh", &paintstep_shader_threshold, 0, 16.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+			}
 
 			ImGui::Separator(); ImGui::Text("Paintball");
 			ImGui::SliderFloat("Weight", &player.paintball_weight, 0, 10, " %.1f", ImGuiSliderFlags_AlwaysClamp);

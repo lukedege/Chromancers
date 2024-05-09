@@ -69,6 +69,12 @@ namespace engine::resources
 
 			shader->setInt("sample_shadow_map", receive_shadows);
 
+			shader->setInt("sample_diffuse_map", 0);
+			shader->setInt("sample_normal_map", 0);
+			shader->setInt("sample_displacement_map", 0);
+			shader->setInt("sample_detail_diffuse_map", 0);
+			shader->setInt("sample_detail_normal_map", 0);
+
 			if (diffuse_map)
 			{
 				// activate a texture unit per map

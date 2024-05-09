@@ -152,7 +152,7 @@ namespace utils::graphics::opengl
 			glViewport(0, 0, old_width, old_height);
 		}
 
-		Texture& get_color_attachment(unsigned int index)
+		Texture& get_color_attachment(unsigned int index = 0)
 		{
 			if (!active_color_attachments.count(color_attachment_base_index + index))
 				utils::io::warn("FRAMEBUFFER - Color attachment at ", index, " wasn't properly set!");
