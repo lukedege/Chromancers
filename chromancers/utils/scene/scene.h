@@ -94,13 +94,11 @@ namespace engine::scene
 
 		void update(float deltaTime);
 
-		void draw();
+		void draw(Shader* custom_shader = nullptr);
 
 		void draw_only (const std::vector<std::string>& ids_to_draw, Shader* custom_shader = nullptr);
 
 		void draw_except(const std::vector<std::string>& ids_to_not_draw, Shader* custom_shader = nullptr);
-
-		void custom_draw(Shader& shader) const;
 
 	private:
 		template<typename T>

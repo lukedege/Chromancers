@@ -2,10 +2,10 @@
 
 #include "camera.h"
 #include "entity.h"
-#include "utils/physics.h"
+#include "../physics.h"
 
-#include "utils/components/rigidbody_component.h"
-#include "utils/components/paintball_component.h"
+#include "../components/rigidbody_component.h"
+#include "../components/paintball_component.h"
 
 #include <glm/gtx/vector_angle.hpp>
 

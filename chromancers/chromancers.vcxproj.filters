@@ -164,6 +164,9 @@
     <ClInclude Include="utils\component.h">
       <Filter>Header Files\engine\components</Filter>
     </ClInclude>
+    <ClInclude Include="utils\scene\paintball_spawner.h">
+      <Filter>Header Files\engine\scene</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\constants.glsl">

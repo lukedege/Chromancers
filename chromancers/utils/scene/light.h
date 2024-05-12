@@ -30,7 +30,7 @@ namespace engine::scene
 			color{ color }, intensity{ intensity }
 		{}
 
-		virtual void compute_shadowmap(const engine::scene::Scene& scene) {};
+		virtual void compute_shadowmap(engine::scene::Scene& scene) {};
 		virtual void setup(const Shader& shader, size_t index) = 0;
 
 	protected:
@@ -106,7 +106,7 @@ namespace engine::scene
 			shader.setFloat(prefix + "attenuation_quadratic", attenuation_quadratic);
 		}
 
-		void compute_shadowmap(const engine::scene::Scene& scene) override
+		void compute_shadowmap(engine::scene::Scene& scene) override
 		{
 			if (!shadowmap_settings.shader)
 			{
@@ -134,7 +134,7 @@ namespace engine::scene
 			shadowmap_settings.shader->setFloat("far_plane", shadowmap_settings.frustum_far);
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
-			scene.custom_draw(*shadowmap_settings.shader);
+			scene.draw(shadowmap_settings.shader);
 
 			depthmap_framebuffer.unbind();
 		
@@ -201,7 +201,7 @@ namespace engine::scene
 			shader.setMat4(prefix + "lightspace_matrix", lightspace_matrix);
 		}
 
-		void compute_shadowmap(const engine::scene::Scene& scene) override
+		void compute_shadowmap(engine::scene::Scene& scene) override
 		{
 			if (!shadowmap_settings.shader)
 			{
@@ -217,7 +217,7 @@ namespace engine::scene
 		
 			shadowmap_settings.shader->bind();
 			shadowmap_settings.shader->setMat4("lightSpaceMatrix", lightspace_matrix);
-			scene.custom_draw(*shadowmap_settings.shader);
+			scene.draw(shadowmap_settings.shader);
 			depthmap_framebuffer.unbind();
 		
 			glCullFace(GL_BACK); // Restoring back face culling for drawing

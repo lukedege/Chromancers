@@ -4,8 +4,8 @@ out vec4 FragColor;
 in vec2 TexCoords;
 
 uniform sampler2D image;
-uniform vec4 color;
-uniform float th = 0.2f;
+uniform float t0 = 0.1f;
+uniform float t1 = 0.5f;
 
 void main()
 {             
@@ -13,22 +13,8 @@ void main()
     vec3 s_color = sampled.rgb;
     float alpha = sampled.a;
 
-	vec3 p_color = color.rgb;
-
-	p_color = smoothstep(0.1f, 0.3f, s_color);
-
-	float s_color_mag = length(s_color);
-	float p_color_mag = length(p_color);
-
-	s_color = smoothstep(0.1f, .3f, s_color);
+	s_color = smoothstep(t0, t1, s_color);
 	//alpha = smoothstep(0.1f, .3f, s_color_mag);
-	//alpha = 1;
-	// thresholds
-    float th0 = th, th1 = 0.4f, th2 = 0.8f;
-    if(s_color_mag < th0)
-    {
-        //alpha = 0;
-    }
 
     FragColor = vec4(s_color, alpha);
 }

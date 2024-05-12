@@ -143,7 +143,7 @@ namespace utils::graphics::opengl
 			glBindFramebuffer(GL_FRAMEBUFFER, _id);
 
 			std::vector<unsigned int> attachments{active_color_attachments.begin(), active_color_attachments.end()};
-			glDrawBuffers(attachments.size(), attachments.data());
+			glDrawBuffers(gsl::narrow<GLsizei>(attachments.size()), attachments.data());
 		}
 
 		void unbind()

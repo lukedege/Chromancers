@@ -120,7 +120,7 @@ namespace engine::scene
 	}
 
 	// draws using the provided shader instead of the material
-	void Entity::custom_draw(Shader& shader) const noexcept
+	void Entity::custom_draw(const Shader& shader) const noexcept
 	{
 		shader.bind();
 

@@ -6,6 +6,7 @@ in vec2 TexCoords;
 uniform sampler2D image;
 uniform bool horizontal;
 uniform float blur_strength = 1.f;
+uniform bool ignore_alpha = false;
 
 float weight[5] = float[] (0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216);
 // the equivalent blur kernel is a 10x10 mask
@@ -59,6 +60,8 @@ vec4 rgba_blur()
 }
 
 void main()
-{             
-    FragColor = rgba_blur();
+{	
+	vec4 color = ignore_alpha ? rgb_blur() : rgba_blur();
+
+    FragColor = color;
 }

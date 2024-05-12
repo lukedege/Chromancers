@@ -59,9 +59,9 @@ namespace engine::scene
 	}
 
 	// Draw the complete scene
-	void Scene::draw()
+	void Scene::draw(Shader* custom_shader)
 	{
-		draw_internal(entities, instanced_entities_groups);
+		draw_internal(entities, instanced_entities_groups, custom_shader);
 	}
 
 	// Draw only if the id is in the provided vector
@@ -100,14 +100,6 @@ namespace engine::scene
 		}
 
 		draw_internal(draw_entities, draw_groups, custom_shader);
-	}
-
-	void Scene::custom_draw(Shader& shader) const
-	{
-		for (auto& [id, entity] : entities)
-		{
-			entity->custom_draw(shader);
-		}
 	}
 
 	void Scene::draw_internal(entity_map entities, entity_group_map instanced_entities_groups, Shader* custom_shader)
