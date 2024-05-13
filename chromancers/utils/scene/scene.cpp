@@ -64,6 +64,60 @@ namespace engine::scene
 		draw_internal(entities, instanced_entities_groups, custom_shader);
 	}
 
+	void Scene::draw_except_instanced(Shader* custom_shader)
+	{
+		for (auto& [id, entity] : entities)
+		{
+			if (custom_shader)
+				entity->custom_draw(*custom_shader);
+			else
+				entity->draw();
+		}
+	}
+
+	void Scene::draw_only_instanced(Shader* custom_shader)
+	{
+		// Lambda for drawing instanced groups of entities
+		auto draw_group = [&](auto instanced_group)
+		{
+			for (auto& [id, instanced_entity] : instanced_group)
+			{
+				// Fill data about instanced group transforms
+				instance_group_transforms.push_back(instanced_entity->world_transform().matrix());
+
+			}
+			// Fill the shader's ubo/ssbo with the gathered transform data
+			utils::graphics::opengl::setup_buffer_object(instanced_ssbo, GL_SHADER_STORAGE_BUFFER, 0, sizeof(glm::mat4), instance_group_transforms.size(), glm::value_ptr(instance_group_transforms[0]));
+
+			// Perform the instanced draw on the common model of the group
+			instanced_group.begin()->second->model->draw_instanced(instance_group_transforms.size());
+		};
+
+		Material* current_group_material;
+		for (auto& [group_id, instanced_group] : instanced_entities_groups)
+		{
+			instance_group_transforms.clear();
+			// get first entity material, we're assuming all entities in a group share the same material and model
+			if (instanced_group.size() > 0)
+			{
+				if (custom_shader)
+				{
+					custom_shader->bind();
+					draw_group(instanced_group);
+					custom_shader->unbind();
+				}
+				else
+				{
+					current_group_material = instanced_group.begin()->second->material;
+					current_group_material->bind();
+					draw_group(instanced_group);
+					current_group_material->unbind();
+				}
+				
+			}
+		}
+	}
+
 	// Draw only if the id is in the provided vector
 	void Scene::draw_only(const std::vector<std::string>& ids_to_draw, Shader* custom_shader)
 	{

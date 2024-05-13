@@ -40,6 +40,7 @@
 #include "utils/components/rigidbody_component.h"
 #include "utils/components/paintable_component.h"
 #include "utils/components/paintball_component.h"
+#include "utils/components/paintball_spawner_component.h"
 
 #include "utils/window.h"
 
@@ -78,7 +79,7 @@ float capped_deltaTime;
 // Scene
 Scene main_scene{ rng };
 std::function<void()> scene_setup;
-Player player{ physics_engine, rng };
+Player player;
 bool hold_to_fire = true;
 
 // parameters for time computation
@@ -254,9 +255,6 @@ int main()
 	Shader shadowmap_shader      { "shadowmap_shader", "shaders/text/generic/shadow_map.vert" , "shaders/text/generic/shadow_map.frag", 4, 3 };
 	Shader shadowcube_shader     { "shadowcube_shader", "shaders/text/generic/shadow_cube.vert" , "shaders/text/generic/shadow_cube.frag", 4, 3, "shaders/text/generic/shadow_cube.geom" };
 
-	Shader paintball_geometry_shader { "paintball_geom_shader", "shaders/text/scene/paintball_geometry.vert", "shaders/text/scene/paintball_geometry.frag", 4, 3 };
-	Shader paintball_lighting_shader { "paintball_light_shader", "shaders/text/scene/paintball_lighting.vert", "shaders/text/scene/paintball_lighting.frag", 4, 3, nullptr, utils_shaders };
-
 	// Post-fx
 	Shader paintblur_shader      { "paintblur_shader", "shaders/text/generic/postprocess.vert" , "shaders/text/generic/paintblur.frag", 4, 3 };
 	Shader paintstep_shader      { "paintstep_shader", "shaders/text/generic/postprocess.vert" , "shaders/text/generic/paintstep.frag", 4, 3 };
@@ -264,9 +262,8 @@ int main()
 	Shader mergefbo_shader       { "mergefbo_shader", "shaders/text/generic/postprocess.vert" , "shaders/text/generic/merge_fbo.frag", 4, 3 };
 
 	std::vector <std::reference_wrapper<Shader>> lit_shaders, all_shaders;
-	lit_shaders.push_back(default_lit); lit_shaders.push_back(default_lit_instanced); lit_shaders.push_back(paintball_lighting_shader);
+	lit_shaders.push_back(default_lit); lit_shaders.push_back(default_lit_instanced); 
 	all_shaders.push_back(basic_mvp_shader); all_shaders.push_back(default_lit); all_shaders.push_back(default_lit_instanced); 
-	all_shaders.push_back(paintball_geometry_shader); all_shaders.push_back(paintball_lighting_shader);
 
 	// Lights setup 
 	DirectionalLight::ShadowMapSettings dir_sm_settings;
@@ -342,13 +339,9 @@ int main()
 	cube_material.uv_repeat = 3.f;
 
 	Material test_cube_material{ default_lit };
+	Material fountain_material{ default_lit };
 	Material gun_mat { default_lit };
 	Material buny_mat{ default_lit };
-
-	Material paintball_material{ default_lit_instanced };
-	paintball_material.shininess = 64.f; paintball_material.kA = 0.17f; paintball_material.kD = 0.17f; paintball_material.kS = 0.5f; 
-	paintball_material.receive_shadows = false;
-	paintball_material.diffuse_color = player.paint_color; paintball_material.ambient_color = player.paint_color;
 
 #pragma endregion materials_setup
 #pragma region entities_setup
@@ -366,6 +359,7 @@ int main()
 	Entity* left_room_rwall = main_scene.emplace_entity("wall", "left_room_rightwall", plane_model, left_room_rwall_material);
 	Entity* left_room_bwall = main_scene.emplace_entity("wall", "left_room_backwall", plane_model, left_room_bwall_material);
 	Entity* bunny       = main_scene.emplace_entity("bunny", "buny", bunny_model, buny_mat);	
+	Entity* fountain       = main_scene.emplace_entity("fountain", "fountain", cube_model, fountain_material);	
 
 	// Cursor setup
 	Model triangle_mesh{ Mesh::simple_triangle_mesh() };
@@ -420,6 +414,10 @@ int main()
 		bunny->set_position(glm::vec3(5.0f, 3.0f, 0.0f));
 		bunny->set_size(glm::vec3(1.f));
 
+		fountain->set_position(glm::vec3(-12.0f, 2.0f, 5.f));
+		fountain->set_orientation(glm::vec3(90.f, 0.0f, 0.0f));
+		fountain->set_size(glm::vec3(0.1f));
+
 		for (auto& lightcube_entity : lightcube_entites)
 		{
 			lightcube_entity->set_size(glm::vec3(0.25f));
@@ -431,19 +429,26 @@ int main()
 
 	// Player setup
 	Entity gun{"gun", gun_model, gun_mat};
+
+	PaintballSpawner gun_spawner{ physics_engine, rng, default_lit_instanced };
+	gun_spawner.paintball_model = &paintball_model;
+	gun_spawner.current_scene = &main_scene;
+
+	gun_spawner.paintball_material.shininess = 64.f; 
+	gun_spawner.paintball_material.kA = 0.17f; gun_spawner.paintball_material.kD = 0.17f; gun_spawner.paintball_material.kS = 0.5f; 
+	gun_spawner.paintball_material.receive_shadows = false;
 	
+	player.paintball_spawner = &gun_spawner;
+
 	player.viewmodel_offset = {0.3,-0.2,0.25};
 	player.gun_entity = &gun;
-	player.paintball_model = &paintball_model;
-	player.paintball_material = &paintball_material;
-	player.current_scene = &main_scene;
 
 	// Physics setup
 	GLDebugDrawer phy_debug_drawer{ *main_scene.current_camera, debug_shader };
 	physics_engine.addDebugDrawer(&phy_debug_drawer);
 	physics_engine.set_debug_mode(0);
 
-	floor_plane->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{100.0f, 0.01f, 100.0f}}}, false );
+	floor_plane->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{100.0f, 0.05f, 100.0f}}}, false );
 	wall_plane ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
 	test_cube  ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 0.1f, 0.1f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
 	cube       ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 30.0f, 0.1f, 0.1f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
@@ -466,6 +471,18 @@ int main()
 	left_room_lwall->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
 	left_room_rwall->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
 	left_room_bwall->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
+
+	PaintballSpawnerComponent* fountain_spawner = static_cast<PaintballSpawnerComponent*> 
+		(fountain -> emplace_component<PaintballSpawnerComponent>(physics_engine, rng, paintball_model, default_lit_instanced));
+
+	fountain_spawner->paintball_spawner.shooting_speed = 8.f; fountain_spawner->paintball_spawner.shooting_spread = 1.f;
+	fountain_spawner->paintball_spawner.rounds_per_second = 30.f;
+	fountain_spawner->paintball_spawner.size_variation_min_multiplier = 0.75f;fountain_spawner->paintball_spawner.size_variation_max_multiplier = 1.25f;
+	fountain_spawner->paintball_spawner.paint_color = { 0.1f, 0.64f, 0.92f, 1.f };
+	Material& fountain_ball_material = fountain_spawner->paintball_spawner.paintball_material;
+	fountain_ball_material.shininess = 64.f; 
+	fountain_ball_material.kA = 0.17f; fountain_ball_material.kD = 0.17f; fountain_ball_material.kS = 0.5f; 
+	fountain_ball_material.receive_shadows = false;
 	
 #pragma endregion entities_setup
 
@@ -482,7 +499,8 @@ int main()
 	Framebuffer present_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
 
 	// Uniforms 
-	float paintstep_shader_smoothstep_t0 = 0.1f, paintstep_shader_smoothstep_t1 = 0.4f;
+	float paintstep_shader_t0_color = 0.1f, paintstep_shader_t1_color = 0.4f;
+	float paintstep_shader_t0_alpha = 0.7f, paintstep_shader_t1_alpha = 0.9f;
 	float paintblur_shader_blurstrength = 1.f;
 	bool paintblur_shader_ignore_alpha = false;
 	int paintblur_blurpasses = 4;
@@ -612,7 +630,7 @@ int main()
 		{
 			glClearColor(0.26f, 0.46f, 0.98f, 1.0f); // bluish
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			main_scene.draw_except({ "paintballs" });
+			main_scene.draw_except_instanced();
 
 			// TODO Player (the gun, specifically) should be drawn on top of the world to avoid clipping 
 			player.draw();
@@ -624,13 +642,13 @@ int main()
 		{
 			glClearColor(0, 0, 0, 0);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			main_scene.draw_only({ "paintballs" });
+			main_scene.draw_only_instanced();
 		}
 		paintballs_framebuffer.unbind();
 
 		// We perform a number of blur passes to make paintball countours less evident, rendering the whole paintball stream more cohesive
 		std::vector<Framebuffer*> postfx_fbos; postfx_fbos.push_back(&postfx0_framebuffer); postfx_fbos.push_back(&postfx1_framebuffer);
-		Framebuffer *destination_fb = postfx_fbos[0], *source_fb = &paintballs_framebuffer;
+		Framebuffer *destination_fb = postfx_fbos[0], *source_fb = &paintballs_framebuffer, *paintblur_fb = &paintballs_framebuffer;
 		paintblur_shader.bind();
 		{
 			for (int i = 0; i < paintblur_blurpasses; i++)
@@ -655,6 +673,7 @@ int main()
 				// Swap source and destination buffers
 				destination_fb = postfx_fbos[!horizontal];
 				source_fb      = postfx_fbos[ horizontal];
+				paintblur_fb   = source_fb;
 			}
 		}
 		paintblur_shader.unbind();
@@ -668,10 +687,12 @@ int main()
 			paintstep_shader.bind();
 			{
 				glActiveTexture(GL_TEXTURE0);
-				destination_fb->get_color_attachment().bind(); // We take the last destination framebuffer
+				paintblur_fb->get_color_attachment().bind(); // We take the last destination framebuffer
 				paintstep_shader.setInt("image", 0);
-				paintstep_shader.setFloat("t0", paintstep_shader_smoothstep_t0);
-				paintstep_shader.setFloat("t1", paintstep_shader_smoothstep_t1);
+				paintstep_shader.setFloat("t0_color", paintstep_shader_t0_color);
+				paintstep_shader.setFloat("t1_color", paintstep_shader_t1_color);
+				paintstep_shader.setFloat("t0_alpha", paintstep_shader_t0_alpha);
+				paintstep_shader.setFloat("t1_alpha", paintstep_shader_t1_alpha);
 				quad_mesh.draw();
 			}
 			paintstep_shader.unbind();
@@ -732,7 +753,7 @@ int main()
 			}
 
 			// Redraw all scene objects from map pov except paintballs
-			main_scene.draw_except({"paintballs"});
+			main_scene.draw_except_instanced();
 
 			// Prepare cursor shader
 			glClear(GL_DEPTH_BUFFER_BIT);
@@ -777,40 +798,69 @@ int main()
 		// Various settings
 		if (ImGui::CollapsingHeader("Paintball FX settings"))
 		{
-			ImGui::ColorEdit4 ("Paint Color",    glm::value_ptr(player.paint_color));
+			ImGui::ColorEdit4 ("Paint Color",    glm::value_ptr(player.paintball_spawner->paint_color));
 			ImGui::Separator(); ImGui::Text("Paintball material");
-			ImGui::SliderFloat("kA", &paintball_material.kA, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("kD", &paintball_material.kD, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("kS", &paintball_material.kS, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::ColorEdit4("Ambient",  glm::value_ptr (paintball_material.ambient_color));
-			ImGui::ColorEdit4("Diffuse",  glm::value_ptr (paintball_material.diffuse_color));
-			ImGui::ColorEdit4("Specular", glm::value_ptr (paintball_material.specular_color));
-			ImGui::SliderFloat("Shininess", &paintball_material.shininess, 0, 128.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::Checkbox("Receive shadows", &paintball_material.receive_shadows);
+			ImGui::SliderFloat("kA", &player.paintball_spawner->paintball_material.kA, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("kD", &player.paintball_spawner->paintball_material.kD, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("kS", &player.paintball_spawner->paintball_material.kS, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::ColorEdit4("Ambient",  glm::value_ptr (player.paintball_spawner->paintball_material.ambient_color));
+			ImGui::ColorEdit4("Diffuse",  glm::value_ptr (player.paintball_spawner->paintball_material.diffuse_color));
+			ImGui::ColorEdit4("Specular", glm::value_ptr (player.paintball_spawner->paintball_material.specular_color));
+			ImGui::SliderFloat("Shininess", &player.paintball_spawner->paintball_material.shininess, 0, 128.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::Checkbox("Receive shadows", &player.paintball_spawner->paintball_material.receive_shadows);
 			ImGui::Separator(); ImGui::Text("Blur and step FX shaders");
 			ImGui::SliderInt("Blur passes", &paintblur_blurpasses, 0, 31, "%d", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::SliderFloat("Blur Strength", &paintblur_shader_blurstrength, 0, 16.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::Checkbox("Blur ignore alpha", &paintblur_shader_ignore_alpha);
-			ImGui::SliderFloat("Smoothstep t0", &paintstep_shader_smoothstep_t0, -1.f, 1.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Smoothstep t1", &paintstep_shader_smoothstep_t1, -1.f, 1.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Smoothstep color t0", &paintstep_shader_t0_color, -1.f, 1.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Smoothstep color t1", &paintstep_shader_t1_color, -1.f, 1.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Smoothstep alpha t0", &paintstep_shader_t0_alpha, -1.f, 1.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Smoothstep alpha t1", &paintstep_shader_t1_alpha, -1.f, 1.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
 		}
 		if (ImGui::CollapsingHeader("Paintgun settings"))
 		{
 			ImGui::Separator(); ImGui::Text("Paintball");
-			ImGui::SliderFloat("Weight", &player.paintball_weight, 0, 10, " %.1f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Size", &player.paintball_size, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Min size variation", &player.size_variation_min_multiplier, 0, 2, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Max size variation", &player.size_variation_max_multiplier, 0, 2, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Weight", &player.paintball_spawner->paintball_weight, 0, 10, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Size", &player.paintball_spawner->paintball_size, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Min size variation", &player.paintball_spawner->size_variation_min_multiplier, 0, 2, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Max size variation", &player.paintball_spawner->size_variation_max_multiplier, 0, 2, " %.2f", ImGuiSliderFlags_AlwaysClamp);
 
 			ImGui::Separator(); ImGui::Text("Gun properties");
-			ImGui::SliderFloat("Muzzle speed", &player.muzzle_speed, 0, 100, " %.1f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Muzzle spread", &player.muzzle_spread, 0, 3, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Muzzle speed", &player.paintball_spawner->shooting_speed, 0, 100, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Muzzle spread", &player.paintball_spawner->shooting_spread, 0, 3, " %.2f", ImGuiSliderFlags_AlwaysClamp);
 			unsigned int rps_min = 1, rps_max = 200;
-			ImGui::SliderScalar("Rounds per Sec", ImGuiDataType_U32, &player.rounds_per_second, &rps_min, &rps_max, " %d", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderScalar("Rounds per Sec", ImGuiDataType_U32, &player.paintball_spawner->rounds_per_second, &rps_min, &rps_max, " %d", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::Checkbox   ("Hold to fire", &hold_to_fire);
 
 			ImGui::Separator(); ImGui::Text("Gun model");
 			ImGui::SliderFloat3("Viewmodel offset", glm::value_ptr(player.viewmodel_offset), -1, 1, "%.2f", 1);
+		}
+
+		// Paintball spawners
+		if (ImGui::CollapsingHeader("Paintball spawners"))
+		{
+			ImGui::Separator(); ImGui::Text("Paintball material");
+			ImGui::ColorEdit4 ("Paint Color",    glm::value_ptr(fountain_spawner->paintball_spawner.paint_color));
+			ImGui::SliderFloat("kA", &fountain_spawner->paintball_spawner.paintball_material.kA, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("kD", &fountain_spawner->paintball_spawner.paintball_material.kD, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("kS", &fountain_spawner->paintball_spawner.paintball_material.kS, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::ColorEdit4("Ambient",  glm::value_ptr (fountain_spawner->paintball_spawner.paintball_material.ambient_color));
+			ImGui::ColorEdit4("Diffuse",  glm::value_ptr (fountain_spawner->paintball_spawner.paintball_material.diffuse_color));
+			ImGui::ColorEdit4("Specular", glm::value_ptr (fountain_spawner->paintball_spawner.paintball_material.specular_color));
+			ImGui::SliderFloat("Shininess", &fountain_spawner->paintball_spawner.paintball_material.shininess, 0, 128.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::Checkbox("Receive shadows", &fountain_spawner->paintball_spawner.paintball_material.receive_shadows);
+
+			ImGui::Separator(); ImGui::Text("Paintball");
+			ImGui::SliderFloat("Weight", &fountain_spawner->paintball_spawner.paintball_weight, 0, 10, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Size", &fountain_spawner->paintball_spawner.paintball_size, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Min size variation", &fountain_spawner->paintball_spawner.size_variation_min_multiplier, 0, 2, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Max size variation", &fountain_spawner->paintball_spawner.size_variation_max_multiplier, 0, 2, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+		
+			ImGui::Separator(); ImGui::Text("Shoot properties");
+			ImGui::SliderFloat("Shoot speed" , &fountain_spawner->paintball_spawner.shooting_speed, 0, 100, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Shoot spread", &fountain_spawner->paintball_spawner.shooting_spread, 0, 3, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+			unsigned int rps_min = 1, rps_max = 200;
+			ImGui::SliderScalar("Rounds per Sec", ImGuiDataType_U32, &fountain_spawner->paintball_spawner.rounds_per_second, &rps_min, &rps_max, " %d", ImGuiSliderFlags_AlwaysClamp);
 		}
 
 		// Light settings

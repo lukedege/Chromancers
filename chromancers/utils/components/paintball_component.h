@@ -24,16 +24,13 @@ namespace engine::components
 			paint_color { paint_color },
 			prev_velocity    { 0 },
 			current_velocity { 0 },
-			lifetime { 10.f }
+			lifetime { 7.f }
 		{}
 
 		void init()
 		{
 			parent_rb = parent->get_component<RigidBodyComponent>()->rigid_body;
 			if (!parent_rb) utils::io::warn("PaintballComponent - RigidBody component not found: a RigidBody component is required for this component to work.");
-
-			parent->material->ambient_color = paint_color;
-			parent->material->diffuse_color = paint_color;
 		}
 
 		void update(float delta_time)

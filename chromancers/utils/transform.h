@@ -98,9 +98,9 @@ namespace engine
 			glm::mat4 rotation_matrix = rot_Y * rot_X * rot_Z;
 
 			glm::mat3 rot_3{rotation_matrix};
-			_forward = glm::normalize(_forward * rot_3);
-			_right   = glm::normalize(_right   * rot_3);
-			_up      = glm::normalize(_up      * rot_3);
+			_forward = glm::normalize(glm::vec3{ 0.0f, 0.0f, 1.0f } * rot_3);
+			_right   = glm::normalize(glm::vec3{ 1.0f, 0.0f, 0.0f } * rot_3);
+			_up      = glm::normalize(glm::vec3{ 0.0f, 1.0f, 0.0f } * rot_3);
 
 			glm::mat4 scale_matrix = glm::scale(glm::mat4{ 1.0f }, _size);
 			glm::mat4 translation_matrix = glm::translate(glm::mat4{ 1.0f }, _position);

@@ -125,9 +125,9 @@ namespace engine::scene
 
 		// N.B. no need to pass the entity as arg
 		template <typename ComponentType, typename ...Args>
-		void emplace_component(Args&&... args)
+		auto emplace_component(Args&&... args)
 		{
-			components.emplace_back(std::make_unique<ComponentType>(*this, args...));
+			return components.emplace_back(std::make_unique<ComponentType>(*this, args...)).get();
 		}
 
 		// draws using the provided shader instead of the material

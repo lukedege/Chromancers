@@ -4,8 +4,10 @@ out vec4 FragColor;
 in vec2 TexCoords;
 
 uniform sampler2D image;
-uniform float t0 = 0.1f;
-uniform float t1 = 0.5f;
+uniform float t0_color = 0.1f;
+uniform float t1_color = 0.5f;
+uniform float t0_alpha = 0.7f;
+uniform float t1_alpha = 0.9f;
 
 void main()
 {             
@@ -13,8 +15,8 @@ void main()
     vec3 s_color = sampled.rgb;
     float alpha = sampled.a;
 
-	s_color = smoothstep(t0, t1, s_color);
-	//alpha = smoothstep(0.1f, .3f, s_color_mag);
+	s_color = smoothstep(t0_color, t1_color, s_color);
+	alpha = smoothstep(t0_alpha, t1_alpha, alpha);
 
     FragColor = vec4(s_color, alpha);
 }
