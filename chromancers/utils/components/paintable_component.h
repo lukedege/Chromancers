@@ -89,7 +89,7 @@ namespace engine::components
 			glBindImageTexture(1, paint_map.id(), 0, GL_FALSE, 0, GL_READ_WRITE, paint_map.format_info().internal_format);
 			
 			//glClear(GL_DEPTH_BUFFER_BIT);
-			parent->custom_draw(*painter_shader);
+			_parent->custom_draw(*painter_shader);
 			glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
 			//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 

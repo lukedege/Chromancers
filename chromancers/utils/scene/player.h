@@ -31,7 +31,7 @@ namespace engine::scene
 
 		Player() :
 			player_entity{"PlayerObject"},
-			first_person_camera{ glm::vec3{0,0,5} }
+			first_person_camera{ glm::vec3{0,0,10} }
 		{}
 
 		void init()

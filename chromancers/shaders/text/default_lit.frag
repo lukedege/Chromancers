@@ -138,7 +138,7 @@ vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
 vec2 calculateTexCoords(vec2 texCoords, vec3 viewDir)
 {
 	//Repeated UV coords
-	vec2 computedTexCoords = mod(texCoords * uv_repeat, 1.0);
+	vec2 computedTexCoords = texCoords * uv_repeat;
 
 	// branchless condition to avoid divergence
 	computedTexCoords = ((1 - sample_displacement_map) * computedTexCoords) + // no displacement map

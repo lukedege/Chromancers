@@ -134,7 +134,7 @@ namespace engine::scene
 			shadowmap_settings.shader->setFloat("far_plane", shadowmap_settings.frustum_far);
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
-			scene.draw(shadowmap_settings.shader);
+			scene.draw_except_instanced(shadowmap_settings.shader);
 
 			depthmap_framebuffer.unbind();
 		
@@ -217,7 +217,7 @@ namespace engine::scene
 		
 			shadowmap_settings.shader->bind();
 			shadowmap_settings.shader->setMat4("lightSpaceMatrix", lightspace_matrix);
-			scene.draw(shadowmap_settings.shader);
+			scene.draw_except_instanced(shadowmap_settings.shader);
 			depthmap_framebuffer.unbind();
 		
 			glCullFace(GL_BACK); // Restoring back face culling for drawing

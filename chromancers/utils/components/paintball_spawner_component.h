@@ -34,7 +34,7 @@ namespace engine::components
 			paintball_spawner.update(delta_time);
 			if (active)
 			{
-				paintball_spawner.shoot(parent->world_transform().position(), parent->world_transform().orientation(), parent->world_transform().forward());
+				paintball_spawner.shoot(_parent->world_transform().position(), _parent->world_transform().orientation(), _parent->world_transform().forward());
 			}
 		}
 

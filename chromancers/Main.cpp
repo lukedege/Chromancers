@@ -84,12 +84,7 @@ bool hold_to_fire = true;
 
 // parameters for time computation
 float deltaTime = 0.0f;
-float lastFrame = 0.0f;
-
-// rotation speed on Y axis
-float spin_speed = 30.0f;
-// boolean to start/stop animated rotation on Y angle
-bool spinning = false;
+float lastFrameTime = 0.0f;
 
 // boolean to activate/deactivate wireframe rendering
 bool wireframe = false;
@@ -100,6 +95,7 @@ float mov_light_speed = 5.f;
 
 /////////////////// INPUT functions ///////////////////////
 
+// We use these button callbacks to simply relay the key information to our input handler
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
 	if (action == GLFW_PRESS)
@@ -124,52 +120,70 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 	}
 }
 
+// Here we setup our input handler, assigning key events to an action (a lambda function)
 void setup_input_keys()
 {
-	// Pressed input
-	Input::instance().add_onPressed_callback(GLFW_KEY_W, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::FORWARD, capped_deltaTime); });
-	Input::instance().add_onPressed_callback(GLFW_KEY_S, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::BACKWARD, capped_deltaTime); });
-	Input::instance().add_onPressed_callback(GLFW_KEY_A, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::LEFT, capped_deltaTime); });
-	Input::instance().add_onPressed_callback(GLFW_KEY_D, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::RIGHT, capped_deltaTime); });
-	Input::instance().add_onPressed_callback(GLFW_KEY_Q, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::DOWN, capped_deltaTime); });
-	Input::instance().add_onPressed_callback(GLFW_KEY_E, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::UP, capped_deltaTime); });
+	// Pressed input (active while being pressed)
+	{
+		// Camera movement
+		Input::instance().add_onPressed_callback(GLFW_KEY_W, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::FORWARD, capped_deltaTime); });
+		Input::instance().add_onPressed_callback(GLFW_KEY_S, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::BACKWARD, capped_deltaTime); });
+		Input::instance().add_onPressed_callback(GLFW_KEY_A, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::LEFT, capped_deltaTime); });
+		Input::instance().add_onPressed_callback(GLFW_KEY_D, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::RIGHT, capped_deltaTime); });
+		Input::instance().add_onPressed_callback(GLFW_KEY_Q, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::DOWN, capped_deltaTime); });
+		Input::instance().add_onPressed_callback(GLFW_KEY_E, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::UP, capped_deltaTime); });
 
-	Input::instance().add_onPressed_callback(GLFW_KEY_LEFT , [&]() { currentLight->position.x -= mov_light_speed * capped_deltaTime; });
-	Input::instance().add_onPressed_callback(GLFW_KEY_RIGHT, [&]() { currentLight->position.x += mov_light_speed * capped_deltaTime; });
-	Input::instance().add_onPressed_callback(GLFW_KEY_UP   , [&]() { currentLight->position.z -= mov_light_speed * capped_deltaTime; });
-	Input::instance().add_onPressed_callback(GLFW_KEY_DOWN , [&]() { currentLight->position.z += mov_light_speed * capped_deltaTime; });
+		// Simple light movement
+		Input::instance().add_onPressed_callback(GLFW_KEY_LEFT, [&]() { currentLight->position.x -= mov_light_speed * capped_deltaTime; });
+		Input::instance().add_onPressed_callback(GLFW_KEY_RIGHT, [&]() { currentLight->position.x += mov_light_speed * capped_deltaTime; });
+		Input::instance().add_onPressed_callback(GLFW_KEY_UP, [&]() { currentLight->position.z -= mov_light_speed * capped_deltaTime; });
+		Input::instance().add_onPressed_callback(GLFW_KEY_DOWN, [&]() { currentLight->position.z += mov_light_speed * capped_deltaTime; });
 
-	Input::instance().add_onPressed_callback(GLFW_MOUSE_BUTTON_RIGHT, [&]()
-		{
-			// This control is a workaround to avoid triggering both onRelease and onPressed callbacks at the same time
-			if (!hold_to_fire) return;
+		// Shoot button (hold version)
+		Input::instance().add_onPressed_callback(GLFW_MOUSE_BUTTON_RIGHT, [&]()
+			{
+				// This control is a workaround to avoid triggering both onRelease and onPressed callbacks at the same time
+				if (!hold_to_fire) return;
 
-			player.shoot();
-		});
+				player.shoot();
+			});
+	}
 
-	// Toggled input
-	Input::instance().add_onRelease_callback(GLFW_KEY_ESCAPE  , [&]() { wdw_ptr->close(); });
-	Input::instance().add_onRelease_callback(GLFW_KEY_LEFT_ALT, [&]() { capture_mouse = !capture_mouse; });
-	Input::instance().add_onRelease_callback(GLFW_KEY_SPACE   , [&]() { main_scene.current_camera->toggle_fly(); });
-	Input::instance().add_onRelease_callback(GLFW_KEY_P, [&]() { spinning = !spinning; });
-	Input::instance().add_onRelease_callback(GLFW_KEY_R, [&]() { scene_setup(); });
-	Input::instance().add_onRelease_callback(GLFW_KEY_L, [&]() 
-		{ 
-			wireframe = !wireframe; 
-			if (wireframe)
-				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);// Draw in wireframe
-			else
-				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);// Fill in fragments
-		});
-	Input::instance().add_onRelease_callback(GLFW_MOUSE_BUTTON_RIGHT, [&]()
-		{
-			// This control is a workaround to avoid triggering both onRelease and onPressed callbacks at the same time
-			if (hold_to_fire) return;
+	// Toggled input (active while button released)
+	{
+		Input::instance().add_onRelease_callback(GLFW_KEY_ESCAPE, [&]() { wdw_ptr->close(); }); // Exit application
 
-			player.shoot();
-		});
+		// Toggle capture mouse (useful between alternating UI usage and gameplay)
+		Input::instance().add_onRelease_callback(GLFW_KEY_LEFT_ALT, [&]() { capture_mouse = !capture_mouse; });
+
+		// Remove camera vertical constraints
+		Input::instance().add_onRelease_callback(GLFW_KEY_SPACE, [&]() { main_scene.current_camera->toggle_fly(); }); 
+		
+		// Reset scene transforms to starting positions
+		Input::instance().add_onRelease_callback(GLFW_KEY_R, [&]() { scene_setup(); });
+
+		// Draw wireframe or filled
+		Input::instance().add_onRelease_callback(GLFW_KEY_L, [&]()
+			{
+				wireframe = !wireframe;
+				if (wireframe)
+					glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);// Draw in wireframe
+				else
+					glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);// Fill in fragments
+			});
+
+		// Shoot button (press version)
+		Input::instance().add_onRelease_callback(GLFW_MOUSE_BUTTON_RIGHT, [&]()
+			{
+				// This control is a workaround to avoid triggering both onRelease and onPressed callbacks at the same time
+				if (hold_to_fire) return;
+
+				player.shoot();
+			});
+	}
 }
 
+// Here we relay the information about mouse movement to the camera
 void mouse_pos_callback(GLFWwindow* window, double x_pos, double y_pos)
 {
 	float x_posf = gsl::narrow<float>(x_pos), y_posf = gsl::narrow<float>(y_pos);
@@ -240,38 +254,47 @@ int main()
 
 #pragma region shader_setup
 	// Shader setup
+
+	// Utils shaders are common types, constants and functions that can be added on top of other compiled shaders
 	std::vector<const GLchar*> utils_shaders { "shaders/types.glsl", "shaders/constants.glsl" };
 
+	// Basic shaders for debugging purposes
 	Shader basic_mvp_shader      { "basic_mvp_shader", "shaders/text/generic/mvp.vert", "shaders/text/generic/basic.frag", 4, 3 };
 	Shader debug_shader          { "debug_shader", "shaders/text/generic/mvp.vert", "shaders/text/generic/fullcolor.frag", 4, 3 };
 
+	// Lit shaders, will take into account point and directional lights for shading calculations as well as materials
 	Shader default_lit           { "default_lit", "shaders/text/default_lit.vert", "shaders/text/default_lit.frag", 4, 3, nullptr, utils_shaders };
 	Shader default_lit_instanced { "default_lit_instanced", "shaders/text/default_lit_instanced.vert", "shaders/text/default_lit.frag", 4, 3, nullptr, utils_shaders };
 
+	// Simple shader that applies a texture to a volume (especially used for full-screen quads)
 	Shader textured_shader       { "textured_shader", "shaders/text/generic/textured.vert" , "shaders/text/generic/textured.frag", 4, 3 };
 
+	// Shader for paintable objects, will load/store color values onto a paintmap
 	Shader painter_shader        { "painter_shader", "shaders/text/generic/texpainter.vert" , "shaders/text/generic/texpainter.frag", 4, 3 };
 
+	// Shaders for shadowmap calculation, respectively for directional lights and for point lights
 	Shader shadowmap_shader      { "shadowmap_shader", "shaders/text/generic/shadow_map.vert" , "shaders/text/generic/shadow_map.frag", 4, 3 };
 	Shader shadowcube_shader     { "shadowcube_shader", "shaders/text/generic/shadow_cube.vert" , "shaders/text/generic/shadow_cube.frag", 4, 3, "shaders/text/generic/shadow_cube.geom" };
 
-	// Post-fx
+	// Shaders for post-processing effects on the paintballs, to make them look more organic instead of single particles
 	Shader paintblur_shader      { "paintblur_shader", "shaders/text/generic/postprocess.vert" , "shaders/text/generic/paintblur.frag", 4, 3 };
 	Shader paintstep_shader      { "paintstep_shader", "shaders/text/generic/postprocess.vert" , "shaders/text/generic/paintstep.frag", 4, 3 };
 	
+	// Shader for merging two framebuffers into one, using their color and depth buffers as textures to determine the resulting fragments
 	Shader mergefbo_shader       { "mergefbo_shader", "shaders/text/generic/postprocess.vert" , "shaders/text/generic/merge_fbo.frag", 4, 3 };
 
+	// Bundling up shaders in collections to later perform shader uniform setting operations in bulk
 	std::vector <std::reference_wrapper<Shader>> lit_shaders, all_shaders;
 	lit_shaders.push_back(default_lit); lit_shaders.push_back(default_lit_instanced); 
 	all_shaders.push_back(basic_mvp_shader); all_shaders.push_back(default_lit); all_shaders.push_back(default_lit_instanced); 
 
-	// Lights setup 
+	// Lights and shadowmaps setup 
 	DirectionalLight::ShadowMapSettings dir_sm_settings;
 	dir_sm_settings.resolution = 1024;
 	dir_sm_settings.shader = &shadowmap_shader;
 
 	PointLight::ShadowMapSettings pl_sm_settings;
-	pl_sm_settings.resolution = 1024;
+	pl_sm_settings.resolution = 256;
 	pl_sm_settings.shader = &shadowcube_shader;
 
 	PointLight pl1 { glm::vec3{-8.0f, 2.0f, 2.5f}, glm::vec4{1, 0, 1, 1}, 0.5f, pl_sm_settings};
@@ -289,7 +312,7 @@ int main()
 
 	currentLight = point_lights[0];
 
-	// Shader commons and "constants" setup
+	// Shader uniform commons and constants setup
 	for (Shader& shader : all_shaders)
 	{
 		shader.bind();
@@ -306,7 +329,7 @@ int main()
 
 #pragma region materials_setup
 	// Textures setup
-	Texture greybricks_diffuse_tex{ "textures/brickwall.jpg" }, greybricks_normal_tex{ "textures/brickwall_normal.jpg" };
+	Texture greybricks_diffuse_tex{ "textures/brickwall.png" }, greybricks_normal_tex{ "textures/brickwall_normal.png" }, greybricks_depth_tex{ "textures/brickwall_disp.png" };
 	Texture redbricks_diffuse_tex{ "textures/bricks2.jpg" },
 		redbricks_normal_tex{ "textures/bricks2_normal.jpg" },
 		redbricks_depth_tex{ "textures/bricks2_disp.jpg" };
@@ -318,7 +341,8 @@ int main()
 	redbricks_mat.parallax_heightscale = 0.05f;
 
 	Material grey_bricks{ default_lit };
-	grey_bricks.diffuse_map = &greybricks_diffuse_tex; grey_bricks.normal_map = &greybricks_normal_tex;
+	grey_bricks.diffuse_map = &greybricks_diffuse_tex; grey_bricks.normal_map = &greybricks_normal_tex; grey_bricks.displacement_map = &greybricks_depth_tex;
+	grey_bricks.parallax_heightscale = 0.01f;
 
 	Material sph_mat { default_lit };
 
@@ -332,7 +356,7 @@ int main()
 	Material left_room_rwall_material { wall_material };
 	Material left_room_bwall_material { wall_material };
 
-	Material floor_material{ grey_bricks }; //TODO LA UV REPEAT E I SUOI ESTREMI DEVONO DIPENDERE DALLA DIMENSIONE DELLA TEXTURE E/O DALLA SIZE DELLA TRANSFORM?
+	Material floor_material{ grey_bricks }; 
 	floor_material.uv_repeat = 0.75f * std::max(floor_material.diffuse_map->width(), floor_material.diffuse_map->height());
 
 	Material cube_material { redbricks_mat };
@@ -344,10 +368,12 @@ int main()
 	Material buny_mat{ default_lit };
 
 #pragma endregion materials_setup
+
 #pragma region entities_setup
-	// Scene entities setup
+	// Model loading and scene entities emplacement
 	Model plane_model{ "models/quad.obj" }, cube_model{ "models/cube.obj" }, sphere_model{ "models/sphere.obj" }, bunny_model{ "models/bunny.obj" };
 	Model gun_model{ "models/gun/gun.obj" }; Model paintball_model{ "models/drop.obj" }; 
+	Model quad_mesh{ Mesh::simple_quad_mesh() };
 
 	Entity* cube        = main_scene.emplace_entity("cube", "brick_cube", cube_model, cube_material);
 	Entity* test_cube   = main_scene.emplace_entity("test_cube", "test_cube", cube_model, test_cube_material);
@@ -359,11 +385,12 @@ int main()
 	Entity* left_room_rwall = main_scene.emplace_entity("wall", "left_room_rightwall", plane_model, left_room_rwall_material);
 	Entity* left_room_bwall = main_scene.emplace_entity("wall", "left_room_backwall", plane_model, left_room_bwall_material);
 	Entity* bunny       = main_scene.emplace_entity("bunny", "buny", bunny_model, buny_mat);	
-	Entity* fountain       = main_scene.emplace_entity("fountain", "fountain", cube_model, fountain_material);	
+	Entity* fountain       = main_scene.emplace_entity("fountain", "Water fountain", cube_model, fountain_material);
+	Entity* fountain_bunny1     = main_scene.emplace_entity("bunny fountain", "Bunny left fountain", cube_model, fountain_material);
+	Entity* fountain_bunny2     = main_scene.emplace_entity("bunny fountain", "Bunny right fountain", cube_model, fountain_material);
 
-	// Cursor setup
+	// Map cursor setup
 	Model triangle_mesh{ Mesh::simple_triangle_mesh() };
-	Model quad_mesh{ Mesh::simple_quad_mesh() };
 	Entity cursor{ "cursor", triangle_mesh, basic_mat };
 
 	// Lightcubes setup
@@ -380,13 +407,14 @@ int main()
 		lightcube_entites[i] = main_scene.emplace_entity("light_cube", "light_cube", cube_model, lightcube_materials[i]);
 	}
 
-	// Scene entities setup 
+	// Scene entities setup
+	// We are setting this as a lambda so we can reset every transform to this initial configuration later
 	scene_setup = [&]()
 	{
 		floor_plane->set_position(glm::vec3(0.0f, -1.0f, 0.0f));
 		floor_plane->set_size(glm::vec3(100.0f, 0.1f, 100.0f));
 
-		wall_plane->set_position(glm::vec3(0.0f, 4.0f, -10.0f));
+		wall_plane->set_position(glm::vec3(0.0f, 4.0f, -12.0f));
 		wall_plane->set_orientation(glm::vec3(90.0f, 0.0f, 0.f));
 		wall_plane->set_size(glm::vec3(10.0f, 0.1f, 5.0f));
 
@@ -411,12 +439,20 @@ int main()
 		sphere->set_orientation(glm::vec3(0.0f, 0.0f, 0.0f));
 		sphere->set_size(glm::vec3(0.25f));
 
-		bunny->set_position(glm::vec3(5.0f, 3.0f, 0.0f));
+		bunny->set_position(glm::vec3(5.0f, 3.0f, -2.0f));
 		bunny->set_size(glm::vec3(1.f));
 
 		fountain->set_position(glm::vec3(-12.0f, 2.0f, 5.f));
 		fountain->set_orientation(glm::vec3(90.f, 0.0f, 0.0f));
 		fountain->set_size(glm::vec3(0.1f));
+
+		fountain_bunny1->set_position(glm::vec3(0.0f, 10.0f, -2.f));
+		fountain_bunny1->set_orientation(glm::vec3(-90.f, 0.0f, -45.0f));
+		fountain_bunny1->set_size(glm::vec3(0.1f));
+
+		fountain_bunny2->set_position(glm::vec3(9.0f, 10.0f, -2.f));
+		fountain_bunny2->set_orientation(glm::vec3(-90.f, 0.0f, 45.0f));
+		fountain_bunny2->set_size(glm::vec3(0.1f));
 
 		for (auto& lightcube_entity : lightcube_entites)
 		{
@@ -425,10 +461,10 @@ int main()
 
 		cursor.set_size(glm::vec3(3.0f));
 	};
-	scene_setup();
+	scene_setup(); // We call the lambda for the first time
 
 	// Player setup
-	Entity gun{"gun", gun_model, gun_mat};
+	Entity gun{"gun", gun_model, gun_mat}; // we don't treat player entities like other objects on the scene because we have a different update/drawing logic
 
 	PaintballSpawner gun_spawner{ physics_engine, rng, default_lit_instanced };
 	gun_spawner.paintball_model = &paintball_model;
@@ -448,6 +484,7 @@ int main()
 	physics_engine.addDebugDrawer(&phy_debug_drawer);
 	physics_engine.set_debug_mode(0);
 
+	// Physical entities setup (an entity that has a collider(thus a rigidbody) and can be influenced by forces)
 	floor_plane->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{100.0f, 0.05f, 100.0f}}}, false );
 	wall_plane ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
 	test_cube  ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 0.1f, 0.1f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
@@ -460,8 +497,9 @@ int main()
 
 	std::vector<glm::vec3> bunny_mesh_vertices = bunny_model.get_vertices_positions();
 	bunny          ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1000.0f, 1.0f, 1.0f,
-		ColliderShapeCreateInfo{ ColliderShape::HULL, glm::vec3{1}, &bunny_mesh_vertices } }, false);
+		ColliderShapeCreateInfo{ ColliderShape::HULL, glm::vec3{1.f}, &bunny_mesh_vertices } }, false);
 
+	// Paintable entities setup (an entity that has a paintmap, thus its appearance can be changed by paintballs)
 	test_cube      ->emplace_component<PaintableComponent>(painter_shader, 128, 128, &splat_tex, &splat_normal_tex);
 	wall_plane     ->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
 	cube           ->emplace_component<PaintableComponent>(painter_shader, 128, 128, &splat_tex, &splat_normal_tex);
@@ -472,17 +510,38 @@ int main()
 	left_room_rwall->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
 	left_room_bwall->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
 
+	// Paintball spawners setup (an entity that generates paintballs)
 	PaintballSpawnerComponent* fountain_spawner = static_cast<PaintballSpawnerComponent*> 
-		(fountain -> emplace_component<PaintballSpawnerComponent>(physics_engine, rng, paintball_model, default_lit_instanced));
+		(fountain   -> emplace_component<PaintballSpawnerComponent>(physics_engine, rng, paintball_model, default_lit_instanced));
+	PaintballSpawnerComponent* fountain_bunny_spawner_sx = static_cast<PaintballSpawnerComponent*> 
+		(fountain_bunny1 -> emplace_component<PaintballSpawnerComponent>(physics_engine, rng, paintball_model, default_lit_instanced));
+	PaintballSpawnerComponent* fountain_bunny_spawner_dx = static_cast<PaintballSpawnerComponent*> 
+		(fountain_bunny2 -> emplace_component<PaintballSpawnerComponent>(physics_engine, rng, paintball_model, default_lit_instanced));
 
-	fountain_spawner->paintball_spawner.shooting_speed = 8.f; fountain_spawner->paintball_spawner.shooting_spread = 1.f;
-	fountain_spawner->paintball_spawner.rounds_per_second = 30.f;
-	fountain_spawner->paintball_spawner.size_variation_min_multiplier = 0.75f;fountain_spawner->paintball_spawner.size_variation_max_multiplier = 1.25f;
-	fountain_spawner->paintball_spawner.paint_color = { 0.1f, 0.64f, 0.92f, 1.f };
-	Material& fountain_ball_material = fountain_spawner->paintball_spawner.paintball_material;
-	fountain_ball_material.shininess = 64.f; 
-	fountain_ball_material.kA = 0.17f; fountain_ball_material.kD = 0.17f; fountain_ball_material.kS = 0.5f; 
-	fountain_ball_material.receive_shadows = false;
+	std::vector<PaintballSpawnerComponent*> fountain_spawners; 
+	fountain_spawners.push_back(fountain_spawner); 
+	fountain_spawners.push_back(fountain_bunny_spawner_sx);  fountain_spawners.push_back(fountain_bunny_spawner_dx);
+
+	// shared spawner settings
+	for (auto& f : fountain_spawners)
+	{
+		f->paintball_spawner.shooting_speed = 8.f; f->paintball_spawner.shooting_spread = 1.f;
+		f->paintball_spawner.rounds_per_second = 200.f;
+		f->paintball_spawner.size_variation_min_multiplier = 0.75f;
+		f->paintball_spawner.size_variation_max_multiplier = 1.25f;
+		f->paintball_spawner.paint_color = { 0.1f, 0.64f, 0.92f, 1.f };
+
+		Material& fountain_ball_material = f->paintball_spawner.paintball_material;
+		fountain_ball_material.shininess = 64.f; 
+		fountain_ball_material.kA = 0.17f; fountain_ball_material.kD = 0.17f; fountain_ball_material.kS = 0.5f; 
+		fountain_ball_material.receive_shadows = false;
+	}
+
+	// specific spawner settings
+	fountain_bunny_spawner_sx->paintball_spawner.paint_color = { 0.1f, 0.5f, 0.f, 1.f };
+	fountain_bunny_spawner_sx->paintball_spawner.shooting_spread = 3.f;
+	fountain_bunny_spawner_dx->paintball_spawner.paint_color = { 0.5f, 0.f, 0.5f, 1.f };
+	fountain_bunny_spawner_dx->paintball_spawner.shooting_spread = 3.f;
 	
 #pragma endregion entities_setup
 
@@ -508,15 +567,18 @@ int main()
 	main_scene.init();
 	player.init();
 
+
+	// Fps Measurements variables setup
+	float avg_fps = 1, alpha = 0.9;
 	while (wdw.is_open())
 	{
 #pragma region setup_loop
 		// we determine the time passed from the beginning
 		// and we calculate the time difference between current frame rendering and the previous one
-		float currentFrame = gsl::narrow_cast<float>(glfwGetTime());
-		deltaTime = currentFrame - lastFrame;
+		float currentFrameTime = gsl::narrow_cast<float>(glfwGetTime());
+		deltaTime = currentFrameTime - lastFrameTime;
 		capped_deltaTime = deltaTime < maxSecPerFrame ? deltaTime : maxSecPerFrame;
-		lastFrame = currentFrame;
+		lastFrameTime = currentFrameTime;
 
 		main_scene.current_camera = &player.first_person_camera;
 
@@ -793,7 +855,8 @@ int main()
 
 		ImGui::Begin("Settings");
 		std::string fps_counter = "Approximate FPS: " + std::to_string(ImGui::GetIO().Framerate);
-		ImGui::Text(fps_counter.c_str());
+		std::string myfps_counter = "My avg approximate FPS: " + std::to_string(avg_fps);
+		ImGui::Text(fps_counter.c_str()); ImGui::Text(myfps_counter.c_str());
 
 		// Various settings
 		if (ImGui::CollapsingHeader("Paintball FX settings"))
@@ -839,28 +902,46 @@ int main()
 		// Paintball spawners
 		if (ImGui::CollapsingHeader("Paintball spawners"))
 		{
-			ImGui::Separator(); ImGui::Text("Paintball material");
-			ImGui::ColorEdit4 ("Paint Color",    glm::value_ptr(fountain_spawner->paintball_spawner.paint_color));
-			ImGui::SliderFloat("kA", &fountain_spawner->paintball_spawner.paintball_material.kA, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("kD", &fountain_spawner->paintball_spawner.paintball_material.kD, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("kS", &fountain_spawner->paintball_spawner.paintball_material.kS, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::ColorEdit4("Ambient",  glm::value_ptr (fountain_spawner->paintball_spawner.paintball_material.ambient_color));
-			ImGui::ColorEdit4("Diffuse",  glm::value_ptr (fountain_spawner->paintball_spawner.paintball_material.diffuse_color));
-			ImGui::ColorEdit4("Specular", glm::value_ptr (fountain_spawner->paintball_spawner.paintball_material.specular_color));
-			ImGui::SliderFloat("Shininess", &fountain_spawner->paintball_spawner.paintball_material.shininess, 0, 128.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::Checkbox("Receive shadows", &fountain_spawner->paintball_spawner.paintball_material.receive_shadows);
+			ImGui::Indent();
+			ImGui::PushID(&fountain_spawners);
+			for (int i = 0; i < fountain_spawners.size(); i++)
+			{
+				auto& fountain_spawner = fountain_spawners[i];
+				std::string fountain_label = fountain_spawner->parent()->display_name;
+				
+				if (ImGui::CollapsingHeader(fountain_label.c_str()))
+				{
+					ImGui::PushID(i);
+					ImGui::Indent();
+					ImGui::Separator(); ImGui::Text("Paintball material");
+					ImGui::ColorEdit4("Paint Color", glm::value_ptr(fountain_spawner->paintball_spawner.paint_color));
+					ImGui::SliderFloat("kA", &fountain_spawner->paintball_spawner.paintball_material.kA, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+					ImGui::SliderFloat("kD", &fountain_spawner->paintball_spawner.paintball_material.kD, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+					ImGui::SliderFloat("kS", &fountain_spawner->paintball_spawner.paintball_material.kS, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+					ImGui::ColorEdit4("Ambient", glm::value_ptr(fountain_spawner->paintball_spawner.paintball_material.ambient_color));
+					ImGui::ColorEdit4("Diffuse", glm::value_ptr(fountain_spawner->paintball_spawner.paintball_material.diffuse_color));
+					ImGui::ColorEdit4("Specular", glm::value_ptr(fountain_spawner->paintball_spawner.paintball_material.specular_color));
+					ImGui::SliderFloat("Shininess", &fountain_spawner->paintball_spawner.paintball_material.shininess, 0, 128.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+					ImGui::Checkbox("Receive shadows", &fountain_spawner->paintball_spawner.paintball_material.receive_shadows);
 
-			ImGui::Separator(); ImGui::Text("Paintball");
-			ImGui::SliderFloat("Weight", &fountain_spawner->paintball_spawner.paintball_weight, 0, 10, " %.1f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Size", &fountain_spawner->paintball_spawner.paintball_size, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Min size variation", &fountain_spawner->paintball_spawner.size_variation_min_multiplier, 0, 2, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Max size variation", &fountain_spawner->paintball_spawner.size_variation_max_multiplier, 0, 2, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-		
-			ImGui::Separator(); ImGui::Text("Shoot properties");
-			ImGui::SliderFloat("Shoot speed" , &fountain_spawner->paintball_spawner.shooting_speed, 0, 100, " %.1f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Shoot spread", &fountain_spawner->paintball_spawner.shooting_spread, 0, 3, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-			unsigned int rps_min = 1, rps_max = 200;
-			ImGui::SliderScalar("Rounds per Sec", ImGuiDataType_U32, &fountain_spawner->paintball_spawner.rounds_per_second, &rps_min, &rps_max, " %d", ImGuiSliderFlags_AlwaysClamp);
+					ImGui::Separator(); ImGui::Text("Paintball");
+					ImGui::SliderFloat("Weight", &fountain_spawner->paintball_spawner.paintball_weight, 0, 10, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+					ImGui::SliderFloat("Size", &fountain_spawner->paintball_spawner.paintball_size, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+					ImGui::SliderFloat("Min size variation", &fountain_spawner->paintball_spawner.size_variation_min_multiplier, 0, 2, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+					ImGui::SliderFloat("Max size variation", &fountain_spawner->paintball_spawner.size_variation_max_multiplier, 0, 2, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+
+					ImGui::Separator(); ImGui::Text("Shoot properties");
+					ImGui::SliderFloat("Shoot speed", &fountain_spawner->paintball_spawner.shooting_speed, 0, 100, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+					ImGui::SliderFloat("Shoot spread", &fountain_spawner->paintball_spawner.shooting_spread, 0, 3, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+					unsigned int rps_min = 1, rps_max = 200;
+					ImGui::SliderScalar("Rounds per Sec", ImGuiDataType_U32, &fountain_spawner->paintball_spawner.rounds_per_second, &rps_min, &rps_max, " %d", ImGuiSliderFlags_AlwaysClamp);
+					
+					ImGui::Unindent();
+					ImGui::PopID();
+				}
+			}
+			ImGui::PopID();
+			ImGui::Unindent();
 		}
 
 		// Light settings
@@ -915,12 +996,13 @@ int main()
 		// Other settings
 		if (ImGui::CollapsingHeader("other coefficients and scales"))
 		{
-			ImGui::Text("Normal");
-			ImGui::SliderFloat("Repeat tex##norm", &floor_plane->material->uv_repeat, 0, 3000, " % .1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::Text("Floor");
+			ImGui::SliderFloat("Repeat tex##floor", &floor_plane->material->uv_repeat, 0, 3000, " % .1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Parallax Height Scale##floor", &floor_plane->material->parallax_heightscale, 0, 0.5, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::Separator(); 
-			ImGui::Text("Parallax");
-			ImGui::SliderFloat("Height Scale", &cube->material->parallax_heightscale, 0, 0.5, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Repeat tex##prlx", &cube->material->uv_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::Text("Cube");
+			ImGui::SliderFloat("Repeat tex##cube", &cube->material->uv_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Parallax Height Scale##cube", &cube->material->parallax_heightscale, 0, 0.5, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 		}
 
 		ImGui::End();
@@ -933,6 +1015,8 @@ int main()
 		// Swap buffers and cleanup
 		main_scene.remove_marked();
 		glfwSwapBuffers(glfw_window);
+		
+		avg_fps  = alpha * avg_fps + (1.0 - alpha) * (1 / deltaTime);
 	}
 
 	ImGui_ImplOpenGL3_Shutdown();

@@ -93,10 +93,10 @@ namespace engine::scene
 #pragma endregion transform_stuff
 
 		EntityBase* parent{ nullptr };
-
+		
+		std::string display_name; 
 	protected:
 		SceneState _scene_state;
-		std::string display_name; 
 
 		Transform _local_transform; // local transform (relative to parent)
 		Transform _world_transform; // world transform (got by calculating local_transform * parent world_transform)

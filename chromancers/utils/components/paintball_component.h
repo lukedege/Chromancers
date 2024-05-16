@@ -29,7 +29,7 @@ namespace engine::components
 
 		void init()
 		{
-			parent_rb = parent->get_component<RigidBodyComponent>()->rigid_body;
+			parent_rb = _parent->get_component<RigidBodyComponent>()->rigid_body;
 			if (!parent_rb) utils::io::warn("PaintballComponent - RigidBody component not found: a RigidBody component is required for this component to work.");
 		}
 
@@ -63,8 +63,8 @@ namespace engine::components
 
 			if (other_paintable)
 			{
-				glm::vec3 paintball_size = parent->world_transform().size();
-				glm::vec3 paintball_position = parent->world_transform().position();
+				glm::vec3 paintball_size = _parent->world_transform().size();
+				glm::vec3 paintball_position = _parent->world_transform().position();
 				glm::vec3 paintball_direction = glm::normalize(prev_velocity);
 				glm::vec3 paintball_lateral = glm::normalize(glm::cross(paintball_direction, glm::vec3{0, 1, 0})); 
 				glm::vec3 paintball_up = glm::normalize(glm::cross(paintball_direction, paintball_lateral));
@@ -90,7 +90,7 @@ namespace engine::components
 	private:
 		void expire()
 		{
-			auto& scene_state = parent->scene_state();
+			auto& scene_state = _parent->scene_state();
 			scene_state.current_scene->mark_for_removal(scene_state.entity_id, scene_state.instanced_group_id);
 		}
 	};

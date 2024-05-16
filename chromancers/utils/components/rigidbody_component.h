@@ -56,7 +56,7 @@ namespace engine::components
 			{
 				GLfloat matrix[16];
 				btTransform bt_transform;
-				glm::vec3 size = parent->world_transform().size();
+				glm::vec3 size = _parent->world_transform().size();
 
 				// we take the transformation matrix of the rigid boby, as calculated by the physics engine
 				rigid_body->getMotionState()->getWorldTransform(bt_transform);
@@ -67,7 +67,7 @@ namespace engine::components
 				// Bullet matrix provides rotations and translations: it does not consider scale
 				glm::mat4 updated_transform = glm::make_mat4(matrix) * glm::scale(glm::mat4{ 1.0f }, size);
 
-				parent->set_transform(updated_transform, false);
+				_parent->set_transform(updated_transform, false);
 			}
 		}
 
@@ -79,22 +79,22 @@ namespace engine::components
 		// Syncs physics position with parent entity transform
 		void on_transform_update()
 		{
-			reset_transform(parent->world_transform());
+			reset_transform(_parent->world_transform());
 		}
 
 	private:
 		btRigidBody* create_rigidbody(RigidBodyCreateInfo rb_cinfo, bool use_transform_size = false)
 		{
-			if (use_transform_size) rb_cinfo.cs_info.size = parent->local_transform().size();
+			if (use_transform_size) rb_cinfo.cs_info.size = _parent->local_transform().size();
 
-			return physics_engine->addRigidBody(parent->world_transform().position(), parent->world_transform().orientation(), rb_cinfo);
+			return physics_engine->addRigidBody(_parent->world_transform().position(), _parent->world_transform().orientation(), rb_cinfo);
 		}
 
 		btRigidBody* create_rigidbody(RigidBodyCreateInfo rb_cinfo, CollisionFilter cf, bool use_transform_size = false)
 		{
-			if (use_transform_size) rb_cinfo.cs_info.size = parent->world_transform().size();
+			if (use_transform_size) rb_cinfo.cs_info.size = _parent->world_transform().size();
 
-			return physics_engine->addRigidBody(parent->world_transform().position(), parent->world_transform().orientation(), rb_cinfo, cf);
+			return physics_engine->addRigidBody(_parent->world_transform().position(), _parent->world_transform().orientation(), rb_cinfo, cf);
 		}
 
 		void reset_forces()

@@ -110,7 +110,7 @@ namespace engine::resources
 			};
 		}
 
-		// Creates and returns a simple triangle mesh
+		// Creates and returns a simple quad mesh
 		static Mesh simple_quad_mesh()
 		{
 			float size = 1.f;

@@ -12,10 +12,10 @@ namespace engine::components
 	class Component
 	{
 	protected:
-		scene::Entity* parent;
+		scene::Entity* _parent;
 
 	public:
-		Component(scene::Entity& parent) : parent{ &parent }{}
+		Component(scene::Entity& parent) : _parent{ &parent }{}
 		virtual ~Component() {}
 
 		virtual void init() = 0;
@@ -24,5 +24,10 @@ namespace engine::components
 
 		virtual void on_transform_update() {};
 		virtual void on_collision(scene::Entity& other, glm::vec3 contact_point, glm::vec3 normal, glm::vec3 impulse) {};
+
+		const scene::Entity* parent()
+		{
+			return _parent;
+		}
 	};
 }
