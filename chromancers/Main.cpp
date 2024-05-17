@@ -560,7 +560,7 @@ int main()
 	// Uniforms 
 	float paintstep_shader_t0_color = 0.1f, paintstep_shader_t1_color = 0.4f;
 	float paintstep_shader_t0_alpha = 0.8f, paintstep_shader_t1_alpha = 0.9f;
-	float paintblur_shader_blurstrength = 10.f;
+	float paintblur_shader_blurstrength = 10.f, paintblur_shader_depthoffset = 1.f;
 	bool paintblur_shader_ignore_alpha = false;
 	int paintblur_blurpasses = 4;
 
@@ -693,9 +693,6 @@ int main()
 			glClearColor(0.26f, 0.46f, 0.98f, 1.0f); // bluish
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			main_scene.draw_except_instanced();
-
-			// TODO Player (the gun, specifically) should be drawn on top of the world to avoid clipping 
-			player.draw();
 		}
 		world_framebuffer.unbind();
 
@@ -729,13 +726,13 @@ int main()
 					glActiveTexture(GL_TEXTURE1);
 					paintballs_framebuffer.get_depth_attachment().bind();
 					paintblur_shader.setInt("depth_image", 1);
-
 					
 					paintblur_shader.setFloat("near_plane", main_scene.current_camera->near_plane());
 					paintblur_shader.setFloat("far_plane", main_scene.current_camera->far_plane());
 
 					paintblur_shader.setBool("horizontal", horizontal);
 					paintblur_shader.setFloat("blur_strength", paintblur_shader_blurstrength);
+					paintblur_shader.setFloat("depth_offset", paintblur_shader_depthoffset);
 					paintblur_shader.setBool("ignore_alpha", paintblur_shader_ignore_alpha);
 					quad_mesh.draw();
 				}
@@ -797,6 +794,10 @@ int main()
 				quad_mesh.draw();
 			}
 			mergefbo_shader.unbind();
+
+			// Draw gun on top of world
+			glClear(GL_DEPTH_BUFFER_BIT);
+			player.draw();
 		}
 		present_framebuffer.unbind();
 
@@ -881,8 +882,9 @@ int main()
 			ImGui::SliderFloat("Shininess", &player.paintball_spawner->paintball_material.shininess, 0, 128.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::Checkbox("Receive shadows", &player.paintball_spawner->paintball_material.receive_shadows);
 			ImGui::Separator(); ImGui::Text("Blur and step FX shaders");
-			ImGui::SliderInt("Blur passes", &paintblur_blurpasses, 0, 31, "%d", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderInt("Blur passes", &paintblur_blurpasses, 0, 8, "%d", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::SliderFloat("Blur Strength", &paintblur_shader_blurstrength, 0, 16.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Blur Depth offset", &paintblur_shader_depthoffset, 0, 16.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::Checkbox("Blur ignore alpha", &paintblur_shader_ignore_alpha);
 			ImGui::SliderFloat("Smoothstep color t0", &paintstep_shader_t0_color, -1.f, 1.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::SliderFloat("Smoothstep color t1", &paintstep_shader_t1_color, -1.f, 1.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
