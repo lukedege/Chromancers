@@ -26,11 +26,11 @@ namespace engine::scene
 		glm::vec3 world_front {0, 0, 1}, world_up{0, 1, 0};
 
 		// matrix related
-		float fov{ 45.f }, aspect_ratio{ 16.f / 9.f }, near_plane{ .1f }, far_plane { 100.f };
+		float fov{ 45.f }, aspect_ratio{ 16.f / 9.f }, _near_plane{ .1f }, _far_plane { 100.f };
 
 		// matrices
 		glm::mat4 view_matrix;
-		glm::mat4 proj_matrix { glm::perspective(fov, aspect_ratio, near_plane, far_plane) };
+		glm::mat4 proj_matrix { glm::perspective(fov, aspect_ratio, _near_plane, _far_plane) };
 
 	public:
 
@@ -81,6 +81,16 @@ namespace engine::scene
 			return front;
 		}
 
+		float near_plane()
+		{
+			return _near_plane;
+		}
+
+		float far_plane()
+		{
+			return _far_plane;
+		}
+
 		void lookAt(const glm::vec3& target, const glm::vec3 up)
 		{
 			view_matrix = glm::lookAt(_position, target, up);
@@ -92,6 +102,7 @@ namespace engine::scene
 		}
 		void set_fov(float new_fov) { fov = new_fov; updateProjectionMatrix(); }
 		void set_aspect_ratio(float new_aspect_ratio) { aspect_ratio = new_aspect_ratio; updateProjectionMatrix(); }
+		void set_planes(float new_nearplane, float new_farplane) { _near_plane = new_nearplane; _far_plane = new_farplane; updateProjectionMatrix(); }
 
 #pragma region input_related
 		enum Directions
@@ -173,7 +184,7 @@ namespace engine::scene
 
 		void updateProjectionMatrix()
 		{
-			proj_matrix = glm::perspective(fov, aspect_ratio, near_plane, far_plane);
+			proj_matrix = glm::perspective(fov, aspect_ratio, _near_plane, _far_plane);
 		}
 	};
 }

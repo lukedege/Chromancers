@@ -559,8 +559,8 @@ int main()
 
 	// Uniforms 
 	float paintstep_shader_t0_color = 0.1f, paintstep_shader_t1_color = 0.4f;
-	float paintstep_shader_t0_alpha = 0.7f, paintstep_shader_t1_alpha = 0.9f;
-	float paintblur_shader_blurstrength = 1.f;
+	float paintstep_shader_t0_alpha = 0.8f, paintstep_shader_t1_alpha = 0.9f;
+	float paintblur_shader_blurstrength = 10.f;
 	bool paintblur_shader_ignore_alpha = false;
 	int paintblur_blurpasses = 4;
 
@@ -725,6 +725,15 @@ int main()
 					glActiveTexture(GL_TEXTURE0);
 					source_fb->get_color_attachment().bind();
 					paintblur_shader.setInt("image", 0);
+
+					glActiveTexture(GL_TEXTURE1);
+					paintballs_framebuffer.get_depth_attachment().bind();
+					paintblur_shader.setInt("depth_image", 1);
+
+					
+					paintblur_shader.setFloat("near_plane", main_scene.current_camera->near_plane());
+					paintblur_shader.setFloat("far_plane", main_scene.current_camera->far_plane());
+
 					paintblur_shader.setBool("horizontal", horizontal);
 					paintblur_shader.setFloat("blur_strength", paintblur_shader_blurstrength);
 					paintblur_shader.setBool("ignore_alpha", paintblur_shader_ignore_alpha);

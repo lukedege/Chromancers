@@ -32,7 +32,9 @@ namespace engine::scene
 		Player() :
 			player_entity{"PlayerObject"},
 			first_person_camera{ glm::vec3{0,0,10} }
-		{}
+		{
+			first_person_camera.set_planes(.1f, 100.f);
+		}
 
 		void init()
 		{
