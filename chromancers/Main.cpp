@@ -207,6 +207,7 @@ void mouse_pos_callback(GLFWwindow* window, double x_pos, double y_pos)
 /////////////////// MAIN function ///////////////////////
 int main()
 {
+#pragma region window_setup
 	Window wdw
 	{
 		Window::window_create_info
@@ -243,6 +244,7 @@ int main()
 	ImGui::StyleColorsDark();
 	ImGui_ImplGlfw_InitForOpenGL(glfw_window, true);
 	ImGui_ImplOpenGL3_Init("#version 430");
+#pragma endregion window_setup
 
 #pragma region scene_setup	
 	// Camera setup
@@ -253,7 +255,7 @@ int main()
 #pragma endregion scene_setup
 
 #pragma region shader_setup
-	// Shader setup
+	// Shader and lights setup
 
 	// Utils shaders are common types, constants and functions that can be added on top of other compiled shaders
 	std::vector<const GLchar*> utils_shaders { "shaders/types.glsl", "shaders/constants.glsl" };
@@ -325,6 +327,14 @@ int main()
 		lit_shader.setUint("nPointLights", gsl::narrow<unsigned int>(point_lights.size()));
 		lit_shader.setUint("nDirLights", gsl::narrow<unsigned int>(dir_lights.size()));
 	}
+
+	// Specific uniforms setup (we use these in imgui for interactability)
+	float paintstep_shader_t0_color = 0.1f, paintstep_shader_t1_color = 0.4f;
+	float paintstep_shader_t0_alpha = 0.8f, paintstep_shader_t1_alpha = 0.9f;
+	float paintblur_shader_blurstrength = 10.f, paintblur_shader_depthoffset = 1.f;
+	bool paintblur_shader_ignore_alpha = false;
+	int paintblur_blurpasses = 4;
+
 #pragma endregion shader_setup
 
 #pragma region materials_setup
@@ -384,10 +394,10 @@ int main()
 	Entity* left_room_lwall = main_scene.emplace_entity("wall", "left_room_leftwall", plane_model, left_room_lwall_material);
 	Entity* left_room_rwall = main_scene.emplace_entity("wall", "left_room_rightwall", plane_model, left_room_rwall_material);
 	Entity* left_room_bwall = main_scene.emplace_entity("wall", "left_room_backwall", plane_model, left_room_bwall_material);
-	Entity* bunny       = main_scene.emplace_entity("bunny", "buny", bunny_model, buny_mat);	
-	Entity* fountain       = main_scene.emplace_entity("fountain", "Water fountain", cube_model, fountain_material);
-	Entity* fountain_bunny1     = main_scene.emplace_entity("bunny fountain", "Bunny left fountain", cube_model, fountain_material);
-	Entity* fountain_bunny2     = main_scene.emplace_entity("bunny fountain", "Bunny right fountain", cube_model, fountain_material);
+	Entity* bunny           = main_scene.emplace_entity("bunny", "buny", bunny_model, buny_mat);	
+	Entity* fountain        = main_scene.emplace_entity("fountain", "Water fountain", cube_model, fountain_material);
+	Entity* fountain_bunny1 = main_scene.emplace_entity("bunny fountain", "Bunny left fountain", cube_model, fountain_material);
+	Entity* fountain_bunny2 = main_scene.emplace_entity("bunny fountain", "Bunny right fountain", cube_model, fountain_material);
 
 	// Map cursor setup
 	Model triangle_mesh{ Mesh::simple_triangle_mesh() };
@@ -526,7 +536,7 @@ int main()
 	for (auto& f : fountain_spawners)
 	{
 		f->paintball_spawner.shooting_speed = 8.f; f->paintball_spawner.shooting_spread = 1.f;
-		f->paintball_spawner.rounds_per_second = 200.f;
+		f->paintball_spawner.rounds_per_second = 200;
 		f->paintball_spawner.size_variation_min_multiplier = 0.75f;
 		f->paintball_spawner.size_variation_max_multiplier = 1.25f;
 		f->paintball_spawner.paint_color = { 0.1f, 0.64f, 0.92f, 1.f };
@@ -545,31 +555,39 @@ int main()
 	
 #pragma endregion entities_setup
 
-	// Framebuffers
+#pragma region framebuffers_setup
+	// Framebuffers setup
+	// This framebuffer will be used to display the entities from the whole scene except the paintballs
 	Framebuffer world_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
+	
+	// This framebuffer will be used to display the instanced paintball entities
 	Framebuffer paintballs_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
 	
-	Framebuffer postfx0_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
-	Framebuffer postfx1_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
+	// These framebuffers will be used for the "ping-pong" blur passes
+	Framebuffer postfxblur0_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
+	Framebuffer postfxblur1_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
+	
+	// This framebuffer will be used for the smoothstep effect of paintballs
 	Framebuffer paintstep_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
 
+	// This framebuffer will be used to display an birds-eye view of the world centered on the player
 	Framebuffer map_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
 
+	// This framebuffer will be used to group
 	Framebuffer present_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
-
-	// Uniforms 
-	float paintstep_shader_t0_color = 0.1f, paintstep_shader_t1_color = 0.4f;
-	float paintstep_shader_t0_alpha = 0.8f, paintstep_shader_t1_alpha = 0.9f;
-	float paintblur_shader_blurstrength = 10.f, paintblur_shader_depthoffset = 1.f;
-	bool paintblur_shader_ignore_alpha = false;
-	int paintblur_blurpasses = 4;
-
+#pragma endregion framebuffers_setup
+	
+#pragma region pre-loop_setup
 	main_scene.init();
 	player.init();
 
-
 	// Fps Measurements variables setup
-	float avg_fps = 1, alpha = 0.9;
+	float avg_fps = 1.f, alpha = 0.9f;
+#pragma endregion pre-loop_setup
+
+#pragma region rendering_loop
+
+	// Rendering loop
 	while (wdw.is_open())
 	{
 #pragma region setup_loop
@@ -579,6 +597,8 @@ int main()
 		deltaTime = currentFrameTime - lastFrameTime;
 		capped_deltaTime = deltaTime < maxSecPerFrame ? deltaTime : maxSecPerFrame;
 		lastFrameTime = currentFrameTime;
+
+		avg_fps  = alpha * avg_fps + (1.0f - alpha) * (1 / deltaTime);
 
 		main_scene.current_camera = &player.first_person_camera;
 
@@ -706,7 +726,7 @@ int main()
 		paintballs_framebuffer.unbind();
 
 		// We perform a number of blur passes to make paintball countours less evident, rendering the whole paintball stream more cohesive
-		std::vector<Framebuffer*> postfx_fbos; postfx_fbos.push_back(&postfx0_framebuffer); postfx_fbos.push_back(&postfx1_framebuffer);
+		std::vector<Framebuffer*> postfx_fbos; postfx_fbos.push_back(&postfxblur0_framebuffer); postfx_fbos.push_back(&postfxblur1_framebuffer);
 		Framebuffer *destination_fb = postfx_fbos[0], *source_fb = &paintballs_framebuffer, *paintblur_fb = &paintballs_framebuffer;
 		paintblur_shader.bind();
 		{
@@ -841,7 +861,6 @@ int main()
 #pragma endregion map_draw
 
 #pragma region present
-
 		// World present onto default framebuffer
 		glBlitNamedFramebuffer(present_framebuffer.id(), 0, 0, 0, ws.width, ws.height, 0, 0, ws.width, ws.height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
@@ -962,6 +981,16 @@ int main()
 			ImGui::PushID(&point_lights);
 			if (ImGui::CollapsingHeader("Pointlights"))
 			{
+				if (ImGui::BeginCombo("Selected light##combo", "0")) // The second parameter is the label previewed before opening the combo.
+				{
+					for (int n = 0; n < point_lights.size(); n++)
+					{
+						bool is_selected = (currentLight == point_lights[n]); // You can store your selection however you want, outside or inside your objects
+						if (ImGui::Selectable(std::to_string(n).c_str(), is_selected))
+							currentLight = point_lights[n];
+					}
+					ImGui::EndCombo();
+				}
 				for (int i = 0; i < point_lights.size(); i++)
 				{
 					ImGui::PushID(i);
@@ -1023,16 +1052,20 @@ int main()
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 #pragma endregion imgui_draw
 
+#pragma region loop_cleanup
 		// Swap buffers and cleanup
 		main_scene.remove_marked();
 		glfwSwapBuffers(glfw_window);
-		
-		avg_fps  = alpha * avg_fps + (1.0 - alpha) * (1 / deltaTime);
+#pragma endregion loop_cleanup
 	}
 
+#pragma endregion rendering_loop
+
+#pragma region post-loop_cleanup
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
-
+#pragma endregion post-loop_cleanup
+	
 	return 0;
 }
