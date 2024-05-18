@@ -133,6 +133,7 @@ namespace engine::physics
         int mask ; // which groups the rigidbody should collide with
     };
 
+	// Implementation of Bullet's physics engine templated on the type of user object linked to rigidbodies (useful later in collision detection and resolution)
     template<typename UserObject>
     class PhysicsEngine
     {

@@ -11,7 +11,7 @@
 
 namespace engine::resources
 {
-	//unifica con model, funzione statica per caricare obj con più sottomesh
+	// Simple vertex properties
 	struct Vertex
 	{
 		glm::vec3 position; 
@@ -19,6 +19,7 @@ namespace engine::resources
 		glm::vec3 normal, tangent, bitangent;
 	};
 
+	// Class for loading and managing a mesh 
 	class Mesh
 	{
 	public:
@@ -86,6 +87,7 @@ namespace engine::resources
 			glBindVertexArray(0);
 		}
 
+		// Creates and returns a vector of vertex positions from the mesh
 		std::vector<glm::vec3> get_vertices_positions() const
 		{
 			std::vector<glm::vec3> ret_vertices;

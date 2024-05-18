@@ -6,6 +6,7 @@
 
 namespace engine::components
 {
+	// Component that gives an entity a physical rigidbody and keeps its transform synced with its counterpart in the physics world
 	class RigidBodyComponent : public Component
 	{
 		using PhysicsEngine = engine::physics::PhysicsEngine<Entity>;
@@ -15,11 +16,11 @@ namespace engine::components
 	public:
 		constexpr static auto COMPONENT_ID = 0;
 	private:
-		PhysicsEngine* physics_engine;
+		PhysicsEngine* physics_engine; // Pointer to the physics engine
+		bool is_kinematic; // If body mass is zero, we don't need to update it through physics
 
 	public:
-		btRigidBody* rigid_body;
-		bool is_kinematic; // TODO check if rigid body's mass needs to be set to zero or this is enough
+		btRigidBody* rigid_body; // Pointer to the rigidbody
 
 		RigidBodyComponent(Entity& parent, PhysicsEngine& phy_engine, RigidBodyCreateInfo rb_cinfo, bool use_transform_size = false) :
 			Component(parent),
@@ -27,7 +28,7 @@ namespace engine::components
 			rigid_body { create_rigidbody(rb_cinfo, use_transform_size) },
 			is_kinematic {rb_cinfo.mass <= 0}
 		{
-			rigid_body->setUserPointer(&parent); // sets user pointer used when resolving collisions
+			rigid_body->setUserPointer(&parent); // sets parent entity as user pointer used when resolving collisions
 		}
 
 		RigidBodyComponent(Entity& parent, PhysicsEngine& phy_engine, RigidBodyCreateInfo rb_cinfo, CollisionFilter cf, bool use_transform_size = false) :
@@ -36,7 +37,7 @@ namespace engine::components
 			rigid_body { create_rigidbody(rb_cinfo, cf, use_transform_size) },
 			is_kinematic {rb_cinfo.mass <= 0}
 		{
-			rigid_body->setUserPointer(&parent); // sets user pointer used when resolving collisions
+			rigid_body->setUserPointer(&parent); // sets parent entity as user pointer used when resolving collisions
 		}
 
 		~RigidBodyComponent()
@@ -58,7 +59,7 @@ namespace engine::components
 				btTransform bt_transform;
 				glm::vec3 size = _parent->world_transform().size();
 
-				// we take the transformation matrix of the rigid boby, as calculated by the physics engine
+				// we take the transformation matrix of the rigid body, as calculated by the physics engine
 				rigid_body->getMotionState()->getWorldTransform(bt_transform);
 
 				// we convert the Bullet matrix (transform) to an array of floats
@@ -67,6 +68,7 @@ namespace engine::components
 				// Bullet matrix provides rotations and translations: it does not consider scale
 				glm::mat4 updated_transform = glm::make_mat4(matrix) * glm::scale(glm::mat4{ 1.0f }, size);
 
+				// Set the parent entity transform without triggering "on_transform_update()" events to avoid infinite recursion
 				_parent->set_transform(updated_transform, false);
 			}
 		}
@@ -76,13 +78,14 @@ namespace engine::components
 			return COMPONENT_ID;
 		}
 
-		// Syncs physics position with parent entity transform
 		void on_transform_update()
 		{
+			// Syncs physics position with parent entity transform
 			reset_transform(_parent->world_transform());
 		}
 
 	private:
+		// Creates and add a rigidbody to the dynamic world through the physics engine
 		btRigidBody* create_rigidbody(RigidBodyCreateInfo rb_cinfo, bool use_transform_size = false)
 		{
 			if (use_transform_size) rb_cinfo.cs_info.size = _parent->local_transform().size();
@@ -90,6 +93,7 @@ namespace engine::components
 			return physics_engine->addRigidBody(_parent->world_transform().position(), _parent->world_transform().orientation(), rb_cinfo);
 		}
 
+		// Creates and add a rigidbody to the dynamic world providing a collision filter for it through the physics engine
 		btRigidBody* create_rigidbody(RigidBodyCreateInfo rb_cinfo, CollisionFilter cf, bool use_transform_size = false)
 		{
 			if (use_transform_size) rb_cinfo.cs_info.size = _parent->world_transform().size();
@@ -97,9 +101,9 @@ namespace engine::components
 			return physics_engine->addRigidBody(_parent->world_transform().position(), _parent->world_transform().orientation(), rb_cinfo, cf);
 		}
 
+		// Resets forces and velocities on the rigidbody
 		void reset_forces()
 		{
-			// Resetting forces and velocities
 			rigid_body->setLinearVelocity(btVector3{ 0,0,0 });
 			rigid_body->setAngularVelocity(btVector3{ 0,0,0 });
 			rigid_body->clearForces();
@@ -107,6 +111,7 @@ namespace engine::components
 			rigid_body->activate();
 		}
 
+		// Resets rigidbody's internal transform given a Bullet transform
 		void reset_bt_transform(const btTransform& new_transform)
 		{
 			// Updating physics transforms
@@ -114,6 +119,7 @@ namespace engine::components
 			rigid_body->getMotionState()->setWorldTransform(new_transform);
 		}
 
+		// Resets rigidbody's internal transform given an entity transform
 		void reset_transform(const Transform& new_transform)
 		{
 			// Copying old transform and changing the position
@@ -132,6 +138,7 @@ namespace engine::components
 			reset_forces();
 		}
 		
+		// Resets rigidbody's internal position given a glm vec3
 		void reset_position(const glm::vec3& new_position)
 		{
 			// Copying old transform and changing the position

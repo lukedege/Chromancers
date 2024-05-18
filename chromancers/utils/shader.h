@@ -1,8 +1,4 @@
 #pragma once
-/*
-   Shader class
-   - loading Shader source code, Shader Program creation
-*/
 
 #include <string>
 #include <fstream>
@@ -21,6 +17,7 @@
 
 namespace engine::resources
 {
+	// Class for loading and managing shaders 
 	class Shader
 	{
 	private:
@@ -38,12 +35,6 @@ namespace engine::resources
 		{
 			loadFromText(vertPath, fragPath, geomPath, utilPaths);
 		}
-		
-		/*Shader(const GLchar* vertSpirvPath, const GLchar* fragSpirvPath, const GLchar* geomSpirvPath = 0) :
-			program{ glCreateProgram() }, glMajorVersion{ 4 }, glMinorVersion{ 6 } // SpirV is core from version 4.6
-		{
-			loadFromSpirV(vertSpirvPath, fragSpirvPath, geomSpirvPath);
-		}*/
 
 		           Shader(const Shader& copy) = delete;
 		Shader& operator=(const Shader& copy) = delete;
@@ -83,11 +74,11 @@ namespace engine::resources
 			dispose();
 		}
 
+		// Mirroring openGL binds
 		void bind()   const noexcept { /*utils::io::info(  "binding ", _name);*/ glUseProgram(_program); }
 		void unbind() const noexcept { /*utils::io::info("unbinding ", _name);*/ glUseProgram(0); }
 
 		GLint program() const noexcept { return _program; };
-
 		std::string name() const noexcept { return _name; };
 
 		std::vector<std::string> findSubroutines(GLenum shaderType)
@@ -143,7 +134,7 @@ namespace engine::resources
 
 			return ret;
 		}
-
+		
 		GLuint getSubroutineIndex(GLenum shaderType, const char* subroutineName)
 		{
 			return glGetSubroutineIndex(_program, shaderType, subroutineName);
@@ -217,14 +208,16 @@ namespace engine::resources
 			}
 		}
 
-#pragma region text
+		// Load, compile, assemble and link a shader program
 		void loadFromText(const GLchar* vertPath, const GLchar* fragPath, const GLchar* geomPath, std::vector<const GLchar*> utilPaths = {})
 		{
 			GLuint vertexShader, fragmentShader, geometryShader;
 
+			// Loading vertex and fragment
 			const std::string vertSource = loadSourceText(vertPath);
 			const std::string fragSource = loadSourceText(fragPath);
 
+			// Loading utils
 			std::string utilsSource;
 
 			for (const GLchar* utilPath : utilPaths)
@@ -232,12 +225,14 @@ namespace engine::resources
 				utilsSource += loadSourceText(utilPath) + "\n";
 			}
 
+			// Compiling vertex and fragment with the prepended utils
 			vertexShader = compileShaderText(vertSource, GL_VERTEX_SHADER, utilsSource);
 			fragmentShader = compileShaderText(fragSource, GL_FRAGMENT_SHADER, utilsSource);
 
 			glAttachShader(_program, vertexShader);
 			glAttachShader(_program, fragmentShader);
 
+			// If a geometry shader file was specified, load and compile it as well
 			if (geomPath)
 			{
 				const std::string geomSource = loadSourceText(geomPath);
@@ -245,18 +240,21 @@ namespace engine::resources
 				glAttachShader(_program, geometryShader);
 			}
 
+			// Link program
 			try {
 				glLinkProgram(_program);
 			}
 			catch (std::exception e) { auto x = glGetError(); checkLinkingErrors(); std::cout << e.what(); }
 			checkLinkingErrors();
 
+			// Cleanup
 			glDeleteShader(vertexShader);
 			glDeleteShader(fragmentShader);
 
 			if (geomPath) { glDeleteShader(geometryShader); }
 		}
 
+		// Load the source code of a shader
 		const std::string loadSourceText(const GLchar* sourcePath) const noexcept
 		{
 			std::string         sourceText;
@@ -285,6 +283,7 @@ namespace engine::resources
 			return sourceText;
 		}
 
+		// Compile a previously loaded shader source, prepending eventual shader utilities and commons (as if they were #includes)
 		GLuint compileShaderText(const std::string& shaderSource, GLenum shaderType, const std::string& utilsSource = "") const noexcept
 		{
 			std::string mergedSource = "";
@@ -305,75 +304,6 @@ namespace engine::resources
 			checkCompileErrors(shader, shaderType);
 			return shader;
 		}
-#pragma endregion
 		
-#pragma region spirv
-		/*void loadFromSpirV(const GLchar* vertPath, const GLchar* fragPath, const GLchar* geomPath, std::vector<const GLchar*> utilPaths = {})
-		{
-			//TODO from example code at https://www.khronos.org/opengl/wiki/SPIR-V
-			GLuint vertexShader, fragmentShader;
-
-			// Read our shaders into the appropriate buffers
-			std::vector<char> vertexSpirv = loadSourceSpirV(vertPath);// Get SPIR-V for vertex shader.
-			std::vector<char> fragmentSpirv = loadSourceSpirV(fragPath);// Get SPIR-V for fragment shader.
-
-			fragmentShader = compileShaderSpirv(fragmentSpirv, GL_FRAGMENT_SHADER);
-			vertexShader = compileShaderSpirv(vertexSpirv, GL_VERTEX_SHADER);
-
-
-			// Vertex and fragment shaders are successfully compiled.
-			// Now time to link them together into a program.
-
-			// Attach our shaders to our program
-			glAttachShader(program, vertexShader);
-			glAttachShader(program, fragmentShader);
-
-			// Link our program
-			try {
-				glLinkProgram(program);
-			}
-			catch (std::exception e) { auto x = glGetError(); checkLinkingErrors(); std::cout << e.what(); }
-			checkLinkingErrors();
-
-			// Always detach shaders after a successful link.
-			glDetachShader(program, vertexShader); // delete or detach??
-			glDetachShader(program, fragmentShader);
-		}
-
-		std::vector<char> loadSourceSpirV(const GLchar* spirvPath)
-		{
-			std::ifstream shaderFile;
-			shaderFile.open(spirvPath, std::ios::binary | std::ios::ate);
-			if (shaderFile.is_open())
-			{
-				size_t size = shaderFile.tellg();
-				char* bin = new char[size];
-				shaderFile.seekg(0, std::ios::beg);
-				shaderFile.read(bin, size);
-				std::vector<char> ret{ bin, bin + size };
-				delete[] bin;
-				return ret;
-			}
-			return {};
-		}
-
-		GLuint compileShaderSpirv(const std::vector<char> shaderSpirv, GLenum shaderType)
-		{
-			// Create an empty shader handle
-			GLuint shader = glCreateShader(shaderType);
-
-			// Apply the shader SPIR-V to the shader object.
-			glShaderBinary(1, &shader, GL_SHADER_BINARY_FORMAT_SPIR_V, shaderSpirv.data(), gsl::narrow<GLsizei>(shaderSpirv.size()));
-
-			// Specialize the shader.
-			//std::string entrypoint = "main"; // Get VS entry point name
-			glSpecializeShader(shader, "main", 0, nullptr, nullptr);
-
-			// Specialization is equivalent to compilation.
-			checkCompileErrors(shader, shaderType);
-
-			return shader;
-		}*/
-#pragma endregion
 	};
 }

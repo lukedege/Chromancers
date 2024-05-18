@@ -25,7 +25,11 @@ namespace engine::components
 		virtual void update(float delta_time) = 0;
 
 		// Callback for various events that could be triggered by the parent entity
+		
+		// This method is called by the parent entity when its transform (world or local) changed
 		virtual void on_transform_update() {}; 
+		
+		// This method is called by the parent entity when it's aware it is part of a collision happening
 		virtual void on_collision(scene::Entity& other, glm::vec3 contact_point, glm::vec3 normal, glm::vec3 impulse) {};
 
 		const scene::Entity* parent()

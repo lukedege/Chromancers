@@ -10,12 +10,18 @@
 
 namespace engine::components
 {
+	// Component that makes an entity explode on impact with another entity's rigidbody: if the impacted entity has a paintmap, it will be altered by this component's paint color
 	class PaintballComponent : public Component
 	{
-		btRigidBody* parent_rb;
-		glm::vec4 paint_color;
-		glm::vec3 prev_velocity, current_velocity; // we need this as current velocity when collision happens factors in the bounce...
-		float lifetime; // i think its seconds
+	private:
+		btRigidBody* parent_rb; // Pointer to parent entity rigidbody
+		glm::vec4 paint_color;  // Paint color to show and to apply on impact
+
+		glm::vec3 prev_velocity, current_velocity; // Caching the last and current velocities of the paintball for collision resolution
+
+		float lifetime; // Remaining lifetime (in seconds) of the entity: when this reaches zero, the parent entity will be set for destruction
+		// This is to avoid paintballs that never hit anything to live undefinitely and tank performance
+
 	public:
 		constexpr static auto COMPONENT_ID = 1;
 
@@ -35,20 +41,23 @@ namespace engine::components
 
 		void update(float delta_time)
 		{
+			// Update cached velocities
 			prev_velocity = current_velocity;
 			current_velocity = physics::to_glm_vec3(parent_rb->getLinearVelocity());
 			
+			// Update the lifetime each frame and set for destruction if reaches zero
 			lifetime -= delta_time;
 			if (lifetime <= 0.f)
 				expire();
 
-			// cancel out gravity
+			// Cancel out gravity
 			btVector3 gravity = btVector3(0, -9.82f, 0);
 			parent_rb->applyCentralForce(-gravity);
 
-			// emulate offset center of mass
-			btVector3 imploc = parent_rb->getWorldTransform().getBasis() * btVector3(0, -0.01f, -0.005f);
-			parent_rb->applyForce(gravity, imploc);
+			// Emulate offset center of mass and reapply gravity
+			// paintballs should have more mass towards the front of the projectile
+			btVector3 impulse_location = parent_rb->getWorldTransform().getBasis() * btVector3(0, -0.01f, -0.005f);
+			parent_rb->applyForce(gravity, impulse_location);
 		}
 
 		int type()
@@ -58,14 +67,16 @@ namespace engine::components
 
 		void on_collision(scene::Entity& other, glm::vec3 contact_point, glm::vec3 normal, glm::vec3 impulse) 
 		{
-			
 			PaintableComponent* other_paintable = other.get_component<PaintableComponent>();
 
 			if (other_paintable)
 			{
 				glm::vec3 paintball_size = _parent->world_transform().size();
 				glm::vec3 paintball_position = _parent->world_transform().position();
-				glm::vec3 paintball_direction = glm::normalize(prev_velocity);
+
+				// We use the previous velocity since the current velocity may have factored in a bounce  
+				// in the physics engine before we can destroy the paintball
+				glm::vec3 paintball_direction = glm::normalize(prev_velocity); 
 				glm::vec3 paintball_lateral = glm::normalize(glm::cross(paintball_direction, glm::vec3{0, 1, 0})); 
 				glm::vec3 paintball_up = glm::normalize(glm::cross(paintball_direction, paintball_lateral));
 				
@@ -74,20 +85,16 @@ namespace engine::components
 				glm::mat4 paintProjection = glm::ortho(-frustum_size, frustum_size, -frustum_size, frustum_size, paint_near_plane, paint_far_plane);
 				glm::mat4 paintView = glm::lookAt(paintball_position - paintball_direction * distance_bias, paintball_position + paintball_direction, paintball_up);
 
+				// Make the paintable entity aware of the paintball collision and let it update its paintmap
 				other_paintable->update_paintmap(paintProjection * paintView, paintball_direction, paint_color);
 			}
 
 			// Set for destruction
 			expire();
-
-			/*
-			utils::io::info(parent->display_name, " is colliding with ", other.display_name, " at coords ", glm::to_string(contact_point));
-			utils::io::info("Normal is: ", glm::to_string(normal));
-			utils::io::info("Impulse is: ", glm::to_string(impulse));
-			utils::io::info("--------------------------------------------------------------------------");
-			*/
 		}
 	private:
+
+		// We ask the parent entity scene to mark this entity for destruction at the end of this frame
 		void expire()
 		{
 			auto& scene_state = _parent->scene_state();

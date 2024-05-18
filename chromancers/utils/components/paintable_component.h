@@ -7,7 +7,7 @@
 
 namespace engine::components
 {
-	// Component that stores a paintmap for the parent entity, making it possible to change its appearance through impact with paintballs
+	// Component that makes an entity paintable by storing a paintmap and making it react to paintball impacts
 	class PaintableComponent : public Component
 	{
 		using Shader = engine::resources::Shader;

@@ -37,6 +37,7 @@ namespace engine::scene
 
 	void EntityBase::on_collision(Entity& other, glm::vec3 contact_point, glm::vec3 norm, glm::vec3 impulse)
 	{
+		// Invoke the on_collision event for each component
 		for (auto& c : components)
 		{
 			c->on_collision(other, contact_point, norm, impulse);
@@ -99,17 +100,22 @@ namespace engine::scene
 
 	void Entity::draw() const noexcept
 	{
-		if (!(material->shader)) { utils::io::error("ENTITY - Material has no shader"); return; }
+		if (!(material))         { utils::io::error("ENTITY - Entity ", display_name, " has no material"); return; }
+		if (!(model   ))         { utils::io::error("ENTITY - Entity ", display_name, " has no model")   ; return; }
 
-		Shader& current_shader = *material->shader; // TODO check material has always a shader
+		if (!(material->shader)) { utils::io::error("ENTITY - Entity's ", display_name, " material has no shader"); return; }
+
+		Shader& current_shader = *material->shader;
 
 		current_shader.bind();
 		current_shader.setMat4("modelMatrix", _world_transform.matrix());
 
+		// If the model has materials of its own, use them
 		if (model->has_material())
 		{
 			model->draw(current_shader);
 		}
+		// otherwise use entity's material
 		else
 		{
 			material->bind();
@@ -119,9 +125,10 @@ namespace engine::scene
 
 	}
 
-	// draws using the provided shader instead of the material
 	void Entity::custom_draw(const Shader& shader) const noexcept
 	{
+		if (!(model)) { utils::io::error("ENTITY - Entity ", display_name, " has no model"); return; }
+
 		shader.bind();
 
 		shader.setMat4("modelMatrix", _world_transform.matrix());

@@ -24,13 +24,16 @@ namespace engine::scene
 {
 	class Scene; // Forward declaration of Scene class (we aren't using it explicitly so we don't need the include, avoiding the cyclical include)
 
+	// Class representing an object inside the game world 
 	class EntityBase : utils::oop::non_movable
 	{
 	protected:
 		friend class Scene;
 
+		using Component = engine::components::Component;
+
 		// This is a record for the entity to remember 
-		// - to which scene it is into (current_scene)
+		// - in which scene it is into (current_scene)
 		// - by which string id its identified in it (entity_id)
 		// - (optional) in which group of instanced drawing elements it belongs to (instanced_group_id)
 		struct SceneState
@@ -38,10 +41,17 @@ namespace engine::scene
 			Scene* current_scene;
 			std::string entity_id;
 			std::optional<std::string> instanced_group_id;
-		};
+		} _scene_state;
 
-		using Component = engine::components::Component;
+		Transform _local_transform; // local transform (relative to parent)
+		Transform _world_transform; // world transform (got by calculating local_transform * parent world_transform)
+
+		std::vector<std::unique_ptr<Component>> components; // Collection of components this entity owns
+
 	public:
+		EntityBase* parent{ nullptr }; // Parent entity (can be null)
+		std::string display_name; // Display-friendly name for the entity
+
 		EntityBase(std::string display_name = "");
 
 		~EntityBase();
@@ -50,16 +60,18 @@ namespace engine::scene
 
 		void update(float delta_time) noexcept;
 
+		// Callback for when the entity is involved in a collision
 		void on_collision(Entity& other, glm::vec3 contact_point, glm::vec3 norm, glm::vec3 impulse);
 
-		// N.B. no need to pass the entity as arg
+		// Emplaces a component into the entity's collection given its construction arguments and returns a raw ptr to it
+		// N.B. no need to pass the entity itself as argument from the outside
 		template <typename ComponentType, typename ...Args>
-		void emplace_component(Args&&... args)
+		auto emplace_component(Args&&... args)
 		{
-			components.emplace_back(std::make_unique<ComponentType>(*this, args...));
+			return components.emplace_back(std::make_unique<ComponentType>(*this, args...)).get();
 		}
 
-		// Returns a raw ptr to the first component matching the type provided, nullptr otherwise
+		// Finds and returns a raw ptr to the first component matching the type provided, nullptr otherwise
 		template <typename ComponentType>
 		ComponentType* get_component()
 		{
@@ -90,49 +102,44 @@ namespace engine::scene
 		void scale         (const glm::vec3& scale)           noexcept;
 
 		void set_transform (const glm::mat4& matrix, bool trigger_update = true) noexcept;
-#pragma endregion transform_stuff
-
-		EntityBase* parent{ nullptr };
 		
-		std::string display_name; 
 	protected:
-		SceneState _scene_state;
-
-		Transform _local_transform; // local transform (relative to parent)
-		Transform _world_transform; // world transform (got by calculating local_transform * parent world_transform)
-
-		std::vector<std::unique_ptr<Component>> components; // map should be okay also
-
-		void on_transform_update();
+		// Function to update the world transform after the local transform has changed
+		// e.g. through set functions, from rigidbody syncing or from parent syncing
 		void update_world_transform();
+
+		// Callback for when the entity's transform has changed
+		void on_transform_update();
+#pragma endregion transform_stuff
 	};
 
-	// Object in scene
+	// Class representing a visual object inside the game world 
 	class Entity : public EntityBase
 	{
-		friend class Scene;
+		friend class Scene; // friendship isn't inheritable so we have to respecify it
 
 		using Shader = engine::resources::Shader;
 		using Model = engine::resources::Model;
 		using Material = engine::resources::Material;
-		using Component = engine::components::Component;
 
 	public:
-		Material* material;
-		Model* model; 
+		Model* model;       // Pointer to the model representing the entity
+		Material* material; // Pointer to the material representing the entity
 
 		Entity(std::string display_name, Model& drawable, Material& material);
 
-		// N.B. no need to pass the entity as arg
+		// Emplaces a component into the entity's collection given its construction arguments and returns a raw ptr to it
+		// N.B. no need to pass the entity itself as argument from the outside
 		template <typename ComponentType, typename ...Args>
 		auto emplace_component(Args&&... args)
 		{
 			return components.emplace_back(std::make_unique<ComponentType>(*this, args...)).get();
 		}
 
-		// draws using the provided shader instead of the material
+		// Draws the entity using the provided shader instead of the one included in the material
 		void custom_draw(const Shader& shader) const noexcept;
 
+		// Draws the entity using its material
 		void draw() const noexcept;
 
 	};

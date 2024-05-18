@@ -5,6 +5,7 @@
 
 namespace engine::scene
 {
+	// Class for managing a simple first person camera
 	class Camera
 	{ 
 		// input related

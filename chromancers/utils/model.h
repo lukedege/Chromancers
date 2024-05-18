@@ -21,28 +21,28 @@
 #include "texture.h"
 #include "material.h"
 
-// Model class purpose:
-// 1. Open file from disk
-// 2. Load data with assimp
-// 3. Pass all nodes to data structure
-// 4. Create a mesh from data structure (which will setup VBO)
-
 namespace engine::resources
 {
+	// Class for loading and managing a model, a collection of meshes and materials (usually loaded from disk)
 	class Model
 	{
+		// Simple struct to hold information about a loaded texture
 		struct TextureEntry
 		{
 			Texture tex;
 			std::string type;
 			std::string path;  // we store the path of the texture to compare with other textures
 		};
+
+		// Simple struct to hold information about a loaded material (and its linked loaded textures)
 		struct MaterialEntry
 		{
 			Material material;
 			std::string name;
 			std::vector<TextureEntry*> associated_textures;
 		};
+
+		// Simple struct to link a loaded mesh to a loaded material
 		struct MeshEntry
 		{
 			Mesh mesh;
@@ -75,6 +75,7 @@ namespace engine::resources
 		Model(Model&& move) = default;
 		Model& operator=(Model&& move) noexcept = default;
 
+		// Draw only the mesh geometry
 		void draw() const
 		{
 			for (size_t i = 0; i < meshes.size(); i++)
@@ -83,6 +84,7 @@ namespace engine::resources
 			}
 		}
 
+		// Given a shader, draw a mesh using its loaded materials 
 		void draw(Shader& shader)
 		{
 			for (size_t i = 0; i < meshes.size(); i++)
@@ -98,11 +100,13 @@ namespace engine::resources
 			}
 		}
 
+		// Draw only the mesh geometry in a instanced manner
 		void draw_instanced(size_t amount) const
 		{
 			for (size_t i = 0; i < meshes.size(); i++) { meshes[i].mesh.draw_instanced(amount); }
 		}
 
+		// Creates and returns a vector of vertex positions from the mesh
 		std::vector<glm::vec3> get_vertices_positions() const
 		{
 			std::vector<glm::vec3> vertices;
@@ -113,7 +117,8 @@ namespace engine::resources
 			return vertices;
 		}
 
-		bool has_material() // different from auto-imported default material
+		// Check if a mesh has materials of its own (different from the default one)
+		bool has_material() 
 		{
 			return materials.size() > 1;
 		}
@@ -145,6 +150,7 @@ namespace engine::resources
 				throw std::runtime_error{ "ASSIMP ERROR! "s + importer.GetErrorString() + "\n" };
 			}
 
+			// load the relevant materials
 			loadMaterials(scene, path);
 
 			// process the scene tree starting from root node down to its descendants
@@ -176,6 +182,7 @@ namespace engine::resources
 			return meshes;
 		}
 
+		// Load all materials in a mesh scene
 		void loadMaterials(const aiScene* scene, const std::string& path) 
 		{
 			// Extract the directory part from the file name
@@ -199,25 +206,25 @@ namespace engine::resources
 				MaterialEntry new_mat;
 				new_mat.name = name.C_Str();
 				new_mat.associated_textures = {};
+
+				// Load and link diffuse textures to the material
 				std::vector<TextureEntry*> diffuse_tex = loadMaterialTextures(pMaterial, aiTextureType_DIFFUSE, "diffuse_tex", Dir);
 				new_mat.associated_textures.insert(new_mat.associated_textures.end(), diffuse_tex.begin(), diffuse_tex.end());
 				if (diffuse_tex.size() > 0) new_mat.material.diffuse_map = &diffuse_tex[0]->tex;
 
+				// Load and link normal textures to the material
 				std::vector<TextureEntry*> normals_tex = loadMaterialTextures(pMaterial, aiTextureType_NORMALS, "normals_tex", Dir);
 				new_mat.associated_textures.insert(new_mat.associated_textures.end(), normals_tex.begin(), normals_tex.end());
 				if (normals_tex.size() > 0) new_mat.material.normal_map = &normals_tex[0]->tex;
 
-				
-				new_mat.material.uv_repeat = 1.f;
-
 				// Fill out other material properties
+				// e.g. new_mat.material.uv_repeat = 1.f;
 
 				materials[i] = new_mat;
 			}
-
-
 		}
 
+		// Load textures related to a material
 		std::vector<TextureEntry*> loadMaterialTextures(aiMaterial *mat, aiTextureType type, std::string typeName, std::string base_path)
 		{
 			std::vector<TextureEntry*> textures;

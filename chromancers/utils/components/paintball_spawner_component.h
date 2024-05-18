@@ -5,6 +5,7 @@
 
 namespace engine::components
 {
+	// Component that lets an entity generate paintballs given several parameters (projectile amount, speed, spread...)
 	class PaintballSpawnerComponent : public Component
 	{
 	public:
@@ -12,8 +13,8 @@ namespace engine::components
 	private:
 
 	public:
-		PaintballSpawner paintball_spawner;
-		bool active = true;
+		PaintballSpawner paintball_spawner; // The actual paintball spawner
+		bool active = true; // Toggle for activating the spawning mechanism
 
 		PaintballSpawnerComponent(Entity& parent, PhysicsEngine<Entity>& phy_engine, utils::random::generator& rng, 
 			Model& paintball_model, Shader& paintball_shader) :
@@ -42,9 +43,5 @@ namespace engine::components
 		{
 			return COMPONENT_ID;
 		}
-
-		
-	private:
-		
 	};
 }

@@ -14,6 +14,7 @@
 
 namespace engine::resources
 {
+	// Class for linking a shader to a set of various material properties and textures
 	class Material
 	{
 		using Color = glm::vec4;
@@ -36,9 +37,9 @@ namespace engine::resources
 		float F0    { 0.9f }; // fresnel reflectance at normal incidence
 
 		// Texture parameters
-		float uv_repeat { 3.f };
+		float uv_repeat { 1.f };
 
-		// Height map parameters
+		// Displacement map parameters
 		float parallax_heightscale { 0.05f };
 
 		// Shadow map parameters
@@ -47,6 +48,7 @@ namespace engine::resources
 		Material() {}
 		Material(Shader& shader) : shader { &shader } {}
 
+		// Bind the shader and set all the relevant properties (including textures if they are available)
 		void bind() const
 		{
 			if (!shader) { utils::io::error("MATERIAL - Shader not provided"); return; }

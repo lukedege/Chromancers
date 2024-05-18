@@ -12,9 +12,11 @@
 
 namespace engine::resources
 {
+	// Class for loading and managing textures 
 	class Texture
 	{
 	public:
+		// Simple class to hold information about a texture's format
 		struct FormatInfo
 		{
 			GLenum internal_format;
@@ -40,7 +42,7 @@ namespace engine::resources
 
 		GLuint _id;
 	public:
-
+		// Create a blank texture (useful for color attachments)
 		Texture(unsigned int width = 512, unsigned int height = 512, Texture::FormatInfo tx_format_info = Texture::FormatInfo::sample_color_attachment_info()) :
 			_id{ generate_texture() },
 			_width      { width  },
@@ -50,6 +52,7 @@ namespace engine::resources
 			create_texture();
 		}
 
+		// Create a texture from a file
 		Texture(const std::string& path, bool vflip_on_load = false) : 
 			_id{ generate_texture() }
 		{
@@ -229,6 +232,7 @@ namespace engine::resources
 
 		// extensible when needed, for now is enough
 	private:
+		// Generate a texture id from openGL
 		GLuint generate_texture() const noexcept
 		{
 			GLuint texture_id;
@@ -237,6 +241,7 @@ namespace engine::resources
 			return texture_id;
 		}
 
+		// Creates a blank texture given a texture id
 		void create_texture()
 		{
 			glBindTexture(GL_TEXTURE_2D, _id);
@@ -256,7 +261,7 @@ namespace engine::resources
 			glDeleteTextures(1, &_id);
 		}
 
-
+		// Helper function for choosing the right color format given the input image channels
 		GLenum choose_color_format(unsigned int channels) const noexcept
 		{
 			GLenum format;
