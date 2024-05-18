@@ -31,8 +31,6 @@ namespace engine
 		glm::vec3 _right   { 1.0f, 0.0f, 0.0f };
 		glm::vec3 _up      { 0.0f, 1.0f, 0.0f };
 
-		bool dirty = false; // Use when space info is updated to recalculate matrix
-
 	public:
 		Transform() 
 		{
@@ -47,6 +45,7 @@ namespace engine
 		inline glm::vec3 right    () const noexcept { return _right; }
 		inline glm::vec3 up       () const noexcept { return _up; }
 
+		// Set the matrix and other transform fields by the given matrix
 		void set(const glm::mat4& matrix) noexcept
 		{
 			glm::quat rotation;
@@ -76,6 +75,7 @@ namespace engine
 			return _matrix;
 		}
 
+		// Matrix composition
 		friend Transform operator*(const Transform& lhs, const Transform& rhs)
 		{
 			Transform result;
@@ -85,12 +85,9 @@ namespace engine
 		}
 
 	private:
+		// Recompute transformation matrix after a change in its fields (translation, orientation...)
 		void update_matrix()
-		{
-			// TODO start using quats
-			//glm::quat rotation_quat {_orientation};
-			//glm::mat4 rotation_matrix = glm::toMat4(rotation_quat);
-			
+		{	
 			// Y * X * Z
 			glm::mat4 rot_X = glm::rotate(glm::mat4{ 1.0f }, glm::radians(_orientation.x), glm::vec3(1.0f, 0.0f, 0.0f));
 			glm::mat4 rot_Y = glm::rotate(glm::mat4{ 1.0f }, glm::radians(_orientation.y), glm::vec3(0.0f, 1.0f, 0.0f));

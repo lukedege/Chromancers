@@ -21,7 +21,7 @@ namespace
 
 namespace engine::physics
 {
-    // Debug drawer for Physics engine
+    // Simple debug drawer for drawing physics engine bodies and colliders
     class GLDebugDrawer : public btIDebugDraw
     {
         int m_debugMode;
@@ -108,8 +108,8 @@ namespace engine::physics
 
     };
 
-    //enum to identify the 2 considered Collision Shapes
-    enum ColliderShape { SPHERE, BOX, HULL, GIVEN };
+    // Enum to identify the various considered collision shapes
+    enum ColliderShape { SPHERE, BOX, HULL };
 
     struct ColliderShapeCreateInfo
     {
@@ -124,16 +124,16 @@ namespace engine::physics
         float friction     { 0.1f };
         float restitution  { 0.1f };
         ColliderShapeCreateInfo cs_info;
-		btCollisionShape* cs{ nullptr }; // if not nullptr, will be used for the rigidbody, ignoring cs_info
     };
 
+	// Struct used to store how a rigidbody behaves against other rigidbodies
     struct CollisionFilter
     {
         int group; // which group  the rigidbody is part of
-        int mask;  // which groups the rigidbody should collide with
+        int mask ; // which groups the rigidbody should collide with
     };
 
-    template<typename GameObject>
+    template<typename UserObject>
     class PhysicsEngine
     {
     public:
@@ -143,7 +143,6 @@ namespace engine::physics
         btCollisionDispatcher* dispatcher; // collision manager
         btBroadphaseInterface* overlappingPairCache; // method for the broadphase collision detection
         btSequentialImpulseConstraintSolver* solver; // constraints solver
-
 
         //////////////////////////////////////////
         // constructor
@@ -200,6 +199,7 @@ namespace engine::physics
             return convex_hull_shape;
         }
 
+		// Creates a collision shape given the construction info
         btCollisionShape* createCollisionShape(ColliderShapeCreateInfo cs_info)
         {
             btCollisionShape* collision_shape{ nullptr };
@@ -233,6 +233,7 @@ namespace engine::physics
             return collision_shape;
         }
 
+		// Creates and add a rigidbody to the dynamic world
         btRigidBody* addRigidBody(const glm::vec3 pos, const glm::vec3 rot, const RigidBodyCreateInfo rb_info)
         {
             btRigidBody* body = createRigidBody(pos, rot, rb_info);
@@ -245,6 +246,7 @@ namespace engine::physics
             return body;
         }
 
+		// Creates and add a rigidbody to the dynamic world providing a collision filter for it
         btRigidBody* addRigidBody(const glm::vec3 pos, const glm::vec3 rot, const RigidBodyCreateInfo rb_info, const CollisionFilter cf)
         {
             btRigidBody* body = createRigidBody(pos, rot, rb_info);
@@ -257,6 +259,7 @@ namespace engine::physics
             return body;
         }
 
+		// Removes and deletes a rigidbody from the dynamic world
         void deleteRigidBody(btRigidBody* body)
         {
             // as of https://github.com/bulletphysics/bullet3/blob/master/examples/CommonInterfaces/CommonRigidBodyBase.h
@@ -280,6 +283,7 @@ namespace engine::physics
             debugDrawer->setDebugMode(isDebug);
         }
 
+		// Progress the dynamic world simulation by one step
         void step(float delta_time)
         {
             dynamicsWorld->stepSimulation(delta_time);
@@ -289,6 +293,7 @@ namespace engine::physics
             }
         }
 
+		// Detect and process rigidbody collisions, making user's object aware of eventual collisions happening
         void detect_collisions()
         {
             // Iterate through all manifolds in the dispatcher
@@ -300,15 +305,17 @@ namespace engine::physics
                 const btCollisionObject* obA = contactManifold->getBody0();
                 const btCollisionObject* obB = contactManifold->getBody1();
 
-                GameObject* ent_a = static_cast<GameObject*>(obA->getUserPointer());
-                GameObject* ent_b = static_cast<GameObject*>(obB->getUserPointer());
+				// Retrieve the user's objects that have collided
+                UserObject* ent_a = static_cast<UserObject*>(obA->getUserPointer());
+                UserObject* ent_b = static_cast<UserObject*>(obB->getUserPointer());
                 
                 int numContacts = contactManifold->getNumContacts();
                 for (int j = 0; j < numContacts; j++)
                 {
                     btManifoldPoint& pt = contactManifold->getContactPoint(j);
-                    if (pt.getDistance() < 0.1f) // TODO if a bullet bounces instead of exploding, remove this check or increase the distance
+                    if (pt.getDistance() < 0.1f) // if a bullet bounces instead of exploding, remove this check or increase the distance
                     {
+						// We compute various informations about the collision
                         const btVector3& ptA = pt.getPositionWorldOnA();
                         const btVector3& ptB = pt.getPositionWorldOnB();
                         btVector3 normalOnB = pt.m_normalWorldOnB;
@@ -322,6 +329,8 @@ namespace engine::physics
                         // Check that user pointers are not null
                         if (ent_a && ent_b)
                         {
+							// We forward the computed collision informations to the objects
+							// so that they can react to the collision and resolve it as they see fit
                             ent_a->on_collision(*ent_b, glm_ptA, glm_norm, glm_impls);
                             ent_b->on_collision(*ent_a, glm_ptB, glm_norm, glm_impls);
                         }
@@ -357,11 +366,7 @@ namespace engine::physics
             objTransform.setOrigin(position);
 
             // If a collision shape is provided we will adopt it and ignore cs creation info
-			btCollisionShape* collision_shape;
-			if (rb_info.cs)
-				collision_shape = rb_info.cs; 
-			else 
-				collision_shape = createCollisionShape(rb_info.cs_info);
+			btCollisionShape* collision_shape = createCollisionShape(rb_info.cs_info);
 
             // if objects has mass = 0 -> then it is static (it does not move and it is not subject to forces)
             btScalar mass = rb_info.mass;
@@ -438,6 +443,7 @@ namespace engine::physics
         }
     };
 
+	// Utility functions to convert bt vectors to glm
     glm::vec3 to_glm_vec3(const btVector3& bt_vec)
     {
         return { bt_vec.x(), bt_vec.y(), bt_vec.z()};

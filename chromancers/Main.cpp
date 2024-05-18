@@ -586,7 +586,7 @@ int main()
 #pragma endregion pre-loop_setup
 
 #pragma region rendering_loop
-
+	
 	// Rendering loop
 	while (wdw.is_open())
 	{

@@ -6,6 +6,7 @@
 
 namespace engine::input
 {
+	// For each key, we store a list of callbacks for both key-pressed events and key-released events
     struct KeyCallbacks
     {
         std::vector<std::function<void()>> onPressed_callbacks;
@@ -16,8 +17,8 @@ namespace engine::input
     class Input
     {
     private:
-        KeyCallbacks keys[1024];
-        std::unordered_set<int> pressed_keys;
+        KeyCallbacks keys[1024]; // Storing callbacks for each key
+        std::unordered_set<int> pressed_keys; // Storing key status 
 
         Input() {}
     public:
