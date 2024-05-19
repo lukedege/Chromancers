@@ -4,34 +4,39 @@ namespace engine::scene
 {
 	void Scene::mark_for_removal(const std::string& id_to_remove, std::optional<std::string> group_id)
 	{
+		// If group_id was provided, we are marking an instanced entity
 		if(group_id.has_value())
 			marked_for_removal_instanced.emplace(group_id.value(), id_to_remove);
+		// Otherwise, we're marking an independent entity
 		else
 			marked_for_removal.emplace(id_to_remove);
 	}
 
 	void Scene::remove_marked()
 	{
+		// Delete marked independent entities
 		for (const std::string& entity_id : marked_for_removal)
 		{
 			entities.erase(entity_id);
 		}
+		// Delete marked instanced entities
 		for (const auto& [group_id, entity_id] : marked_for_removal_instanced)
 		{
 			instanced_entities_groups[group_id].erase(entity_id);
 		}
+
+		// Clear marks
 		marked_for_removal.clear();
 		marked_for_removal_instanced.clear();
 	}
 
 	void Scene::init()
 	{
-		glGenBuffers(1, &instanced_ssbo);
-
 		for (auto& [id, entity] : entities)
 		{
 			entity->init();
 		}
+
 		for (auto& [group_id, instanced_group] : instanced_entities_groups)
 		{
 			for (auto& [id, instanced_entity] : instanced_group)
@@ -39,7 +44,6 @@ namespace engine::scene
 				instanced_entity->init();
 			}
 		}
-		
 	}
 
 	void Scene::update(float deltaTime)
@@ -58,7 +62,6 @@ namespace engine::scene
 		}
 	}
 
-	// Draw the complete scene
 	void Scene::draw(Shader* custom_shader)
 	{
 		draw_internal(entities, instanced_entities_groups, custom_shader);
@@ -118,7 +121,6 @@ namespace engine::scene
 		}
 	}
 
-	// Draw only if the id is in the provided vector
 	void Scene::draw_only(const std::vector<std::string>& ids_to_draw, Shader* custom_shader)
 	{
 		entity_map draw_entities;

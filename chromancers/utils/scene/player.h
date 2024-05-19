@@ -17,17 +17,19 @@ namespace
 
 namespace engine::scene
 {
+	// Class representing the player's main way to observe and interact with the scene
 	class Player
 	{
 	public:
-		EntityBase player_entity;
-		Entity*    gun_entity    {nullptr};
-		PaintballSpawner* paintball_spawner{ nullptr };
+		EntityBase player_entity;           // Main entity that will be synced to the camera (since it's the one receiving movement input)
+		Entity*    gun_entity    {nullptr}; // Gun entity that will be attached to the main player entity
 
-		Camera first_person_camera;		
-		float lerp_speed = 10.f;
+		PaintballSpawner* paintball_spawner{ nullptr }; // Paintball spawner that simulates the gun paintball chamber
+
+		Camera first_person_camera;	// First person camera moved by user input
+		float lerp_speed = 10.f;    // Interpolation speed to make gun movement feel more natural while syncing to the camera
 		
-		glm::vec3 viewmodel_offset{ 0 };
+		glm::vec3 viewmodel_offset{ 0 }; // Offset of the gun model from the default position (e.g. CSGO viewmodel_offset)
 
 		Player() :
 			player_entity{"PlayerObject"},
@@ -40,6 +42,7 @@ namespace engine::scene
 		{
 			gun_entity->init();
 
+			// The gun will be child of the main player entity, so that it moves together with it
 			if (gun_entity)
 			{
 				gun_entity->parent = &player_entity;
@@ -63,7 +66,7 @@ namespace engine::scene
 			gun_entity->draw();
 		}
 
-		// Creates and launches a paintball
+		// Invoke the paintball spawner [ in the gun :) ] to generate and shoot a paintball
 		void shoot()
 		{
 			if (gun_entity && paintball_spawner)
@@ -78,6 +81,7 @@ namespace engine::scene
 			}
 		}
 
+		// Calculates and returns the world position of the gun muzzle
 		glm::vec3 gun_muzzle_world_position()
 		{
 			glm::mat4 gun_world_transform = gun_entity ? gun_entity->world_transform().matrix() : glm::mat4{1.f};
@@ -85,8 +89,9 @@ namespace engine::scene
 		}
 
 	private:
-		glm::vec3 local_muzzle_position { 0.0f, 0.1f, 0.67f };
+		glm::vec3 local_muzzle_position { 0.0f, 0.1f, 0.67f }; // This depends on the gun model
 		
+		// Synchronize the player entity to the camera movement
 		void sync_to_cam(float delta_time)
 		{
 			float f_ang = std::clamp(lerp_speed * delta_time, 0.f, 1.f);
@@ -96,7 +101,7 @@ namespace engine::scene
 
 			if (gun_entity)
 			{
-				gun_entity->set_position(viewmodel_offset);
+				gun_entity->set_position(viewmodel_offset); // Update offset in case it was modified in the UI by the user
 			}
 		}
 

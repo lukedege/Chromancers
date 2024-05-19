@@ -4,6 +4,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_inverse.hpp>
 
+// Various and miscellaneous utilities are located here
+
 namespace utils::strings
 {
 	// Erases the whole line at the specified string index (if valid)

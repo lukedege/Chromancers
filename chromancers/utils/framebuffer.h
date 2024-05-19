@@ -9,8 +9,13 @@
 
 namespace utils::graphics::opengl
 {
+	// Class wrapping the OpenGL framebuffer
 	class BasicFramebuffer
 	{
+		GLuint _id;
+		unsigned int _width, _height;
+		unsigned int old_width, old_height; // stores the glviewport values before binding
+
 	public:
 		BasicFramebuffer(unsigned int width = 512, unsigned int height = 512) :
 			_id{ generate_framebuffer() },
@@ -51,9 +56,6 @@ namespace utils::graphics::opengl
 		unsigned int id()     const noexcept { return _id; }
 
 	private:
-		GLuint _id;
-		unsigned int _width, _height;
-		unsigned int old_width, old_height; // stores the glviewport values before binding
 
 		GLuint generate_framebuffer()
 		{
@@ -68,10 +70,19 @@ namespace utils::graphics::opengl
 		}
 	};
 
+	// Class extending the basic framebuffer functionalities by keeping information about its own attachments (color and depth)
 	class Framebuffer
 	{
 		using Texture = engine::resources::Texture;
+
+		GLuint _id;
+		unsigned int _width, _height;
+		unsigned int old_width, old_height; // stores the glviewport values before binding
+
 		unsigned int color_attachment_base_index = GL_COLOR_ATTACHMENT0;
+		std::array<Texture, 8> color_attachments; // Minimum value is 8 for OpenGL 3.x+ spec, GL macros goes up to 32 
+		std::set<unsigned int> active_color_attachments;
+		Texture depth_attachment;
 
 	public:
 		Framebuffer(unsigned int width = 512, unsigned int height = 512, 
@@ -182,14 +193,6 @@ namespace utils::graphics::opengl
 		unsigned int height() const noexcept { return _height; }
 		unsigned int id()     const noexcept { return _id; }
 	private:
-		GLuint _id;
-		unsigned int _width, _height;
-		unsigned int old_width, old_height; // stores the glviewport values before binding
-
-		std::array<Texture, 8> color_attachments; // Minimum value is 8 for OpenGL 3.x+ spec, GL macros goes up to 32 
-		std::set<unsigned int> active_color_attachments;
-		Texture depth_attachment;
-
 		GLuint generate_framebuffer()
 		{
 			GLuint framebuffer;

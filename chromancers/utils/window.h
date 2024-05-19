@@ -7,8 +7,6 @@
 
 #include <gsl/gsl>
 
-#include "oop.h"
-
 // Debug callbacks in a debug context are available from OpenGL 4.3+
 inline void GLAPIENTRY debugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* param)
 {
@@ -53,6 +51,7 @@ inline void GLAPIENTRY debugCallback(GLenum source, GLenum type, GLuint id, GLen
 
 namespace utils::graphics::opengl
 {
+	// Class wrapping a GLFW window and setupping a openGL context
 	class Window
 	{
 	public:
@@ -139,14 +138,6 @@ namespace utils::graphics::opengl
 			}
 
 			glfwMakeContextCurrent(window);
-
-			// TODO put in input class
-			//// we put in relation the window and the callbacks
-			//glfwSetKeyCallback(window, key_callback);
-			//glfwSetCursorPosCallback(window, mouse_pos_callback);
-			//
-			//// we disable the mouse cursor
-			//glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 			// GLAD tries to load the context set by GLFW
 			if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))

@@ -77,7 +77,6 @@ float maxSecPerFrame = 1.0f / 60.0f;
 float capped_deltaTime;
 
 // Scene
-Scene main_scene{ rng };
 std::function<void()> scene_setup;
 Player player;
 bool hold_to_fire = true;
@@ -126,18 +125,18 @@ void setup_input_keys()
 	// Pressed input (active while being pressed)
 	{
 		// Camera movement
-		Input::instance().add_onPressed_callback(GLFW_KEY_W, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::FORWARD, capped_deltaTime); });
-		Input::instance().add_onPressed_callback(GLFW_KEY_S, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::BACKWARD, capped_deltaTime); });
-		Input::instance().add_onPressed_callback(GLFW_KEY_A, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::LEFT, capped_deltaTime); });
-		Input::instance().add_onPressed_callback(GLFW_KEY_D, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::RIGHT, capped_deltaTime); });
-		Input::instance().add_onPressed_callback(GLFW_KEY_Q, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::DOWN, capped_deltaTime); });
-		Input::instance().add_onPressed_callback(GLFW_KEY_E, [&]() { main_scene.current_camera->ProcessKeyboard(Camera::Directions::UP, capped_deltaTime); });
+		Input::instance().add_onPressed_callback(GLFW_KEY_W, [&]() { player.first_person_camera.ProcessKeyboard(Camera::Directions::FORWARD, capped_deltaTime); });
+		Input::instance().add_onPressed_callback(GLFW_KEY_S, [&]() { player.first_person_camera.ProcessKeyboard(Camera::Directions::BACKWARD, capped_deltaTime); });
+		Input::instance().add_onPressed_callback(GLFW_KEY_A, [&]() { player.first_person_camera.ProcessKeyboard(Camera::Directions::LEFT, capped_deltaTime); });
+		Input::instance().add_onPressed_callback(GLFW_KEY_D, [&]() { player.first_person_camera.ProcessKeyboard(Camera::Directions::RIGHT, capped_deltaTime); });
+		Input::instance().add_onPressed_callback(GLFW_KEY_Q, [&]() { player.first_person_camera.ProcessKeyboard(Camera::Directions::DOWN, capped_deltaTime); });
+		Input::instance().add_onPressed_callback(GLFW_KEY_E, [&]() { player.first_person_camera.ProcessKeyboard(Camera::Directions::UP, capped_deltaTime); });
 
 		// Simple light movement
-		Input::instance().add_onPressed_callback(GLFW_KEY_LEFT, [&]() { currentLight->position.x -= mov_light_speed * capped_deltaTime; });
+		Input::instance().add_onPressed_callback(GLFW_KEY_LEFT , [&]() { currentLight->position.x -= mov_light_speed * capped_deltaTime; });
 		Input::instance().add_onPressed_callback(GLFW_KEY_RIGHT, [&]() { currentLight->position.x += mov_light_speed * capped_deltaTime; });
-		Input::instance().add_onPressed_callback(GLFW_KEY_UP, [&]() { currentLight->position.z -= mov_light_speed * capped_deltaTime; });
-		Input::instance().add_onPressed_callback(GLFW_KEY_DOWN, [&]() { currentLight->position.z += mov_light_speed * capped_deltaTime; });
+		Input::instance().add_onPressed_callback(GLFW_KEY_UP   , [&]() { currentLight->position.z -= mov_light_speed * capped_deltaTime; });
+		Input::instance().add_onPressed_callback(GLFW_KEY_DOWN , [&]() { currentLight->position.z += mov_light_speed * capped_deltaTime; });
 
 		// Shoot button (hold version)
 		Input::instance().add_onPressed_callback(GLFW_MOUSE_BUTTON_RIGHT, [&]()
@@ -157,7 +156,7 @@ void setup_input_keys()
 		Input::instance().add_onRelease_callback(GLFW_KEY_LEFT_ALT, [&]() { capture_mouse = !capture_mouse; });
 
 		// Remove camera vertical constraints
-		Input::instance().add_onRelease_callback(GLFW_KEY_SPACE, [&]() { main_scene.current_camera->toggle_fly(); }); 
+		Input::instance().add_onRelease_callback(GLFW_KEY_SPACE, [&]() { player.first_person_camera.toggle_fly(); }); 
 		
 		// Reset scene transforms to starting positions
 		Input::instance().add_onRelease_callback(GLFW_KEY_R, [&]() { scene_setup(); });
@@ -201,7 +200,7 @@ void mouse_pos_callback(GLFWwindow* window, double x_pos, double y_pos)
 	cursor_y = y_posf;
 
 	if(capture_mouse)
-		main_scene.current_camera->ProcessMouseMovement(x_offset, y_offset);
+		player.first_person_camera.ProcessMouseMovement(x_offset, y_offset);
 }
 
 /////////////////// MAIN function ///////////////////////
@@ -251,6 +250,7 @@ int main()
 	Camera topdown_camera;
 
 	// Scene setup
+	Scene main_scene{ rng };
 	main_scene.current_camera = &player.first_person_camera;
 #pragma endregion scene_setup
 

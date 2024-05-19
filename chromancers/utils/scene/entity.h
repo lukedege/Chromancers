@@ -56,8 +56,10 @@ namespace engine::scene
 
 		~EntityBase();
 
+		// Calls the init method for every component
 		void init() noexcept;
 
+		// Calls the update method for every component and keep transforms updated
 		void update(float delta_time) noexcept;
 
 		// Callback for when the entity is involved in a collision

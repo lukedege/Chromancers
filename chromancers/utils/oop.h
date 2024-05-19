@@ -2,6 +2,7 @@
 
 namespace utils::oop
 {
+	// Simple classes to inherit to quickly remove copiability or movability properties
 	struct non_copyable
 	{
 		inline  non_copyable() {}

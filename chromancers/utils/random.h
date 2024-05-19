@@ -5,6 +5,7 @@
 
 namespace utils::random
 {
+	// Simple random generator class
 	class generator
 	{
 		std::random_device random_device; // create object for seeding

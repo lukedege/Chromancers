@@ -5,6 +5,7 @@
 
 namespace utils::io
 {
+	// Simple collection of functions for logging
 	enum logtype
 	{
 		INFO,
@@ -20,18 +21,21 @@ namespace utils::io
 		std::cout << std::endl;
 	}
 
+	// Display an information message
 	template<typename ...Args>
 	void info(Args && ...args)
 	{
 		log(logtype::INFO, args...);
 	}
 
+	// Display a warning message
 	template<typename ...Args>
 	void warn(Args && ...args)
 	{
 		log(logtype::WARNING, args...);
 	}
 
+	// Display an error message
 	template<typename ...Args>
 	void error(Args && ...args)
 	{

@@ -16,7 +16,7 @@ namespace engine::resources
 	class Texture
 	{
 	public:
-		// Simple class to hold information about a texture's format
+		// Simple struct to hold information about a texture's format
 		struct FormatInfo
 		{
 			GLenum internal_format;

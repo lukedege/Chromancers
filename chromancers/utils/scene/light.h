@@ -16,21 +16,25 @@
 
 namespace engine::scene
 {
+	// Class representing a generic light source in the game world
 	class Light
 	{
 	protected:
 		using Shader = engine::resources::Shader;
 		using Texture = engine::resources::Texture;
 	public:
-
-		glm::vec4 color    ;
-		float     intensity;
+		glm::vec4 color    ; // Light RGBA color
+		float     intensity; // Light intensity
 	
 		Light(const glm::vec4& color = { 1.0f, 1.0f, 1.0f, 1.0f }, const float intensity = 1.0f) : 
 			color{ color }, intensity{ intensity }
 		{}
 
+		// Given a scene of entities, computes a shadowmap from the lights POV
+		// each type of light will have their own way to compute the map
 		virtual void compute_shadowmap(engine::scene::Scene& scene) {};
+
+		// Setups the light uniforms onto the given shader
 		virtual void setup(const Shader& shader, size_t index) = 0;
 
 	protected:
@@ -41,9 +45,11 @@ namespace engine::scene
 		}
 	};
 
+	// Class representing a point light source in the game world
 	class PointLight : public Light
 	{
 	public:
+		//Struct to hold information about settings used for generating a shadowmap
 		struct ShadowMapSettings
 		{
 			Shader* shader = nullptr; 
@@ -52,17 +58,18 @@ namespace engine::scene
 			float frustum_far = 25.f;
 			float distance_bias = 20.f;
 		} shadowmap_settings;
+		
+		// Dedicated framebuffer for computing the shadowmap
+		utils::graphics::opengl::BasicFramebuffer depthmap_framebuffer;
+		unsigned int depthCubemap; // OpenGL id for the shadow cubemap
 
-		glm::vec3 position;
+		// Light attributes
+		glm::vec3 position; // Light world position 
 
 		// Attenuation values 
 		float attenuation_constant    = 0.1f;
 		float attenuation_linear      = 0.1f;
 		float attenuation_quadratic   = 0.02f;
-
-		// Shadowmap stuff
-		utils::graphics::opengl::BasicFramebuffer depthmap_framebuffer;
-		unsigned int depthCubemap;
 
 		PointLight(const glm::vec3& position, 
 			const glm::vec4& color = { 1.0f, 1.0f, 1.0f, 1.0f }, const float intensity = { 1.0f }, ShadowMapSettings shadowmap_settings = {}) :
@@ -90,9 +97,11 @@ namespace engine::scene
 
 			// Attach the whole cubemap as depth attachment to the framebuffer as we'll do a geom shader trick to render all faces at once
 			depthmap_framebuffer.bind();
-			glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0);
-			glDrawBuffer(GL_NONE); // NO COLOR ATTACHMENT NEEDED
-			glReadBuffer(GL_NONE);
+			{
+				glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0);
+				glDrawBuffer(GL_NONE); // NO COLOR ATTACHMENT NEEDED
+				glReadBuffer(GL_NONE); 
+			}
 			depthmap_framebuffer.unbind();
 		}
 
@@ -119,37 +128,48 @@ namespace engine::scene
 
 			// Shadow pass
 			depthmap_framebuffer.bind();
-			glClear(GL_DEPTH_BUFFER_BIT);
-		
-			glCullFace(GL_FRONT); // Culling front face to reduce peter panning effect
-		
-			shadowmap_settings.shader->bind();
-			// geom shader uniform setting
-			for (int index = 0; index < lightspace_matrices.size(); index++)
 			{
-				shadowmap_settings.shader->setMat4("shadowMatrices["+std::to_string(index)+"]", lightspace_matrices[index]);
-			}
-			//frag shader uniform setting
-			shadowmap_settings.shader->setVec3("lightPos", position);
-			shadowmap_settings.shader->setFloat("far_plane", shadowmap_settings.frustum_far);
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
-			scene.draw_except_instanced(shadowmap_settings.shader);
+				glClear(GL_DEPTH_BUFFER_BIT);
 
+				glCullFace(GL_FRONT); // Culling front face to reduce peter panning effect
+
+				shadowmap_settings.shader->bind();
+				{
+					// Geom shader uniform setting
+					for (int index = 0; index < lightspace_matrices.size(); index++)
+					{
+						shadowmap_settings.shader->setMat4("lightspace_matrices[" + std::to_string(index) + "]", lightspace_matrices[index]);
+					}
+
+					// Frag shader uniform setting
+					shadowmap_settings.shader->setVec3("lightPos", position);
+					shadowmap_settings.shader->setFloat("far_plane", shadowmap_settings.frustum_far);
+
+					glActiveTexture(GL_TEXTURE0);
+					glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
+
+					// Draw the scene from point lights pov
+					scene.draw_except_instanced(shadowmap_settings.shader);
+				}
+				shadowmap_settings.shader->unbind();
+			}
 			depthmap_framebuffer.unbind();
 		
 			glCullFace(GL_BACK); // Restoring back face culling for drawing
 		}
 	private:
+
+		// Computes a lightspace matrix for each face of the cubemap given the shadowmap settings
 		std::vector<glm::mat4> compute_lightspace_matrices()
 		{
 			const unsigned int SHADOW_WIDTH = shadowmap_settings.resolution, SHADOW_HEIGHT = shadowmap_settings.resolution;
 
 			// We calculate it by perspective since the point light is part of the scene 
-			// and with relative distance to its objects, unlike directional lights 
+			// and has relative distance to its objects, unlike directional lights 
 			float aspect = (float)SHADOW_WIDTH/(float)SHADOW_HEIGHT;
 			float near = 1.0f;
 			float far = 25.0f;
+
 			// With a 90° fov we can ensure the viewing field fills the cube face and doesnt underflow or overflow
 			glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), aspect, near, far); 
 
@@ -166,6 +186,7 @@ namespace engine::scene
 		}
 	};
 
+	// Class representing a directional light source in the game world
 	class DirectionalLight : public Light
 	{
 	public:
@@ -179,10 +200,12 @@ namespace engine::scene
 			float distance_bias = 20.f;
 		} shadowmap_settings;
 
-		glm::vec3 direction;
-
+		// Dedicated framebuffer for computing the shadowmap
 		utils::graphics::opengl::Framebuffer depthmap_framebuffer;
 		glm::mat4 lightspace_matrix{1};
+
+		// Light attributes
+		glm::vec3 direction; 
 
 		DirectionalLight(const glm::vec3& direction, const glm::vec4& color = { 1.0f, 1.0f, 1.0f, 1.0f }, float intensity = 1.0f, ShadowMapSettings shadowmap_settings = {}) :
 			Light{ color, intensity }, 
@@ -211,13 +234,20 @@ namespace engine::scene
 			
 			// Shadow pass
 			depthmap_framebuffer.bind();
-			glClear(GL_DEPTH_BUFFER_BIT);
-		
-			glCullFace(GL_FRONT); // Culling front face to reduce peter panning effect
-		
-			shadowmap_settings.shader->bind();
-			shadowmap_settings.shader->setMat4("lightSpaceMatrix", lightspace_matrix);
-			scene.draw_except_instanced(shadowmap_settings.shader);
+			{
+				glClear(GL_DEPTH_BUFFER_BIT);
+
+				glCullFace(GL_FRONT); // Culling front face to reduce peter panning effect
+
+				shadowmap_settings.shader->bind();
+				{
+					shadowmap_settings.shader->setMat4("lightSpaceMatrix", lightspace_matrix);
+
+					// Draw the scene from point lights pov
+					scene.draw_except_instanced(shadowmap_settings.shader);
+				}
+				shadowmap_settings.shader->unbind();
+			}
 			depthmap_framebuffer.unbind();
 		
 			glCullFace(GL_BACK); // Restoring back face culling for drawing
@@ -229,6 +259,7 @@ namespace engine::scene
 		}
 
 	private:
+		// Computes a lightspace matrix given the shadowmap settings
 		glm::mat4 compute_lightspace_matrix()
 		{
 			float frustum_size = shadowmap_settings.frustum_size;
@@ -238,6 +269,7 @@ namespace engine::scene
 		}
 	};
 
+	// Class representing a spot light source in the game world
 	class SpotLight : public Light
 	{
 	public:
