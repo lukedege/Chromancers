@@ -10,6 +10,7 @@
 #include "utils/shader.h"
 #include "utils/scene/camera.h"
 #include "utils/model.h "
+#include "utils/scene/entity.h"
 #include "utils/input.h"
 
 #include <iostream>
@@ -50,14 +51,14 @@ int mainz()
 	{
 		Window::window_create_info
 		{
-			{ "Lighting test" }, //.title
+			{ "Quick test" }, //.title
 			{ 4 }, //.gl_version_major
 			{ 6 }, //.gl_version_minor
 			{ 1280 }, //.window_width
 			{ 720 }, //.window_height
 			{ 1280 }, //.viewport_width
 			{ 720 }, //.viewport_height
-			{ true }, //.resizable
+			{ false }, //.resizable
 			{ true }, //.debug_gl
 		}
 	};
@@ -73,10 +74,11 @@ int mainz()
 	// Setup keys
 	setup_keys(wdw);
 
-	Shader painter_shader{ "", "shaders/text/generic/texpainter.vert" ,"shaders/text/generic/texpainter.frag", 4, 3 };
+	Shader painter_shader{ "jj", "shaders/text/generic/texpainter.vert" ,"shaders/text/generic/texpainter.frag", 4, 3 };
+	Shader mvp{ "mvp", "shaders/text/generic/mvp.vert", "shaders/text/generic/fullcolor.frag", 4 , 3 };
 	Model cube_model{ "models/cube.obj" }, sphere_model{ "models/sphere.obj" }, bunny_model{ "models/bunny.obj" };
-
-	Camera cam;
+	
+	Camera cam{ glm::vec3{0, 0, 5.f} };
 
 	while (wdw.is_open())
 	{
@@ -87,7 +89,14 @@ int mainz()
 		// Clear the frame and z buffer
 		glClearColor(0.26f, 0.46f, 0.98f, 1.0f); //the "clear" color for the default frame buffer
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		cube_model.draw();
+		mvp.bind();
+		{
+			mvp.setMat4("viewMatrix", cam.viewMatrix());
+			mvp.setMat4("projectionMatrix", cam.projectionMatrix());
+			mvp.setVec3("colorIn", glm::vec3{ 1.f, 1.f, 0 });
+			cube_model.draw();
+		}
+		mvp.unbind();
 
 		glfwSwapBuffers(glfw_window);
 	}

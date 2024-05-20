@@ -211,7 +211,7 @@ int main()
 	{
 		Window::window_create_info
 		{
-			{ "Lighting test" }, //.title
+			{ "Chromancers: splatting colors!" }, //.title
 			{ 4 }, //.gl_version_major
 			{ 6 }, //.gl_version_minor
 			{ 1280 }, //.window_width

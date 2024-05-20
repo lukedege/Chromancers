@@ -17,7 +17,7 @@ uniform float blur_strength = 1.f;
 uniform bool ignore_alpha = false;
 
 uniform float near_plane = 0.1f;
-uniform float far_plane  = 100f;
+uniform float far_plane  = 100.f;
 uniform float depth_offset = 1.f; 
 // We use a depth offset to avoid blurring too much paintballs closer to the camera (such as the ones coming out of the gun)
 
