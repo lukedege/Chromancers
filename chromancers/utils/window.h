@@ -60,12 +60,13 @@ namespace utils::graphics::opengl
 			std::string title{ "Window" };
 			GLuint      gl_version_major{ 4 };
 			GLuint      gl_version_minor{ 3 };
-			GLuint      window_width{ 1200 };
-			GLuint      window_height{ 900 };
-			GLuint      viewport_width{ window_width };
+			GLuint      window_width   { 1200 };
+			GLuint      window_height  { 900 };
+			GLuint      viewport_width { window_width };
 			GLuint      viewport_height{ window_height };
 			GLboolean   resizable{ GLFW_FALSE };
-			GLboolean   gl_debug{ GLFW_FALSE };
+			GLboolean   vsync    { GLFW_FALSE };
+			GLboolean   gl_debug { GLFW_FALSE };
 		};
 
 		struct window_size
@@ -138,6 +139,8 @@ namespace utils::graphics::opengl
 			}
 
 			glfwMakeContextCurrent(window);
+			
+			if (!create_info.vsync) { glfwSwapInterval(0); }
 
 			// GLAD tries to load the context set by GLFW
 			if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))

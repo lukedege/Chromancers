@@ -56,6 +56,8 @@ namespace
 
 // window
 Window* wdw_ptr;
+Window::window_size ws;
+std::vector<Framebuffer*> framebuffers;
 
 // callback function for keyboard events
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
@@ -91,6 +93,8 @@ bool wireframe = false;
 // Lights
 PointLight* currentLight;
 float mov_light_speed = 5.f;
+
+
 
 /////////////////// INPUT functions ///////////////////////
 
@@ -203,6 +207,18 @@ void mouse_pos_callback(GLFWwindow* window, double x_pos, double y_pos)
 		player.first_person_camera.ProcessMouseMovement(x_offset, y_offset);
 }
 
+// Framebuffer resize callback
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+	ws.width = width;
+	ws.height = height;
+	for (auto f : framebuffers)
+	{
+		f->resize(width, height);
+	}
+}
+
+
 /////////////////// MAIN function ///////////////////////
 int main()
 {
@@ -219,6 +235,7 @@ int main()
 			{ 1280 }, //.viewport_width
 			{ 720 }, //.viewport_height
 			{ true }, //.resizable
+			{ true }, //.vsync
 			{ true }, //.debug_gl
 		}
 	};
@@ -226,13 +243,13 @@ int main()
 	wdw_ptr = &wdw;
 
 	GLFWwindow* glfw_window = wdw.get();
-	Window::window_size ws = wdw.get_size();
-	float width = gsl::narrow<float>(ws.width), height = gsl::narrow<float>(ws.height);
+	ws = wdw.get_size();
 
 	// Callbacks linking with glfw
 	glfwSetKeyCallback(glfw_window, key_callback);
 	glfwSetCursorPosCallback(glfw_window, mouse_pos_callback);
 	glfwSetMouseButtonCallback(glfw_window, mouse_button_callback);
+	glfwSetFramebufferSizeCallback(glfw_window, framebuffer_size_callback);
 
 	// Setup keys
 	setup_input_keys();
@@ -242,7 +259,7 @@ int main()
 	ImGui::CreateContext();
 	ImGui::StyleColorsDark();
 	ImGui_ImplGlfw_InitForOpenGL(glfw_window, true);
-	ImGui_ImplOpenGL3_Init("#version 430");
+	ImGui_ImplOpenGL3_Init("#version 460");
 #pragma endregion window_setup
 
 #pragma region scene_setup	
@@ -575,6 +592,9 @@ int main()
 
 	// This framebuffer will be used to group
 	Framebuffer present_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
+
+	framebuffers = {&world_framebuffer, & paintballs_framebuffer,
+		& postfxblur0_framebuffer, & postfxblur1_framebuffer, & paintstep_framebuffer, & map_framebuffer, & present_framebuffer};
 #pragma endregion framebuffers_setup
 	
 #pragma region pre-loop_setup
@@ -868,10 +888,12 @@ int main()
 		glClear(GL_DEPTH_BUFFER_BIT);
 		glViewport(ws.width - map_framebuffer.width() / 4 - 10, ws.height - map_framebuffer.height() / 4 - 10, map_framebuffer.width() / 4, map_framebuffer.height() / 4);
 		textured_shader.bind();
-		glActiveTexture(GL_TEXTURE0);
-		map_framebuffer.get_color_attachment(0).bind();
-		quad_mesh.draw();
-		textured_shader.unbind();
+		{
+			glActiveTexture(GL_TEXTURE0);
+			map_framebuffer.get_color_attachment(0).bind();
+			quad_mesh.draw();
+			textured_shader.unbind();
+		}
 		glViewport(0, 0, ws.width, ws.height);
 
 #pragma endregion present

@@ -170,6 +170,19 @@ namespace utils::graphics::opengl
 			// attachment textures will go out of scope and delete themselves automatically
 		}
 
+		void resize(unsigned int new_width, unsigned int new_height)
+		{
+			_width = new_width;
+			_height = new_height;
+
+			Texture::FormatInfo primary_color_format_info = color_attachments[0].format_info();
+			color_attachments = { create_color_attachment(0, new_width, new_height, primary_color_format_info) };
+			active_color_attachments.clear(); active_color_attachments.insert(color_attachment_base_index);
+			
+			Texture::FormatInfo depth_format_info = depth_attachment.format_info();
+			depth_attachment = create_depth_attachment(new_width, new_height, depth_format_info);
+		}
+
 		// Bind this framebuffer, setting the attachments to be available for Multiple Render Targets shader techniques
 		void bind()
 		{
