@@ -131,8 +131,6 @@ namespace engine::scene
 			{
 				glClear(GL_DEPTH_BUFFER_BIT);
 
-				glCullFace(GL_FRONT); // Culling front face to reduce peter panning effect
-
 				shadowmap_settings.shader->bind();
 				{
 					// Geom shader uniform setting
@@ -154,8 +152,6 @@ namespace engine::scene
 				shadowmap_settings.shader->unbind();
 			}
 			depthmap_framebuffer.unbind();
-		
-			glCullFace(GL_BACK); // Restoring back face culling for drawing
 		}
 	private:
 
@@ -237,8 +233,6 @@ namespace engine::scene
 			{
 				glClear(GL_DEPTH_BUFFER_BIT);
 
-				glCullFace(GL_FRONT); // Culling front face to reduce peter panning effect
-
 				shadowmap_settings.shader->bind();
 				{
 					shadowmap_settings.shader->setMat4("lightSpaceMatrix", lightspace_matrix);
@@ -249,8 +243,6 @@ namespace engine::scene
 				shadowmap_settings.shader->unbind();
 			}
 			depthmap_framebuffer.unbind();
-		
-			glCullFace(GL_BACK); // Restoring back face culling for drawing
 		}
 
 		const Texture& get_shadowmap()

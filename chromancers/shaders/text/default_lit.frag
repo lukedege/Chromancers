@@ -55,6 +55,9 @@ uniform int sample_shadow_map  = 0; // receive shadows or not
 
 uniform float uv_repeat = 1; // texture repetitions
 
+uniform float detail_diffuse_bias = 1.75f;
+uniform float detail_normal_bias = 0.05f;
+
 // Material-light attributes
 uniform vec4 ambient_color ;
 uniform vec4 diffuse_color ;
@@ -295,14 +298,14 @@ vec3 BlinnPhong()
 
 	if(sample_detail_diffuse_map == 1 && sample_detail_normal_map == 1)
 	{
-		if(detail_diffuse_color.a > 0.8f)
+		if(detail_diffuse_color.a > 0.7f)
 		{
+			N += calculateNormal(detail_normal_map, sample_detail_normal_map, fs_in.twNormal, finalTexCoords) * detail_normal_bias * detail_diffuse_color.a;
 			shininess_factor = 512.f;
-			float normal_bias = 0.25f;
-			N += calculateNormal(detail_normal_map, sample_detail_normal_map, fs_in.twNormal, final_texCoords) * normal_bias;
+			vec4 color0 = detail_diffuse_color * detail_diffuse_bias;
+			vec4 color1 = surface_color;
+			surface_color = color0 * color0.a + color1 * (1 - color0.a);
 		}
-		float paint_bias = 1.75f;
-		surface_color = vec4(mix(surface_color.rgb, detail_diffuse_color.rgb * paint_bias, detail_diffuse_color.a), 1.f);
 	}
 	
 	// normalization of the per-fragment light incidence direction

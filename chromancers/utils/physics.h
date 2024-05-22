@@ -179,13 +179,13 @@ namespace engine::physics
         }
 
         // Creates an approximate convex hull given a set of vertices (e.g. a mesh). The "hi_res" parameter, if true, builds a more accurate hull.
-        btConvexHullShape* createConvexHull(const std::vector<glm::vec3>& vertices, bool hi_res = false) const
+        btConvexHullShape* createConvexHull(const std::vector<glm::vec3>& vertices, const glm::vec3 size, bool hi_res = false) const
         {
             // We create a hull from the provided vertices
             btConvexHullShape initial_convexHullShape;
             for (glm::vec3 v : vertices)
             {
-                btVector3 bt_v{ v.x, v.y, v.z };
+                btVector3 bt_v{ v.x * size.x, v.y * size.y, v.z * size.z };
                 initial_convexHullShape.addPoint(bt_v);
             }
 
@@ -221,7 +221,7 @@ namespace engine::physics
             else if (cs_info.type == HULL)
             {
                 if (cs_info.hull_vertices)
-                    collision_shape = createConvexHull(*cs_info.hull_vertices); 
+                    collision_shape = createConvexHull(*cs_info.hull_vertices, cs_info.size); 
                 else
                     utils::io::error("PHYSICS - no vertices provided for convex hull construction!");
             }
@@ -288,11 +288,15 @@ namespace engine::physics
         void step(float delta_time)
         {
             dynamicsWorld->stepSimulation(delta_time);
-            if (debugDrawer && debugDrawer->getDebugMode())
+        }
+
+		void debug_draw_world()
+		{
+			if (debugDrawer && debugDrawer->getDebugMode())
             {
                 dynamicsWorld->debugDrawWorld();
             }
-        }
+		}
 
 		// Detect and process rigidbody collisions, making user's object aware of eventual collisions happening
         void detect_collisions()

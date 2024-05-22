@@ -88,7 +88,7 @@ namespace engine::components
 		// Creates and add a rigidbody to the dynamic world through the physics engine
 		btRigidBody* create_rigidbody(RigidBodyCreateInfo rb_cinfo, bool use_transform_size = false)
 		{
-			if (use_transform_size) rb_cinfo.cs_info.size = _parent->local_transform().size();
+			if (use_transform_size) rb_cinfo.cs_info.size = _parent->world_transform().size();
 
 			return physics_engine->addRigidBody(_parent->world_transform().position(), _parent->world_transform().orientation(), rb_cinfo);
 		}

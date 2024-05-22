@@ -54,10 +54,13 @@ namespace
 	using namespace utils::graphics::opengl;
 }
 
-// window
+// Window
 Window* wdw_ptr;
 Window::window_size ws;
-std::vector<Framebuffer*> framebuffers;
+
+// Framebuffers
+std::vector<Framebuffer*> fullscreen_framebuffers; 
+Framebuffer* map_framebuffer_ptr; // This framebuffer will be used to display an birds-eye view of the world centered on the player
 
 // callback function for keyboard events
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
@@ -75,6 +78,7 @@ utils::random::generator rng;
 
 // Physics
 PhysicsEngine<Entity> physics_engine;
+bool phy_debug_mode = false;
 float maxSecPerFrame = 1.0f / 60.0f;
 float capped_deltaTime;
 
@@ -175,6 +179,13 @@ void setup_input_keys()
 					glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);// Fill in fragments
 			});
 
+		// Debug draw physics wireframe or filled
+		Input::instance().add_onRelease_callback(GLFW_KEY_P, [&]()
+			{
+				phy_debug_mode = !phy_debug_mode;
+				physics_engine.set_debug_mode(phy_debug_mode);
+			});
+
 		// Shoot button (press version)
 		Input::instance().add_onRelease_callback(GLFW_MOUSE_BUTTON_RIGHT, [&]()
 			{
@@ -212,10 +223,11 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
 	ws.width = width;
 	ws.height = height;
-	for (auto f : framebuffers)
+	for (auto f : fullscreen_framebuffers)
 	{
 		f->resize(width, height);
 	}
+	map_framebuffer_ptr->resize(width / 8, height / 8);
 }
 
 
@@ -235,7 +247,7 @@ int main()
 			{ 1280 }, //.viewport_width
 			{ 720 }, //.viewport_height
 			{ true }, //.resizable
-			{ true }, //.vsync
+			{ false }, //.vsync
 			{ true }, //.debug_gl
 		}
 	};
@@ -356,6 +368,7 @@ int main()
 
 #pragma region materials_setup
 	// Textures setup
+	Texture soilcracked_diffuse_tex{ "textures/soil_cracked.png" }, soilcracked_normal_tex{ "textures/soil_cracked_normal.png" }, soilcracked_depth_tex{ "textures/soil_cracked_disp.png" };
 	Texture greybricks_diffuse_tex{ "textures/brickwall.png" }, greybricks_normal_tex{ "textures/brickwall_normal.png" }, greybricks_depth_tex{ "textures/brickwall_disp.png" };
 	Texture redbricks_diffuse_tex{ "textures/bricks2.jpg" },
 		redbricks_normal_tex{ "textures/bricks2_normal.jpg" },
@@ -371,20 +384,28 @@ int main()
 	grey_bricks.diffuse_map = &greybricks_diffuse_tex; grey_bricks.normal_map = &greybricks_normal_tex; grey_bricks.displacement_map = &greybricks_depth_tex;
 	grey_bricks.parallax_heightscale = 0.01f;
 
+	Material soil_cracked{ default_lit };
+	soil_cracked.diffuse_map = &soilcracked_diffuse_tex; soil_cracked.normal_map = &soilcracked_normal_tex; soil_cracked.displacement_map = &soilcracked_depth_tex;
+	soil_cracked.parallax_heightscale = 0.001f;
+
 	Material sph_mat { default_lit };
 
 	Material basic_mat{ basic_mvp_shader };
 
 	// Specific materials (ad hoc)
-	Material wall_material { redbricks_mat };
-	wall_material.uv_repeat = 20.f;
+	Material left_room_wall_material { redbricks_mat };
+	left_room_wall_material.uv_repeat = 20.f; left_room_wall_material.detail_normal_bias = 0.25f;
 
-	Material left_room_lwall_material { wall_material };
-	Material left_room_rwall_material { wall_material };
-	Material left_room_bwall_material { wall_material };
+	Material left_room_lwall_material { left_room_wall_material };
+	Material left_room_rwall_material { left_room_wall_material };
+	Material left_room_bwall_material { left_room_wall_material };
+	
+	Material front_wall_material { grey_bricks };
+	front_wall_material.uv_repeat = 20.f; 
 
-	Material floor_material{ grey_bricks }; 
-	floor_material.uv_repeat = 0.75f * std::max(floor_material.diffuse_map->width(), floor_material.diffuse_map->height());
+	Material floor_material{ soil_cracked }; 
+	floor_material.uv_repeat = 0.5f * std::max(floor_material.diffuse_map->width(), floor_material.diffuse_map->height());
+	floor_material.detail_normal_bias = 0.05f;
 
 	Material cube_material { redbricks_mat };
 	cube_material.uv_repeat = 3.f;
@@ -398,19 +419,19 @@ int main()
 
 #pragma region entities_setup
 	// Model loading and scene entities emplacement
-	Model plane_model{ "models/quad.obj" }, cube_model{ "models/cube.obj" }, sphere_model{ "models/sphere.obj" }, bunny_model{ "models/bunny.obj" };
-	Model gun_model{ "models/gun/gun.obj" }; Model paintball_model{ "models/drop.obj" }; 
+	Model cube_model{ "models/cube.obj" }, sphere_model{ "models/sphere.obj" }, bunny_model{ "models/bunny.obj" };
+	Model gun_model{ "models/gun/gun.obj" }; Model paintball_model{ "models/drop_lowres.obj" }; 
 	Model quad_mesh{ Mesh::simple_quad_mesh() };
 
 	Entity* cube        = main_scene.emplace_entity("cube", "brick_cube", cube_model, cube_material);
 	Entity* test_cube   = main_scene.emplace_entity("test_cube", "test_cube", cube_model, test_cube_material);
-	Entity* floor_plane = main_scene.emplace_entity("floor", "floorplane", plane_model, floor_material);
-	Entity* wall_plane  = main_scene.emplace_entity("wall", "wallplane", plane_model, wall_material);
+	Entity* floor_plane = main_scene.emplace_entity("floor", "floorplane", cube_model, floor_material);
+	Entity* wall_plane  = main_scene.emplace_entity("wall", "wallplane", cube_model, front_wall_material);
 	Entity* sphere      = main_scene.emplace_entity("sphere", "sphere", sphere_model, sph_mat);
 
-	Entity* left_room_lwall = main_scene.emplace_entity("wall", "left_room_leftwall", plane_model, left_room_lwall_material);
-	Entity* left_room_rwall = main_scene.emplace_entity("wall", "left_room_rightwall", plane_model, left_room_rwall_material);
-	Entity* left_room_bwall = main_scene.emplace_entity("wall", "left_room_backwall", plane_model, left_room_bwall_material);
+	Entity* left_room_lwall = main_scene.emplace_entity("wall", "left_room_leftwall", cube_model, left_room_lwall_material);
+	Entity* left_room_rwall = main_scene.emplace_entity("wall", "left_room_rightwall", cube_model, left_room_rwall_material);
+	Entity* left_room_bwall = main_scene.emplace_entity("wall", "left_room_backwall", cube_model, left_room_bwall_material);
 	Entity* bunny           = main_scene.emplace_entity("bunny", "buny", bunny_model, buny_mat);	
 	Entity* fountain        = main_scene.emplace_entity("fountain", "Water fountain", cube_model, fountain_material);
 	Entity* fountain_bunny1 = main_scene.emplace_entity("bunny fountain", "Bunny left fountain", cube_model, fountain_material);
@@ -438,48 +459,43 @@ int main()
 	// We are setting this as a lambda so we can reset every transform to this initial configuration later
 	scene_setup = [&]()
 	{
+		floor_plane->set_size(glm::vec3(25.0f, 0.2f, 25.0f));
 		floor_plane->set_position(glm::vec3(0.0f, -1.0f, 0.0f));
-		floor_plane->set_size(glm::vec3(100.0f, 0.1f, 100.0f));
 
-		wall_plane->set_position(glm::vec3(0.0f, 4.0f, -12.0f));
-		wall_plane->set_orientation(glm::vec3(90.0f, 0.0f, 0.f));
-		wall_plane->set_size(glm::vec3(10.0f, 0.1f, 5.0f));
+		wall_plane->set_size(glm::vec3(10.0f, 5.0f, 0.1f));
+		wall_plane->set_orientation(glm::vec3(-30.0f, 0.0f, 0.f));
+		wall_plane->set_position(glm::vec3(0.0f, 3.0f, -12.0f));
+		
+		left_room_lwall->set_size(glm::vec3(5.0f, 5.0f, 0.1f));
+		left_room_lwall->set_position(glm::vec3(-10.0f, 4.0f, 10.0f));
+		
+		left_room_rwall->set_size(glm::vec3(5.0f, 5.0f, 0.1f));
+		left_room_rwall->set_position(glm::vec3(-10.0f, 4.0f, 0.0f));
 
-		left_room_lwall->set_position(glm::vec3(-10.0f, 4.0f, 0.0f));
-		left_room_lwall->set_orientation(glm::vec3(90.0f, 0.0f, 0.f));
-		left_room_lwall->set_size(glm::vec3(5.0f, 0.1f, 5.0f));
-
-		left_room_rwall->set_position(glm::vec3(-10.0f, 4.0f, 10.0f));
-		left_room_rwall->set_orientation(glm::vec3(90.0f, 0.0f, 0.f));
-		left_room_rwall->set_size(glm::vec3(5.0f, 0.1f, 5.0f));
-
+		left_room_bwall->set_size(glm::vec3(5.0f, 5.0f, 0.1f));
+		left_room_bwall->set_orientation(glm::vec3(0.0f, 90.0f, 0.f));
 		left_room_bwall->set_position(glm::vec3(-15.0f, 4.0f, 5.f));
-		left_room_bwall->set_orientation(glm::vec3(90.0f, 90.0f, 0.f));
-		left_room_bwall->set_size(glm::vec3(5.0f, 0.1f, 5.0f));
 
 		cube->set_position(glm::vec3(0.0f, 3.0f, 0.0f));
-		cube->set_orientation(glm::vec3(0.0f, 0.0f, 0.0f));
 
 		test_cube->set_position(glm::vec3(-12.0f, 0.0f, 5.f));
 
-		sphere->set_position(glm::vec3(0.0f, 0.0f, 0.0f));
-		sphere->set_orientation(glm::vec3(0.0f, 0.0f, 0.0f));
 		sphere->set_size(glm::vec3(0.25f));
 
+		bunny->set_size(glm::vec3(.75f));
 		bunny->set_position(glm::vec3(5.0f, 3.0f, -2.0f));
-		bunny->set_size(glm::vec3(1.f));
 
-		fountain->set_position(glm::vec3(-12.0f, 2.0f, 5.f));
-		fountain->set_orientation(glm::vec3(90.f, 0.0f, 0.0f));
 		fountain->set_size(glm::vec3(0.1f));
-
-		fountain_bunny1->set_position(glm::vec3(0.0f, 10.0f, -2.f));
-		fountain_bunny1->set_orientation(glm::vec3(-90.f, 0.0f, -45.0f));
+		fountain->set_orientation(glm::vec3(90.f, 0.0f, 0.0f));
+		fountain->set_position(glm::vec3(-12.0f, 2.0f, 5.f));
+		
 		fountain_bunny1->set_size(glm::vec3(0.1f));
+		fountain_bunny1->set_orientation(glm::vec3(0.0f, -90.0f, 0.0f));
+		fountain_bunny1->set_position(glm::vec3(0.0f, 10.0f, -2.f));
 
-		fountain_bunny2->set_position(glm::vec3(9.0f, 10.0f, -2.f));
-		fountain_bunny2->set_orientation(glm::vec3(-90.f, 0.0f, 45.0f));
 		fountain_bunny2->set_size(glm::vec3(0.1f));
+		fountain_bunny2->set_orientation(glm::vec3(0.0f, 90.0f, 0.0f));
+		fountain_bunny2->set_position(glm::vec3(9.0f, 10.0f, -2.f));
 
 		for (auto& lightcube_entity : lightcube_entites)
 		{
@@ -509,28 +525,28 @@ int main()
 	// Physics setup
 	GLDebugDrawer phy_debug_drawer{ *main_scene.current_camera, debug_shader };
 	physics_engine.addDebugDrawer(&phy_debug_drawer);
-	physics_engine.set_debug_mode(0);
+	physics_engine.set_debug_mode(phy_debug_mode);
 
 	// Physical entities setup (an entity that has a collider(thus a rigidbody) and can be influenced by forces)
-	floor_plane->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{100.0f, 0.05f, 100.0f}}}, false );
+	floor_plane->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
 	wall_plane ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
 	test_cube  ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 0.1f, 0.1f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
-	cube       ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 30.0f, 0.1f, 0.1f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
+	cube       ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 30.f, 0.1f, 0.1f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
 	sphere     ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1.0f, 1.0f, 1.0f, {ColliderShape::SPHERE, glm::vec3{1}} }, true);
 
-	left_room_lwall->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
-	left_room_rwall->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
-	left_room_bwall->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,    glm::vec3{1}} }, true);
+	left_room_lwall->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,  glm::vec3{1}} }, true);
+	left_room_rwall->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,  glm::vec3{1}} }, true);
+	left_room_bwall->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 0.0f, 3.0f, 0.5f, {ColliderShape::BOX,  glm::vec3{1}} }, true);
 
 	std::vector<glm::vec3> bunny_mesh_vertices = bunny_model.get_vertices_positions();
 	bunny          ->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ 1000.0f, 1.0f, 1.0f,
-		ColliderShapeCreateInfo{ ColliderShape::HULL, glm::vec3{1.f}, &bunny_mesh_vertices } }, false);
+		ColliderShapeCreateInfo{ ColliderShape::HULL, bunny->world_transform().size(), &bunny_mesh_vertices}}, false);
 
 	// Paintable entities setup (an entity that has a paintmap, thus its appearance can be changed by paintballs)
 	test_cube      ->emplace_component<PaintableComponent>(painter_shader, 128, 128, &splat_tex, &splat_normal_tex);
 	wall_plane     ->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
 	cube           ->emplace_component<PaintableComponent>(painter_shader, 128, 128, &splat_tex, &splat_normal_tex);
-	floor_plane    ->emplace_component<PaintableComponent>(painter_shader, 4096, 4096, &splat_tex, &splat_normal_tex);
+	floor_plane    ->emplace_component<PaintableComponent>(painter_shader, 2048, 2048, &splat_tex, &splat_normal_tex);
 	bunny          ->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
 
 	left_room_lwall->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
@@ -567,8 +583,10 @@ int main()
 	// specific spawner settings
 	fountain_bunny_spawner_sx->paintball_spawner.paint_color = { 0.1f, 0.5f, 0.f, 1.f };
 	fountain_bunny_spawner_sx->paintball_spawner.shooting_spread = 3.f;
+	fountain_bunny_spawner_sx->paintball_spawner.shooting_speed = 3.f;
 	fountain_bunny_spawner_dx->paintball_spawner.paint_color = { 0.5f, 0.f, 0.5f, 1.f };
 	fountain_bunny_spawner_dx->paintball_spawner.shooting_spread = 3.f;
+	fountain_bunny_spawner_dx->paintball_spawner.shooting_speed = 3.f;
 	
 #pragma endregion entities_setup
 
@@ -587,14 +605,17 @@ int main()
 	// This framebuffer will be used for the smoothstep effect of paintballs
 	Framebuffer paintstep_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
 
-	// This framebuffer will be used to display an birds-eye view of the world centered on the player
-	Framebuffer map_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
+	Framebuffer map_framebuffer{ ws.width / 8, ws.height / 8, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
 
 	// This framebuffer will be used to group
 	Framebuffer present_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
 
-	framebuffers = {&world_framebuffer, & paintballs_framebuffer,
-		& postfxblur0_framebuffer, & postfxblur1_framebuffer, & paintstep_framebuffer, & map_framebuffer, & present_framebuffer};
+	fullscreen_framebuffers = {&world_framebuffer, & paintballs_framebuffer,
+		& postfxblur0_framebuffer, & postfxblur1_framebuffer, & paintstep_framebuffer, & present_framebuffer};
+
+	std::vector<Framebuffer*> postfx_fbos; postfx_fbos.push_back(&postfxblur0_framebuffer); postfx_fbos.push_back(&postfxblur1_framebuffer);
+
+	map_framebuffer_ptr = &map_framebuffer;
 #pragma endregion framebuffers_setup
 	
 #pragma region pre-loop_setup
@@ -602,11 +623,10 @@ int main()
 	player.init();
 
 	// Fps Measurements variables setup
-	float avg_fps = 1.f, alpha = 0.9f;
+	float avg_ms_per_frame = 1.f, alpha = 0.9f;
 #pragma endregion pre-loop_setup
 
 #pragma region rendering_loop
-	
 	// Rendering loop
 	while (wdw.is_open())
 	{
@@ -618,7 +638,7 @@ int main()
 		capped_deltaTime = deltaTime < maxSecPerFrame ? deltaTime : maxSecPerFrame;
 		lastFrameTime = currentFrameTime;
 
-		avg_fps  = alpha * avg_fps + (1.0f - alpha) * (1 / deltaTime);
+		avg_ms_per_frame  = alpha * avg_ms_per_frame + (1.0f - alpha) * deltaTime * 1000;
 
 		main_scene.current_camera = &player.first_person_camera;
 
@@ -733,6 +753,7 @@ int main()
 			glClearColor(0.26f, 0.46f, 0.98f, 1.0f); // bluish
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			main_scene.draw_except_instanced();
+			//main_scene.draw_only({ "floor", "cube"});
 		}
 		world_framebuffer.unbind();
 
@@ -746,7 +767,6 @@ int main()
 		paintballs_framebuffer.unbind();
 
 		// We perform a number of blur passes to make paintball countours less evident, rendering the whole paintball stream more cohesive
-		std::vector<Framebuffer*> postfx_fbos; postfx_fbos.push_back(&postfxblur0_framebuffer); postfx_fbos.push_back(&postfxblur1_framebuffer);
 		Framebuffer *destination_fb = postfx_fbos[0], *source_fb = &paintballs_framebuffer, *paintblur_fb = &paintballs_framebuffer;
 		paintblur_shader.bind();
 		{
@@ -850,12 +870,12 @@ int main()
 		{
 			glClearColor(0.26f, 0.46f, 0.98f, 1.0f); // bluish
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+		
 			float topdown_height = 20;
 			topdown_camera.set_position(player.first_person_camera.position() + glm::vec3{ 0, topdown_height, 0 });
 			topdown_camera.lookAt(player.first_person_camera.position(), glm::vec3{0, 0, 1});
 			main_scene.current_camera = &topdown_camera;
-
+		
 			// Update camera info since we swapped to topdown
 			for (Shader& shader : all_shaders)
 			{
@@ -863,16 +883,16 @@ int main()
 				shader.setVec3("wCameraPos", main_scene.current_camera->position());
 				shader.setMat4("viewMatrix", main_scene.current_camera->viewMatrix());
 			}
-
+		
 			// Redraw all scene objects from map pov except paintballs
 			main_scene.draw_except_instanced();
-
+		
 			// Prepare cursor shader
 			glClear(GL_DEPTH_BUFFER_BIT);
-
+		
 			cursor.set_position(player.first_person_camera.position());
 			cursor.set_orientation({ -90.0f, 0.0f, -player.first_person_camera.rotation().y - 90.f });
-
+		
 			cursor.update(capped_deltaTime);
 			cursor.draw();
 		}
@@ -884,9 +904,12 @@ int main()
 		// World present onto default framebuffer
 		glBlitNamedFramebuffer(present_framebuffer.id(), 0, 0, 0, ws.width, ws.height, 0, 0, ws.width, ws.height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
+		// Draw physics colliders on top if debug mode is enabled
+		physics_engine.debug_draw_world();
+
 		// Map present : we render now into the smaller map viewport
 		glClear(GL_DEPTH_BUFFER_BIT);
-		glViewport(ws.width - map_framebuffer.width() / 4 - 10, ws.height - map_framebuffer.height() / 4 - 10, map_framebuffer.width() / 4, map_framebuffer.height() / 4);
+		glViewport(ws.width - map_framebuffer.width() - 10, ws.height - map_framebuffer.height() - 10, map_framebuffer.width(), map_framebuffer.height());
 		textured_shader.bind();
 		{
 			glActiveTexture(GL_TEXTURE0);
@@ -906,8 +929,8 @@ int main()
 
 		ImGui::Begin("Settings");
 		std::string fps_counter = "Approximate FPS: " + std::to_string(ImGui::GetIO().Framerate);
-		std::string myfps_counter = "My avg approximate FPS: " + std::to_string(avg_fps);
-		ImGui::Text(fps_counter.c_str()); ImGui::Text(myfps_counter.c_str());
+		std::string ms_frame_counter = "Time per frame: " + std::to_string(avg_ms_per_frame) + "ms";
+		ImGui::Text(fps_counter.c_str()); ImGui::Text(ms_frame_counter.c_str());
 
 		// Various settings
 		if (ImGui::CollapsingHeader("Paintball FX settings"))
@@ -1060,11 +1083,17 @@ int main()
 		{
 			ImGui::Text("Floor");
 			ImGui::SliderFloat("Repeat tex##floor", &floor_plane->material->uv_repeat, 0, 3000, " % .1f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Parallax Height Scale##floor", &floor_plane->material->parallax_heightscale, 0, 0.5, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Parallax Height Scale##floor", &floor_plane->material->parallax_heightscale, 0, 0.5, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Paint normal bias##floor", &floor_plane->material->detail_normal_bias, 0, 0.5, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::Separator(); 
 			ImGui::Text("Cube");
 			ImGui::SliderFloat("Repeat tex##cube", &cube->material->uv_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Parallax Height Scale##cube", &cube->material->parallax_heightscale, 0, 0.5, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Parallax Height Scale##cube", &cube->material->parallax_heightscale, 0, 0.5, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Paint normal bias##cube", &cube->material->detail_normal_bias, 0, 0.5, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::Text("Front wall");
+			ImGui::SliderFloat("Repeat tex##front", &wall_plane->material->uv_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Parallax Height Scale##front", &wall_plane->material->parallax_heightscale, 0, 0.5, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Paint normal bias##front", &wall_plane->material->detail_normal_bias, 0, 0.5, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 		}
 
 		ImGui::End();

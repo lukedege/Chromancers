@@ -41,6 +41,10 @@ namespace engine::resources
 
 		// Displacement map parameters
 		float parallax_heightscale { 0.05f };
+		
+		// Detail map related parameters
+		float detail_diffuse_bias { 1.50f };
+		float detail_normal_bias  { 0.25f };
 
 		// Shadow map parameters
 		bool receive_shadows{ true };
@@ -68,6 +72,9 @@ namespace engine::resources
 
 			shader->setFloat("uv_repeat", uv_repeat);
 			shader->setFloat("parallax_heightscale", parallax_heightscale);
+
+			shader->setFloat("detail_diffuse_bias", detail_diffuse_bias);
+			shader->setFloat("detail_normal_bias", detail_normal_bias);
 
 			shader->setInt("sample_shadow_map", receive_shadows);
 

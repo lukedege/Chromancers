@@ -154,6 +154,9 @@ namespace utils::graphics::opengl
 			// we enable Z test
 			glEnable(GL_DEPTH_TEST);
 
+			// enable culling	
+			glEnable(GL_CULL_FACE);
+
 			// Init debug callbacks
 			int flags; glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
 			if (flags & GL_CONTEXT_FLAG_DEBUG_BIT)

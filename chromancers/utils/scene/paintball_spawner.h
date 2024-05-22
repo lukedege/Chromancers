@@ -92,7 +92,7 @@ namespace engine::scene
 
 			// Add the related components
 			paintball->emplace_component<RigidBodyComponent>(physics_engine, RigidBodyCreateInfo{ paintball_weight, 0.1f, 0.1f, 
-				ColliderShapeCreateInfo{ ColliderShape::BOX, glm::vec3{paintball_final_size.x, paintball_final_size.y, paintball_final_size.z*2}} }, paintball_cf, false);
+				ColliderShapeCreateInfo{ ColliderShape::BOX, glm::vec3{paintball_final_size.x, paintball_final_size.y, paintball_final_size.z}} }, paintball_cf, false);
 			paintball->emplace_component<PaintballComponent>(paint_color);
 
 			paintball->init();
