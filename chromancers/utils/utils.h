@@ -54,6 +54,27 @@ namespace utils::strings
 
 namespace utils::math
 {
+	struct Plane
+	{
+		// unit vector
+		glm::vec3 normal = { 0.f, 1.f, 0.f };
+
+		// distance from origin to the nearest point in the plane
+		float     distance = 0.f;             
+	};
+   
+	struct Frustum
+	{
+		Plane topFace;
+		Plane bottomFace;
+
+		Plane rightFace;
+		Plane leftFace;
+
+		Plane farFace;
+		Plane nearFace;
+	};
+
 	inline glm::vec4 unproject(float screen_x, float screen_y, int screen_width, int screen_height, glm::mat4 view, glm::mat4 proj)
 	{
 		glm::vec4 ret{1};
