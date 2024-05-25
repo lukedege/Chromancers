@@ -325,7 +325,7 @@ int main()
 	dir_sm_settings.shader = &shadowmap_shader;
 
 	PointLight::ShadowMapSettings pl_sm_settings;
-	pl_sm_settings.resolution = 256;
+	pl_sm_settings.resolution = 512;
 	pl_sm_settings.shader = &shadowcube_shader;
 
 	PointLight pl1 { glm::vec3{-8.0f, 2.0f, 2.5f}, glm::vec4{1, 0, 1, 1}, 0.5f, pl_sm_settings};
@@ -416,6 +416,7 @@ int main()
 	Material fountain_material{ default_lit_material };
 	Material gun_mat { default_lit_material };
 	Material buny_mat{ default_lit_material };
+	buny_mat.uv_repeat = 20.f;
 
 #pragma endregion materials_setup
 
@@ -1088,15 +1089,18 @@ int main()
 			ImGui::SliderFloat("Parallax Height Scale##floor", &floor_plane->material->parallax_heightscale, 0, 0.5, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::SliderFloat("Paint normal bias##floor", &floor_plane->material->detail_normal_bias, 0, 0.5, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::SliderFloat("Paint threshold##floor", &floor_plane->material->detail_alpha_threshold, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::Separator(); 
-			ImGui::Text("Cube");
+			ImGui::Separator(); ImGui::Text("Cube");
 			ImGui::SliderFloat("Repeat tex##cube", &cube->material->uv_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::SliderFloat("Parallax Height Scale##cube", &cube->material->parallax_heightscale, 0, 0.5, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::SliderFloat("Paint threshold##cube", &cube->material->detail_alpha_threshold, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::Text("Front wall");
+			ImGui::Separator(); ImGui::Text("Front wall");
 			ImGui::SliderFloat("Repeat tex##front", &wall_plane->material->uv_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::SliderFloat("Parallax Height Scale##front", &wall_plane->material->parallax_heightscale, 0, 0.5, "%.3f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Paint threshold##cube", &wall_plane->material->detail_alpha_threshold, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Paint threshold##front", &wall_plane->material->detail_alpha_threshold, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::Separator(); ImGui::Text("Bunny");
+			ImGui::SliderFloat("Repeat tex##bunny", &bunny->material->uv_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Parallax Height Scale##bunny", &bunny->material->parallax_heightscale, 0, 0.5, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Paint threshold##bunny", &bunny->material->detail_alpha_threshold, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 		}
 
 		ImGui::End();
