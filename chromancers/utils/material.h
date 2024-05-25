@@ -43,8 +43,9 @@ namespace engine::resources
 		float parallax_heightscale { 0.05f };
 		
 		// Detail map related parameters
-		float detail_diffuse_bias { 1.50f };
-		float detail_normal_bias  { 0.25f };
+		float detail_alpha_threshold{ 0.75f };
+		float detail_diffuse_bias   { 1.50f };
+		float detail_normal_bias    { 0.25f };
 
 		// Shadow map parameters
 		bool receive_shadows{ true };
@@ -73,6 +74,7 @@ namespace engine::resources
 			shader->setFloat("uv_repeat", uv_repeat);
 			shader->setFloat("parallax_heightscale", parallax_heightscale);
 
+			shader->setFloat("detail_alpha_threshold", detail_alpha_threshold);
 			shader->setFloat("detail_diffuse_bias", detail_diffuse_bias);
 			shader->setFloat("detail_normal_bias", detail_normal_bias);
 

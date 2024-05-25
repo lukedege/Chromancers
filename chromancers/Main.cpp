@@ -294,7 +294,7 @@ int main()
 	Shader debug_shader          { "debug_shader", "shaders/text/generic/mvp.vert", "shaders/text/generic/fullcolor.frag", 4, 3 };
 
 	// Lit shaders, will take into account point and directional lights for shading calculations as well as materials
-	Shader default_lit           { "default_lit", "shaders/text/default_lit.vert", "shaders/text/default_lit.frag", 4, 3, nullptr, utils_shaders };
+	Shader default_lit_shader    { "default_lit", "shaders/text/default_lit.vert", "shaders/text/default_lit.frag", 4, 3, nullptr, utils_shaders };
 	Shader default_lit_instanced { "default_lit_instanced", "shaders/text/default_lit_instanced.vert", "shaders/text/default_lit.frag", 4, 3, nullptr, utils_shaders };
 
 	// Simple shader that applies a texture to a volume (especially used for full-screen quads)
@@ -316,8 +316,8 @@ int main()
 
 	// Bundling up shaders in collections to later perform shader uniform setting operations in bulk
 	std::vector <std::reference_wrapper<Shader>> lit_shaders, all_shaders;
-	lit_shaders.push_back(default_lit); lit_shaders.push_back(default_lit_instanced); 
-	all_shaders.push_back(basic_mvp_shader); all_shaders.push_back(default_lit); all_shaders.push_back(default_lit_instanced); 
+	lit_shaders.push_back(default_lit_shader); lit_shaders.push_back(default_lit_instanced); 
+	all_shaders.push_back(basic_mvp_shader); all_shaders.push_back(default_lit_shader); all_shaders.push_back(default_lit_instanced); 
 
 	// Lights and shadowmaps setup 
 	DirectionalLight::ShadowMapSettings dir_sm_settings;
@@ -376,19 +376,21 @@ int main()
 	Texture splat_tex{ "textures/uniform_splat_inv.png" }, splat_normal_tex{"textures/splat_normal.jpg"};
 
 	// Shared materials
-	Material redbricks_mat{ default_lit };
+	Material default_lit_material{ default_lit_shader };
+
+	Material redbricks_mat{ default_lit_material };
 	redbricks_mat.diffuse_map = &redbricks_diffuse_tex; redbricks_mat.normal_map = &redbricks_normal_tex; redbricks_mat.displacement_map = &redbricks_depth_tex;
 	redbricks_mat.parallax_heightscale = 0.05f;
 
-	Material grey_bricks{ default_lit };
+	Material grey_bricks{ default_lit_material };
 	grey_bricks.diffuse_map = &greybricks_diffuse_tex; grey_bricks.normal_map = &greybricks_normal_tex; grey_bricks.displacement_map = &greybricks_depth_tex;
 	grey_bricks.parallax_heightscale = 0.01f;
 
-	Material soil_cracked{ default_lit };
+	Material soil_cracked{ default_lit_material };
 	soil_cracked.diffuse_map = &soilcracked_diffuse_tex; soil_cracked.normal_map = &soilcracked_normal_tex; soil_cracked.displacement_map = &soilcracked_depth_tex;
 	soil_cracked.parallax_heightscale = 0.001f;
 
-	Material sph_mat { default_lit };
+	Material sph_mat { default_lit_material };
 
 	Material basic_mat{ basic_mvp_shader };
 
@@ -410,10 +412,10 @@ int main()
 	Material cube_material { redbricks_mat };
 	cube_material.uv_repeat = 3.f;
 
-	Material test_cube_material{ default_lit };
-	Material fountain_material{ default_lit };
-	Material gun_mat { default_lit };
-	Material buny_mat{ default_lit };
+	Material test_cube_material{ default_lit_material };
+	Material fountain_material{ default_lit_material };
+	Material gun_mat { default_lit_material };
+	Material buny_mat{ default_lit_material };
 
 #pragma endregion materials_setup
 
@@ -446,7 +448,7 @@ int main()
 	std::vector<Entity*> lightcube_entites; lightcube_entites.resize(point_lights.size());
 	for (size_t i = 0; i < point_lights.size(); i++)
 	{
-		Material lightcolor { default_lit };
+		Material lightcolor { default_lit_material };
 		lightcolor.ambient_color = point_lights[i]->color;
 		lightcolor.kA = 1; lightcolor.kD = 0; lightcolor.kS = 0;
 		lightcolor.receive_shadows = false;
@@ -1085,15 +1087,16 @@ int main()
 			ImGui::SliderFloat("Repeat tex##floor", &floor_plane->material->uv_repeat, 0, 3000, " % .1f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::SliderFloat("Parallax Height Scale##floor", &floor_plane->material->parallax_heightscale, 0, 0.5, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::SliderFloat("Paint normal bias##floor", &floor_plane->material->detail_normal_bias, 0, 0.5, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Paint threshold##floor", &floor_plane->material->detail_alpha_threshold, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::Separator(); 
 			ImGui::Text("Cube");
 			ImGui::SliderFloat("Repeat tex##cube", &cube->material->uv_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::SliderFloat("Parallax Height Scale##cube", &cube->material->parallax_heightscale, 0, 0.5, "%.3f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Paint normal bias##cube", &cube->material->detail_normal_bias, 0, 0.5, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Paint threshold##cube", &cube->material->detail_alpha_threshold, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::Text("Front wall");
 			ImGui::SliderFloat("Repeat tex##front", &wall_plane->material->uv_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::SliderFloat("Parallax Height Scale##front", &wall_plane->material->parallax_heightscale, 0, 0.5, "%.3f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Paint normal bias##front", &wall_plane->material->detail_normal_bias, 0, 0.5, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Paint threshold##cube", &wall_plane->material->detail_alpha_threshold, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 		}
 
 		ImGui::End();

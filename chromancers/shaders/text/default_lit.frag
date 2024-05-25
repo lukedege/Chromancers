@@ -55,6 +55,8 @@ uniform int sample_shadow_map  = 0; // receive shadows or not
 
 uniform float uv_repeat = 1; // texture repetitions
 
+// Detail map attributes
+uniform float detail_alpha_threshold = 0.7f;
 uniform float detail_diffuse_bias = 1.75f;
 uniform float detail_normal_bias = 0.05f;
 
@@ -298,7 +300,7 @@ vec3 BlinnPhong()
 
 	if(sample_detail_diffuse_map == 1 && sample_detail_normal_map == 1)
 	{
-		if(detail_diffuse_color.a > 0.7f)
+		if(detail_diffuse_color.a > detail_alpha_threshold)
 		{
 			N += calculateNormal(detail_normal_map, sample_detail_normal_map, fs_in.twNormal, finalTexCoords) * detail_normal_bias * detail_diffuse_color.a;
 			shininess_factor = 512.f;
