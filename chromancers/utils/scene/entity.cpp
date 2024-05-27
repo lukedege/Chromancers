@@ -95,8 +95,11 @@ namespace engine::scene
 	}
 
 	Entity::Entity(std::string display_name, Model& drawable, Material& material) :
-		EntityBase(display_name), model{ &drawable }, material{ &material }
-	{}
+		EntityBase(display_name), 
+		model{ &drawable }, material{ &material }
+	{
+		bounding_volume = std::make_unique<BoundingSphere>(drawable);
+	}
 
 	void Entity::draw() const noexcept
 	{

@@ -78,31 +78,8 @@ namespace engine::scene
 			depthmap_framebuffer{ shadowmap_settings.resolution, shadowmap_settings.resolution },
 			position{ position } 
 		{
-			// Create cubemap
 			glGenTextures(1, &depthCubemap);
-
-			const unsigned int SHADOW_WIDTH = shadowmap_settings.resolution, SHADOW_HEIGHT = shadowmap_settings.resolution;
-			glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
-
-			// Create a 2D texture for each face of the cubemap
-			for (unsigned int i = 0; i < 6; ++i)
-					glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, 
-								 SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL); 
-
-			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);  
-
-			// Attach the whole cubemap as depth attachment to the framebuffer as we'll do a geom shader trick to render all faces at once
-			depthmap_framebuffer.bind();
-			{
-				glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0);
-				glDrawBuffer(GL_NONE); // NO COLOR ATTACHMENT NEEDED
-				glReadBuffer(GL_NONE); 
-			}
-			depthmap_framebuffer.unbind();
+			create_depth_cubemap(shadowmap_settings.resolution);
 		}
 
 		void setup(const Shader& shader, size_t index)
@@ -113,6 +90,16 @@ namespace engine::scene
 			shader.setFloat(prefix + "attenuation_constant" , attenuation_constant);
 			shader.setFloat(prefix + "attenuation_linear"   , attenuation_linear);
 			shader.setFloat(prefix + "attenuation_quadratic", attenuation_quadratic);
+		}
+
+		void resize_shadowmap(unsigned int new_resolution)
+		{
+			// Do nothing if resolution is the same as before
+			if (shadowmap_settings.resolution == new_resolution) return; 
+
+			shadowmap_settings.resolution = new_resolution;
+			depthmap_framebuffer.resize(new_resolution, new_resolution);
+			create_depth_cubemap(new_resolution);
 		}
 
 		void compute_shadowmap(engine::scene::Scene& scene) override
@@ -180,6 +167,32 @@ namespace engine::scene
 
 			return shadowTransforms;
 		}
+
+		// Create a depth cubemap
+		void create_depth_cubemap(unsigned int resolution)
+		{
+			glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
+
+			// Create a 2D texture for each face of the cubemap
+			for (unsigned int i = 0; i < 6; ++i)
+				glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, 
+								 resolution, resolution, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL); 
+
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);  
+
+			// Attach the whole cubemap as depth attachment to the framebuffer as we'll do a geom shader trick to render all faces at once
+			depthmap_framebuffer.bind();
+			{
+				glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0);
+				glDrawBuffer(GL_NONE); // NO COLOR ATTACHMENT NEEDED
+				glReadBuffer(GL_NONE); 
+			}
+			depthmap_framebuffer.unbind();
+		}
 	};
 
 	// Class representing a directional light source in the game world
@@ -218,6 +231,15 @@ namespace engine::scene
 			setBaseLightAttributes(shader, prefix);
 			shader.setVec3(prefix + "direction", direction);
 			shader.setMat4(prefix + "lightspace_matrix", lightspace_matrix);
+		}
+
+		void resize_shadowmap(unsigned int new_resolution)
+		{
+			// Do nothing if resolution is the same as before
+			if (shadowmap_settings.resolution == new_resolution) return;
+
+			shadowmap_settings.resolution = new_resolution;
+			depthmap_framebuffer.resize(new_resolution, new_resolution);
 		}
 
 		void compute_shadowmap(engine::scene::Scene& scene) override

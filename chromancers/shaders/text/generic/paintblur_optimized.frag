@@ -22,7 +22,39 @@ uniform float depth_offset = 1.f;
 // We use a depth offset to avoid blurring too much paintballs closer to the camera (such as the ones coming out of the gun)
 
 // The equivalent blur kernel is a 9x9 gaussian mask
-float weights[5] = float[] (0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216);
+// We can take advantage of bilinear texture filtering to get information
+// about 2 pixels instead of one, halving the texture fetches
+const uint gauss_sampleCount = 3;
+float weights[gauss_sampleCount] = float[](0.2270270270, 0.3162162162, 0.0702702703);
+float offsets[gauss_sampleCount] = float[](0.0, 1.3846153846, 3.2307692308);
+/*
+const uint gauss_sampleCount = 9;
+float weights[gauss_sampleCount] = float[]
+(
+6.745572658e-2,
+1.302552143e-1,
+1.131940344e-1,
+8.791722474e-2,
+6.103025286e-2,
+3.786477257e-2,
+2.099627278e-2,
+1.040549874e-2,
+4.608866282e-3
+);
+
+float offsets[gauss_sampleCount] = float[]
+(
+0.000000000	,
+1.489397239	,
+3.475276694	,
+5.461195572	,
+7.447176104	,
+9.433240132	,
+11.419408973,
+13.405703291,
+15.392142983
+);*/
+
 
 // Since the depth map is not linear, we need to linearize it
 float LinearizeDepth(float depth) 
@@ -37,18 +69,18 @@ vec4 rgba_blur(vec2 tex_offset)
 
     if(horizontal)
     {
-        for(int i = 1; i < 5; ++i)
+        for(int i = 1; i < gauss_sampleCount; ++i)
         {
-            result += texture(image, TexCoords + vec2(tex_offset.x * i, 0.0)) * weights[i];
-            result += texture(image, TexCoords - vec2(tex_offset.x * i, 0.0)) * weights[i];
+            result += texture(image, TexCoords + vec2(tex_offset.x * offsets[i], 0.0)) * weights[i];
+            result += texture(image, TexCoords - vec2(tex_offset.x * offsets[i], 0.0)) * weights[i];
         }
     }
     else
     {
-        for(int i = 1; i < 5; ++i)
+        for(int i = 1; i < gauss_sampleCount; ++i)
         {
-            result += texture(image, TexCoords + vec2(0.0, tex_offset.y * i)) * weights[i];
-            result += texture(image, TexCoords - vec2(0.0, tex_offset.y * i)) * weights[i];
+            result += texture(image, TexCoords + vec2(0.0, tex_offset.y * offsets[i])) * weights[i];
+            result += texture(image, TexCoords - vec2(0.0, tex_offset.y * offsets[i])) * weights[i];
         }
     }
 

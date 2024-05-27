@@ -19,6 +19,7 @@
 #include "../component.h"
 
 #include "../transform.h"
+#include "bounding_volume.h"
 
 namespace engine::scene
 {
@@ -127,6 +128,8 @@ namespace engine::scene
 	public:
 		Model* model;       // Pointer to the model representing the entity
 		Material* material; // Pointer to the material representing the entity
+
+		std::unique_ptr<BoundingVolume> bounding_volume; 
 
 		Entity(std::string display_name, Model& drawable, Material& material);
 

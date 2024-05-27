@@ -98,7 +98,11 @@ bool wireframe = false;
 PointLight* currentLight;
 float mov_light_speed = 5.f;
 
+// Shaders
+float paintblur_shader_blurstrength = 10.f;
 
+// Others
+unsigned int map_framebuffer_divisor = 4;
 
 /////////////////// INPUT functions ///////////////////////
 
@@ -223,11 +227,16 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
 	ws.width = width;
 	ws.height = height;
+	
+	// Resize all screensized framebuffers
 	for (auto f : fullscreen_framebuffers)
 	{
 		f->resize(width, height);
 	}
-	map_framebuffer_ptr->resize(width / 8, height / 8);
+	map_framebuffer_ptr->resize(width / map_framebuffer_divisor, height / map_framebuffer_divisor);
+
+	// Paintballs blur depends on framebuffer size so we need to adjust blur strength on resize
+	paintblur_shader_blurstrength = std::powf(ws.width * ws.height, 0.16f);
 }
 
 
@@ -320,12 +329,16 @@ int main()
 	all_shaders.push_back(basic_mvp_shader); all_shaders.push_back(default_lit_shader); all_shaders.push_back(default_lit_instanced); 
 
 	// Lights and shadowmaps setup 
+	std::vector<unsigned int> shadowmap_res{128, 256, 512, 1024, 2048, 4096};
+	unsigned int current_dl_res = shadowmap_res[4];
+	unsigned int current_pl_res = shadowmap_res[0];
+
 	DirectionalLight::ShadowMapSettings dir_sm_settings;
-	dir_sm_settings.resolution = 1024;
+	dir_sm_settings.resolution = current_dl_res;
 	dir_sm_settings.shader = &shadowmap_shader;
 
 	PointLight::ShadowMapSettings pl_sm_settings;
-	pl_sm_settings.resolution = 512;
+	pl_sm_settings.resolution = current_pl_res;
 	pl_sm_settings.shader = &shadowcube_shader;
 
 	PointLight pl1 { glm::vec3{-8.0f, 2.0f, 2.5f}, glm::vec4{1, 0, 1, 1}, 0.5f, pl_sm_settings};
@@ -341,7 +354,7 @@ int main()
 	std::vector<DirectionalLight*> dir_lights;
 	dir_lights.push_back(&dl1); dir_lights.push_back(&dl2); //dir_lights.push_back(&dl3);
 
-	currentLight = point_lights[0];
+	if(point_lights.size() > 0) currentLight = point_lights[0];
 
 	// Shader uniform commons and constants setup
 	for (Shader& shader : all_shaders)
@@ -360,7 +373,7 @@ int main()
 	// Specific uniforms setup (we use these in imgui for interactability)
 	float paintstep_shader_t0_color = 0.1f, paintstep_shader_t1_color = 0.4f;
 	float paintstep_shader_t0_alpha = 0.8f, paintstep_shader_t1_alpha = 0.9f;
-	float paintblur_shader_blurstrength = 10.f, paintblur_shader_depthoffset = 1.f;
+	float paintblur_shader_depthoffset = 1.f;
 	bool paintblur_shader_ignore_alpha = false;
 	int paintblur_blurpasses = 4;
 
@@ -608,7 +621,8 @@ int main()
 	// This framebuffer will be used for the smoothstep effect of paintballs
 	Framebuffer paintstep_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
 
-	Framebuffer map_framebuffer{ ws.width / 8, ws.height / 8, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
+	Framebuffer map_framebuffer{ ws.width / map_framebuffer_divisor, ws.height / map_framebuffer_divisor, 
+		Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
 
 	// This framebuffer will be used to group
 	Framebuffer present_framebuffer{ ws.width, ws.height, Texture::FormatInfo{GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} };
@@ -638,12 +652,10 @@ int main()
 		// and we calculate the time difference between current frame rendering and the previous one
 		float currentFrameTime = gsl::narrow_cast<float>(glfwGetTime());
 		deltaTime = currentFrameTime - lastFrameTime;
-		capped_deltaTime = deltaTime < maxSecPerFrame ? deltaTime : maxSecPerFrame;
+		capped_deltaTime = deltaTime < maxSecPerFrame ? deltaTime : maxSecPerFrame; // for physics
 		lastFrameTime = currentFrameTime;
 
-		avg_ms_per_frame  = alpha * avg_ms_per_frame + (1.0f - alpha) * deltaTime * 1000;
-
-		main_scene.current_camera = &player.first_person_camera;
+		avg_ms_per_frame  = alpha * avg_ms_per_frame + (1.0f - alpha) * (deltaTime * 1000);
 
 		if (capture_mouse)
 			glfwSetInputMode(wdw.get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -725,25 +737,27 @@ int main()
 		for (Shader& lit_shader : lit_shaders)
 		{
 			lit_shader.bind();
-			// Set sampler locations for directional shadow maps
-			for (int i = 0; i < dir_shadow_locs_amount; i++)
 			{
-				int tex_offset = SHADOW_TEX_UNIT + i;
-				dir_shadow_locs[i] = tex_offset;
-				glActiveTexture(GL_TEXTURE0 + tex_offset);
-				glBindTexture(GL_TEXTURE_2D, i < dir_lights.size() ? dir_lights[i]->get_shadowmap().id() : 0);
-			}
-			// Set sampler locations for point shadow maps
-			for (int i = 0; i < point_shadow_locs_amount; i++)
-			{
-				int tex_offset = SHADOW_TEX_UNIT + dir_shadow_locs_amount + i;
-				point_shadow_locs[i] = tex_offset;
-				glActiveTexture(GL_TEXTURE0 + tex_offset);
-				glBindTexture(GL_TEXTURE_CUBE_MAP, i < point_lights.size() ? point_lights[i]->depthCubemap : 0);
-			}
+				// Set sampler locations for directional shadow maps
+				for (int i = 0; i < dir_shadow_locs_amount; i++)
+				{
+					int tex_offset = SHADOW_TEX_UNIT + i;
+					dir_shadow_locs[i] = tex_offset;
+					glActiveTexture(GL_TEXTURE0 + tex_offset);
+					glBindTexture(GL_TEXTURE_2D, i < dir_lights.size() ? dir_lights[i]->get_shadowmap().id() : 0);
+				}
+				// Set sampler locations for point shadow maps
+				for (int i = 0; i < point_shadow_locs_amount; i++)
+				{
+					int tex_offset = SHADOW_TEX_UNIT + dir_shadow_locs_amount + i;
+					point_shadow_locs[i] = tex_offset;
+					glActiveTexture(GL_TEXTURE0 + tex_offset);
+					glBindTexture(GL_TEXTURE_CUBE_MAP, i < point_lights.size() ? point_lights[i]->depthCubemap : 0);
+				}
 
-			lit_shader.setIntV("directional_shadow_maps", dir_shadow_locs_amount, dir_shadow_locs.data());
-			lit_shader.setIntV("point_shadow_maps", point_shadow_locs_amount, point_shadow_locs.data());
+				lit_shader.setIntV("directional_shadow_maps", dir_shadow_locs_amount, dir_shadow_locs.data());
+				lit_shader.setIntV("point_shadow_maps", point_shadow_locs_amount, point_shadow_locs.data());
+			}
 			lit_shader.unbind();
 		}
 
@@ -756,7 +770,6 @@ int main()
 			glClearColor(0.26f, 0.46f, 0.98f, 1.0f); // bluish
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			main_scene.draw_except_instanced();
-			//main_scene.draw_only({ "floor", "cube"});
 		}
 		world_framebuffer.unbind();
 
@@ -901,6 +914,9 @@ int main()
 		}
 		map_framebuffer.unbind();
 
+		// Reset main scene camera to the player's one
+		main_scene.current_camera = &player.first_person_camera;
+
 #pragma endregion map_draw
 
 #pragma region present
@@ -1029,13 +1045,29 @@ int main()
 			ImGui::PushID(&point_lights);
 			if (ImGui::CollapsingHeader("Pointlights"))
 			{
-				if (ImGui::BeginCombo("Selected light##combo", "0")) // The second parameter is the label previewed before opening the combo.
+				if (ImGui::BeginCombo("Selected light##selcombo", "0")) // The second parameter is the label previewed before opening the combo.
 				{
 					for (int n = 0; n < point_lights.size(); n++)
 					{
 						bool is_selected = (currentLight == point_lights[n]); // You can store your selection however you want, outside or inside your objects
 						if (ImGui::Selectable(std::to_string(n).c_str(), is_selected))
 							currentLight = point_lights[n];
+					}
+					ImGui::EndCombo();
+				}
+				if (ImGui::BeginCombo("Shadowmap resolution##rescombo", std::to_string(current_pl_res).c_str())) // The second parameter is the label previewed before opening the combo.
+				{
+					for (int n = 0; n < shadowmap_res.size(); n++)
+					{
+						bool is_selected = (current_pl_res == shadowmap_res[n]); // You can store your selection however you want, outside or inside your objects
+						if (ImGui::Selectable(std::to_string(shadowmap_res[n]).c_str(), is_selected))
+						{
+							current_pl_res = shadowmap_res[n];
+							for (auto& pl : point_lights)
+							{
+								pl->resize_shadowmap(current_pl_res);
+							}
+						}
 					}
 					ImGui::EndCombo();
 				}
@@ -1061,6 +1093,22 @@ int main()
 			ImGui::PushID(&dir_lights);
 			if (ImGui::CollapsingHeader("Dir lights"))
 			{
+				if (ImGui::BeginCombo("Shadowmap resolution##rescombo", std::to_string(current_dl_res).c_str())) // The second parameter is the label previewed before opening the combo.
+				{
+					for (int n = 0; n < shadowmap_res.size(); n++)
+					{
+						bool is_selected = (current_dl_res == shadowmap_res[n]); // You can store your selection however you want, outside or inside your objects
+						if (ImGui::Selectable(std::to_string(shadowmap_res[n]).c_str(), is_selected))
+						{
+							current_dl_res = shadowmap_res[n];
+							for (auto& dl : dir_lights)
+							{
+								dl->resize_shadowmap(current_dl_res);
+							}
+						}
+					}
+					ImGui::EndCombo();
+				}
 				for (int i = 0; i < dir_lights.size(); i++)
 				{
 					ImGui::PushID(i);

@@ -3,6 +3,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "../utils.h"
+
 namespace engine::scene
 {
 	// Class for managing a simple first person camera
@@ -67,6 +69,29 @@ namespace engine::scene
 		glm::mat4 projectionMatrix()
 		{
 			return proj_matrix;
+		}
+
+		utils::math::Frustum frustum()
+		{
+			utils::math::Frustum frustum;
+			const float halfVSide = _far_plane * tanf(fov * .5f);
+			const float halfHSide = halfVSide * aspect_ratio;
+			const glm::vec3 frontMultFar = _far_plane * front;
+
+			frustum.nearFace = { _position + _near_plane * front, front };
+			frustum.farFace  = { _position + frontMultFar, -front };
+
+			frustum.rightFace = { _position,
+									glm::cross(frontMultFar - right * halfHSide, up) };
+			frustum.leftFace  = { _position,
+									glm::cross(up,frontMultFar + right * halfHSide) };
+
+			frustum.topFace    = { _position,
+									glm::cross(right, frontMultFar - up * halfVSide) };
+			frustum.bottomFace = { _position,
+									glm::cross(frontMultFar + up * halfVSide, right) };
+
+			return frustum;
 		}
 
 		glm::vec3 position()

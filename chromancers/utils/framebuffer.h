@@ -80,6 +80,15 @@ namespace utils::graphics::opengl
 			glViewport(0, 0, old_width, old_height);
 		}
 
+		void resize(unsigned int new_width, unsigned int new_height)
+		{
+			// Do nothing if parameters are the same
+			if (new_width == _width && new_height == _height) return;
+		
+			_width = new_width;
+			_height = new_height;
+		}
+
 		// N.B. viewport restoring functionality from bind/unbind is guaranteed
 		// only if the methods are called in a coupled way
 		// e.g. bind = "(", unbind = ")"
@@ -172,6 +181,9 @@ namespace utils::graphics::opengl
 
 		void resize(unsigned int new_width, unsigned int new_height)
 		{
+			// Do nothing if parameters are the same
+			if (new_width == _width && new_height == _height) return;
+		
 			_width = new_width;
 			_height = new_height;
 

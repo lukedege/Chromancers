@@ -58,7 +58,8 @@ int mainz()
 			{ 720 }, //.window_height
 			{ 1280 }, //.viewport_width
 			{ 720 }, //.viewport_height
-			{ false }, //.resizable
+			{ true }, //.resizable
+			{ false }, //.vsync
 			{ true }, //.debug_gl
 		}
 	};
@@ -80,8 +81,18 @@ int mainz()
 	
 	Camera cam{ glm::vec3{0, 0, 5.f} };
 
+	float avg_fps = 1.f, alpha = 0.9f;
+	float deltaTime = 0.f, lastFrameTime = 0.f;
 	while (wdw.is_open())
 	{
+		float currentFrameTime = gsl::narrow_cast<float>(glfwGetTime());
+		deltaTime = currentFrameTime - lastFrameTime;
+		lastFrameTime = currentFrameTime;
+
+		avg_fps  = alpha * avg_fps + (1.0f - alpha) * (1.f / deltaTime);
+		std::cout << "Avg.fps :" << (avg_fps);
+		std::cout << "\r" << std::flush;
+
 		// Check is an I/O event is happening
 		glfwPollEvents();
 		Input::instance().process_pressed_keys();

@@ -170,6 +170,9 @@
     <ClInclude Include="utils\components\paintball_spawner_component.h">
       <Filter>Header Files\engine\components</Filter>
     </ClInclude>
+    <ClInclude Include="utils\scene\bounding_volume.h">
+      <Filter>Header Files\engine\scene</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\constants.glsl">
@@ -242,6 +245,9 @@
       <Filter>Shaders\text\generic</Filter>
     </None>
     <None Include="shaders\text\generic\shadow_cube.geom">
+      <Filter>Shaders\text\generic</Filter>
+    </None>
+    <None Include="shaders\text\generic\paintblur_optimized.frag">
       <Filter>Shaders\text\generic</Filter>
     </None>
   </ItemGroup>
