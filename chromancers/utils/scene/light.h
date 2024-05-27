@@ -210,7 +210,8 @@ namespace engine::scene
 		} shadowmap_settings;
 
 		// Dedicated framebuffer for computing the shadowmap
-		utils::graphics::opengl::Framebuffer depthmap_framebuffer;
+		utils::graphics::opengl::BasicFramebuffer depthmap_framebuffer;
+		unsigned int depthmap;
 		glm::mat4 lightspace_matrix{1};
 
 		// Light attributes
@@ -220,9 +221,11 @@ namespace engine::scene
 			Light{ color, intensity }, 
 			direction{ glm::normalize(direction) },
 			shadowmap_settings{ shadowmap_settings },
-			depthmap_framebuffer{ shadowmap_settings.resolution, shadowmap_settings.resolution,
-				Texture::FormatInfo{GL_RGB, GL_RGB, GL_UNSIGNED_BYTE}, Texture::FormatInfo{GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT} }
-		{}
+			depthmap_framebuffer{ shadowmap_settings.resolution, shadowmap_settings.resolution }
+		{
+			glGenTextures(1, &depthmap);
+			create_depthmap(shadowmap_settings.resolution);
+		}
 
 		void setup(const Shader& shader, size_t index)
 		{
@@ -240,6 +243,7 @@ namespace engine::scene
 
 			shadowmap_settings.resolution = new_resolution;
 			depthmap_framebuffer.resize(new_resolution, new_resolution);
+			create_depthmap(new_resolution);
 		}
 
 		void compute_shadowmap(engine::scene::Scene& scene) override
@@ -267,12 +271,30 @@ namespace engine::scene
 			depthmap_framebuffer.unbind();
 		}
 
-		const Texture& get_shadowmap()
+	private:
+		void create_depthmap(unsigned int resolution)
 		{
-			return depthmap_framebuffer.get_depth_attachment();
+			glBindTexture(GL_TEXTURE_2D, depthmap);
+
+			// Create a 2D texture depth tex
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
+					resolution, resolution, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+			// Attach the whole cubemap as depth attachment to the framebuffer as we'll do a geom shader trick to render all faces at once
+			depthmap_framebuffer.bind();
+			{
+				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthmap, 0);
+				glDrawBuffer(GL_NONE); // NO COLOR ATTACHMENT NEEDED
+				glReadBuffer(GL_NONE);
+			}
+			depthmap_framebuffer.unbind();
 		}
 
-	private:
 		// Computes a lightspace matrix given the shadowmap settings
 		glm::mat4 compute_lightspace_matrix()
 		{

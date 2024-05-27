@@ -640,7 +640,7 @@ int main()
 	player.init();
 
 	// Fps Measurements variables setup
-	float avg_ms_per_frame = 1.f, alpha = 0.9f;
+	float avg_ms_per_frame = 1.f, avg_fps = 1.f, alpha = 0.9f;
 #pragma endregion pre-loop_setup
 
 #pragma region rendering_loop
@@ -656,6 +656,9 @@ int main()
 		lastFrameTime = currentFrameTime;
 
 		avg_ms_per_frame  = alpha * avg_ms_per_frame + (1.0f - alpha) * (deltaTime * 1000);
+		avg_fps = alpha * avg_fps + (1.0f - alpha) * (1.f / deltaTime);
+		std::cout << "Avg.fps : " << (avg_fps) << " | Avg. frametime (ms) :" << avg_ms_per_frame;
+		std::cout << "\r" << std::flush;
 
 		if (capture_mouse)
 			glfwSetInputMode(wdw.get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -744,7 +747,7 @@ int main()
 					int tex_offset = SHADOW_TEX_UNIT + i;
 					dir_shadow_locs[i] = tex_offset;
 					glActiveTexture(GL_TEXTURE0 + tex_offset);
-					glBindTexture(GL_TEXTURE_2D, i < dir_lights.size() ? dir_lights[i]->get_shadowmap().id() : 0);
+					glBindTexture(GL_TEXTURE_2D, i < dir_lights.size() ? dir_lights[i]->depthmap : 0);
 				}
 				// Set sampler locations for point shadow maps
 				for (int i = 0; i < point_shadow_locs_amount; i++)
