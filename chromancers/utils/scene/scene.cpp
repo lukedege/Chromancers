@@ -119,8 +119,11 @@ namespace engine::scene
 		// Draw independent entities
 		for (auto& [id, entity] : entities)
 		{
-			// Don't draw this entity if not in frustums camera
-			//if (!(entity->bounding_volume->isOnFrustum(current_camera->frustum(), entity->world_transform()))) { continue; } 
+			if (use_frustum_culling)
+			{
+				// Don't draw this entity if not in frustums camera
+				if (!(entity->bounding_volume->isOnFrustum(current_camera->frustum(), entity->world_transform()))) { continue; } 
+			}
 
 			if (custom_shader)
 				entity->custom_draw(*custom_shader);
@@ -136,8 +139,11 @@ namespace engine::scene
 		{
 			for (auto& [id, instanced_entity] : instanced_group)
 			{
-				// Don't add this entity to the drawing transforms if not in frustums camera
-				//if (!(instanced_entity->bounding_volume->isOnFrustum(current_camera->frustum(), instanced_entity->world_transform()))) { continue; }
+				if (use_frustum_culling)
+				{
+					// Don't add this entity to the drawing transforms if not in frustums camera
+					if (!(instanced_entity->bounding_volume->isOnFrustum(current_camera->frustum(), instanced_entity->world_transform()))) { continue; }
+				}
 
 				// Fill data about instanced group transforms
 				instance_group_transforms.push_back(instanced_entity->world_transform().matrix());

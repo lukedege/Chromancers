@@ -66,24 +66,6 @@
     <ClCompile Include="quick_tests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Libraries\imgui-1.88\imgui.cpp">
-      <Filter>Source Files\Libraries\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Libraries\imgui-1.88\imgui_draw.cpp">
-      <Filter>Source Files\Libraries\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Libraries\imgui-1.88\imgui_tables.cpp">
-      <Filter>Source Files\Libraries\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Libraries\imgui-1.88\imgui_widgets.cpp">
-      <Filter>Source Files\Libraries\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Libraries\imgui-1.88\backends\imgui_impl_opengl3.cpp">
-      <Filter>Source Files\Libraries\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Libraries\imgui-1.88\backends\imgui_impl_glfw.cpp">
-      <Filter>Source Files\Libraries\imgui</Filter>
-    </ClCompile>
     <ClCompile Include="stb_image.cpp">
       <Filter>Source Files\Libraries\stb_image</Filter>
     </ClCompile>
@@ -92,6 +74,30 @@
     </ClCompile>
     <ClCompile Include="utils\scene\entity.cpp">
       <Filter>Source Files\engine\scene</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Libraries\imgui-1.90.7\imgui.cpp">
+      <Filter>Source Files\Libraries\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Libraries\imgui-1.90.7\imgui_draw.cpp">
+      <Filter>Source Files\Libraries\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Libraries\imgui-1.90.7\imgui_tables.cpp">
+      <Filter>Source Files\Libraries\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Libraries\imgui-1.90.7\imgui_widgets.cpp">
+      <Filter>Source Files\Libraries\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Libraries\implot-master\implot.cpp">
+      <Filter>Source Files\Libraries\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Libraries\implot-master\implot_items.cpp">
+      <Filter>Source Files\Libraries\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Libraries\imgui-1.90.7\backends\imgui_impl_opengl3.cpp">
+      <Filter>Source Files\Libraries\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Libraries\imgui-1.90.7\backends\imgui_impl_glfw.cpp">
+      <Filter>Source Files\Libraries\imgui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

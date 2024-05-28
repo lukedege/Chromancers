@@ -130,11 +130,11 @@ namespace engine::scene
 					shadowmap_settings.shader->setVec3("lightPos", position);
 					shadowmap_settings.shader->setFloat("far_plane", shadowmap_settings.frustum_far);
 
-					glActiveTexture(GL_TEXTURE0);
-					glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
-
 					// Draw the scene from point lights pov
+					bool cull_option = scene.use_frustum_culling;
+					scene.use_frustum_culling = false;
 					scene.draw_except_instanced(shadowmap_settings.shader);
+					scene.use_frustum_culling = cull_option; // restore previous culling option
 				}
 				shadowmap_settings.shader->unbind();
 			}
@@ -264,7 +264,10 @@ namespace engine::scene
 					shadowmap_settings.shader->setMat4("lightSpaceMatrix", lightspace_matrix);
 
 					// Draw the scene from point lights pov
+					bool cull_option = scene.use_frustum_culling;
+					scene.use_frustum_culling = false;
 					scene.draw_except_instanced(shadowmap_settings.shader);
+					scene.use_frustum_culling = cull_option; // restore previous culling option
 				}
 				shadowmap_settings.shader->unbind();
 			}

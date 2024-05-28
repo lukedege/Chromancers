@@ -59,6 +59,7 @@ namespace engine::scene
 	public:
 		Camera* current_camera{ nullptr };
 		utils::random::generator& rng;
+		bool use_frustum_culling{ true };
 
 		Scene(utils::random::generator& rng) : rng{rng} { glGenBuffers(1, &instanced_ssbo); }
 

@@ -21,6 +21,8 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
+#include <implot.h>
+
 // utils libraries
 #include "utils/shader.h"
 #include "utils/model.h "
@@ -236,7 +238,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	map_framebuffer_ptr->resize(width / map_framebuffer_divisor, height / map_framebuffer_divisor);
 
 	// Paintballs blur depends on framebuffer size so we need to adjust blur strength on resize
-	paintblur_shader_blurstrength = std::powf(ws.width * ws.height, 0.16f);
+	paintblur_shader_blurstrength = std::powf(static_cast<float>(ws.width * ws.height), 0.16f);
 }
 
 
@@ -281,6 +283,7 @@ int main()
 	ImGui::StyleColorsDark();
 	ImGui_ImplGlfw_InitForOpenGL(glfw_window, true);
 	ImGui_ImplOpenGL3_Init("#version 460");
+	ImPlot::CreateContext();
 #pragma endregion window_setup
 
 #pragma region scene_setup	
@@ -331,7 +334,7 @@ int main()
 	// Lights and shadowmaps setup 
 	std::vector<unsigned int> shadowmap_res{128, 256, 512, 1024, 2048, 4096};
 	unsigned int current_dl_res = shadowmap_res[4];
-	unsigned int current_pl_res = shadowmap_res[0];
+	unsigned int current_pl_res = shadowmap_res[2];
 
 	DirectionalLight::ShadowMapSettings dir_sm_settings;
 	dir_sm_settings.resolution = current_dl_res;
@@ -560,14 +563,14 @@ int main()
 
 	// Paintable entities setup (an entity that has a paintmap, thus its appearance can be changed by paintballs)
 	test_cube      ->emplace_component<PaintableComponent>(painter_shader, 128, 128, &splat_tex, &splat_normal_tex);
-	wall_plane     ->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
+	wall_plane     ->emplace_component<PaintableComponent>(painter_shader, 512, 512, &splat_tex, &splat_normal_tex);
 	cube           ->emplace_component<PaintableComponent>(painter_shader, 128, 128, &splat_tex, &splat_normal_tex);
 	floor_plane    ->emplace_component<PaintableComponent>(painter_shader, 2048, 2048, &splat_tex, &splat_normal_tex);
-	bunny          ->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
+	bunny          ->emplace_component<PaintableComponent>(painter_shader, 256, 256, &splat_tex, &splat_normal_tex);
 
-	left_room_lwall->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
-	left_room_rwall->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
-	left_room_bwall->emplace_component<PaintableComponent>(painter_shader, 1024, 1024, &splat_tex, &splat_normal_tex);
+	left_room_lwall->emplace_component<PaintableComponent>(painter_shader, 512, 512, &splat_tex, &splat_normal_tex);
+	left_room_rwall->emplace_component<PaintableComponent>(painter_shader, 512, 512, &splat_tex, &splat_normal_tex);
+	left_room_bwall->emplace_component<PaintableComponent>(painter_shader, 512, 512, &splat_tex, &splat_normal_tex);
 
 	// Paintball spawners setup (an entity that generates paintballs)
 	PaintballSpawnerComponent* fountain_spawner = static_cast<PaintballSpawnerComponent*> 
@@ -640,7 +643,14 @@ int main()
 	player.init();
 
 	// Fps Measurements variables setup
+	const int fps_values_amount = 2000;
+	utils::containers::FixedQueue<float, fps_values_amount> fps_values;
+	utils::containers::FixedQueue<float, fps_values_amount> t_values;
+
 	float avg_ms_per_frame = 1.f, avg_fps = 1.f, alpha = 0.9f;
+	float min_fps = 0.f, max_fps = 800.f;
+	float time_offset = 3.0f, fps_offset = 100.f;
+	bool stable = false;
 #pragma endregion pre-loop_setup
 
 #pragma region rendering_loop
@@ -655,10 +665,11 @@ int main()
 		capped_deltaTime = deltaTime < maxSecPerFrame ? deltaTime : maxSecPerFrame; // for physics
 		lastFrameTime = currentFrameTime;
 
-		avg_ms_per_frame  = alpha * avg_ms_per_frame + (1.0f - alpha) * (deltaTime * 1000);
-		avg_fps = alpha * avg_fps + (1.0f - alpha) * (1.f / deltaTime);
-		std::cout << "Avg.fps : " << (avg_fps) << " | Avg. frametime (ms) :" << avg_ms_per_frame;
-		std::cout << "\r" << std::flush;
+		if (!stable && currentFrameTime > 5)
+		{
+			stable = true;
+			min_fps = 1000.f, max_fps = 0.f;
+		}
 
 		if (capture_mouse)
 			glfwSetInputMode(wdw.get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -885,6 +896,7 @@ int main()
 #pragma region map_draw
 
 		// MAP
+		bool cull_option = main_scene.use_frustum_culling;
 		map_framebuffer.bind();
 		{
 			glClearColor(0.26f, 0.46f, 0.98f, 1.0f); // bluish
@@ -894,6 +906,7 @@ int main()
 			topdown_camera.set_position(player.first_person_camera.position() + glm::vec3{ 0, topdown_height, 0 });
 			topdown_camera.lookAt(player.first_person_camera.position(), glm::vec3{0, 0, 1});
 			main_scene.current_camera = &topdown_camera;
+			main_scene.use_frustum_culling = false;
 		
 			// Update camera info since we swapped to topdown
 			for (Shader& shader : all_shaders)
@@ -919,6 +932,7 @@ int main()
 
 		// Reset main scene camera to the player's one
 		main_scene.current_camera = &player.first_person_camera;
+		main_scene.use_frustum_culling = cull_option; // restore frustum culling option
 
 #pragma endregion map_draw
 
@@ -949,211 +963,239 @@ int main()
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
+		ImGui::Begin("FPS info");
+		{
+			avg_ms_per_frame  = alpha * avg_ms_per_frame + (1.0f - alpha) * (deltaTime * 1000);
+			avg_fps = alpha * avg_fps + (1.0f - alpha) * (1.f / deltaTime);
+			if (stable)
+			{
+				min_fps = min_fps < avg_fps ? min_fps : avg_fps;
+				max_fps = max_fps > avg_fps ? max_fps : avg_fps;
+			}
+
+			fps_values.push_back(avg_fps);
+			t_values.push_back(currentFrameTime);
+			
+			std::string my_fps_counter = "Avg FPS: " + std::to_string(avg_fps);
+			std::string ms_frame_counter = "Time per frame: " + std::to_string(avg_ms_per_frame) + "ms";
+			std::string min_record = "Min fps:" + std::to_string(min_fps) + "ms";
+			std::string max_record = "Max fps:" + std::to_string(max_fps) + "ms";
+			ImGui::Text(my_fps_counter.c_str()); ImGui::Text(ms_frame_counter.c_str());
+			ImGui::Text(min_record.c_str()); ImGui::Text(max_record.c_str());
+			ImGui::SliderFloat("Time offset", &time_offset, 0, 10, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderFloat("Fps offset", &fps_offset, 0, 200, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+			if (ImPlot::BeginPlot("##Fps Plot"))
+			{
+				ImPlot::SetupAxisLimits(ImAxis_X1, currentFrameTime - time_offset, currentFrameTime, ImPlotCond_Always);
+				ImPlot::SetupAxisLimits(ImAxis_Y1, min_fps - fps_offset, max_fps + fps_offset, ImPlotCond_Always);
+				ImPlot::PlotLine("Fps", t_values.data(), fps_values.data(), fps_values_amount);
+				ImPlot::EndPlot();
+			}
+		}
+		ImGui::End();
 		ImGui::Begin("Settings");
-		std::string fps_counter = "Approximate FPS: " + std::to_string(ImGui::GetIO().Framerate);
-		std::string ms_frame_counter = "Time per frame: " + std::to_string(avg_ms_per_frame) + "ms";
-		ImGui::Text(fps_counter.c_str()); ImGui::Text(ms_frame_counter.c_str());
-
-		// Various settings
-		if (ImGui::CollapsingHeader("Paintball FX settings"))
 		{
-			ImGui::ColorEdit4 ("Paint Color",    glm::value_ptr(player.paintball_spawner->paint_color));
-			ImGui::Separator(); ImGui::Text("Paintball material");
-			ImGui::SliderFloat("kA", &player.paintball_spawner->paintball_material.kA, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("kD", &player.paintball_spawner->paintball_material.kD, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("kS", &player.paintball_spawner->paintball_material.kS, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::ColorEdit4("Ambient",  glm::value_ptr (player.paintball_spawner->paintball_material.ambient_color));
-			ImGui::ColorEdit4("Diffuse",  glm::value_ptr (player.paintball_spawner->paintball_material.diffuse_color));
-			ImGui::ColorEdit4("Specular", glm::value_ptr (player.paintball_spawner->paintball_material.specular_color));
-			ImGui::SliderFloat("Shininess", &player.paintball_spawner->paintball_material.shininess, 0, 128.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::Checkbox("Receive shadows", &player.paintball_spawner->paintball_material.receive_shadows);
-			ImGui::Separator(); ImGui::Text("Blur and step FX shaders");
-			ImGui::SliderInt("Blur passes", &paintblur_blurpasses, 0, 8, "%d", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Blur Strength", &paintblur_shader_blurstrength, 0, 16.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Blur Depth offset", &paintblur_shader_depthoffset, 0, 16.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::Checkbox("Blur ignore alpha", &paintblur_shader_ignore_alpha);
-			ImGui::SliderFloat("Smoothstep color t0", &paintstep_shader_t0_color, -1.f, 1.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Smoothstep color t1", &paintstep_shader_t1_color, -1.f, 1.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Smoothstep alpha t0", &paintstep_shader_t0_alpha, -1.f, 1.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Smoothstep alpha t1", &paintstep_shader_t1_alpha, -1.f, 1.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
-		}
-		if (ImGui::CollapsingHeader("Paintgun settings"))
-		{
-			ImGui::Separator(); ImGui::Text("Paintball");
-			ImGui::SliderFloat("Weight", &player.paintball_spawner->paintball_weight, 0, 10, " %.1f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Size", &player.paintball_spawner->paintball_size, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Min size variation", &player.paintball_spawner->size_variation_min_multiplier, 0, 2, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Max size variation", &player.paintball_spawner->size_variation_max_multiplier, 0, 2, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-
-			ImGui::Separator(); ImGui::Text("Gun properties");
-			ImGui::SliderFloat("Muzzle speed", &player.paintball_spawner->shooting_speed, 0, 100, " %.1f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Muzzle spread", &player.paintball_spawner->shooting_spread, 0, 3, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-			unsigned int rps_min = 1, rps_max = 200;
-			ImGui::SliderScalar("Rounds per Sec", ImGuiDataType_U32, &player.paintball_spawner->rounds_per_second, &rps_min, &rps_max, " %d", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::Checkbox   ("Hold to fire", &hold_to_fire);
-
-			ImGui::Separator(); ImGui::Text("Gun model");
-			ImGui::SliderFloat3("Viewmodel offset", glm::value_ptr(player.viewmodel_offset), -1, 1, "%.2f", 1);
-		}
-
-		// Paintball spawners
-		if (ImGui::CollapsingHeader("Paintball spawners"))
-		{
-			ImGui::Indent();
-			ImGui::PushID(&fountain_spawners);
-			for (int i = 0; i < fountain_spawners.size(); i++)
+			// Various settings
+			if (ImGui::CollapsingHeader("Paintball FX settings"))
 			{
-				auto& fountain_spawner = fountain_spawners[i];
-				std::string fountain_label = fountain_spawner->parent()->display_name;
-				
-				if (ImGui::CollapsingHeader(fountain_label.c_str()))
-				{
-					ImGui::PushID(i);
-					ImGui::Indent();
-					ImGui::Separator(); ImGui::Text("Paintball material");
-					ImGui::ColorEdit4("Paint Color", glm::value_ptr(fountain_spawner->paintball_spawner.paint_color));
-					ImGui::SliderFloat("kA", &fountain_spawner->paintball_spawner.paintball_material.kA, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-					ImGui::SliderFloat("kD", &fountain_spawner->paintball_spawner.paintball_material.kD, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-					ImGui::SliderFloat("kS", &fountain_spawner->paintball_spawner.paintball_material.kS, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-					ImGui::ColorEdit4("Ambient", glm::value_ptr(fountain_spawner->paintball_spawner.paintball_material.ambient_color));
-					ImGui::ColorEdit4("Diffuse", glm::value_ptr(fountain_spawner->paintball_spawner.paintball_material.diffuse_color));
-					ImGui::ColorEdit4("Specular", glm::value_ptr(fountain_spawner->paintball_spawner.paintball_material.specular_color));
-					ImGui::SliderFloat("Shininess", &fountain_spawner->paintball_spawner.paintball_material.shininess, 0, 128.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
-					ImGui::Checkbox("Receive shadows", &fountain_spawner->paintball_spawner.paintball_material.receive_shadows);
-
-					ImGui::Separator(); ImGui::Text("Paintball");
-					ImGui::SliderFloat("Weight", &fountain_spawner->paintball_spawner.paintball_weight, 0, 10, " %.1f", ImGuiSliderFlags_AlwaysClamp);
-					ImGui::SliderFloat("Size", &fountain_spawner->paintball_spawner.paintball_size, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-					ImGui::SliderFloat("Min size variation", &fountain_spawner->paintball_spawner.size_variation_min_multiplier, 0, 2, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-					ImGui::SliderFloat("Max size variation", &fountain_spawner->paintball_spawner.size_variation_max_multiplier, 0, 2, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-
-					ImGui::Separator(); ImGui::Text("Shoot properties");
-					ImGui::SliderFloat("Shoot speed", &fountain_spawner->paintball_spawner.shooting_speed, 0, 100, " %.1f", ImGuiSliderFlags_AlwaysClamp);
-					ImGui::SliderFloat("Shoot spread", &fountain_spawner->paintball_spawner.shooting_spread, 0, 3, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-					unsigned int rps_min = 1, rps_max = 200;
-					ImGui::SliderScalar("Rounds per Sec", ImGuiDataType_U32, &fountain_spawner->paintball_spawner.rounds_per_second, &rps_min, &rps_max, " %d", ImGuiSliderFlags_AlwaysClamp);
-					
-					ImGui::Unindent();
-					ImGui::PopID();
-				}
+				ImGui::ColorEdit4("Paint Color", glm::value_ptr(player.paintball_spawner->paint_color));
+				ImGui::Separator(); ImGui::Text("Paintball material");
+				ImGui::SliderFloat("kA", &player.paintball_spawner->paintball_material.kA, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("kD", &player.paintball_spawner->paintball_material.kD, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("kS", &player.paintball_spawner->paintball_material.kS, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::ColorEdit4("Ambient", glm::value_ptr(player.paintball_spawner->paintball_material.ambient_color));
+				ImGui::ColorEdit4("Diffuse", glm::value_ptr(player.paintball_spawner->paintball_material.diffuse_color));
+				ImGui::ColorEdit4("Specular", glm::value_ptr(player.paintball_spawner->paintball_material.specular_color));
+				ImGui::SliderFloat("Shininess", &player.paintball_spawner->paintball_material.shininess, 0, 128.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::Checkbox("Receive shadows", &player.paintball_spawner->paintball_material.receive_shadows);
+				ImGui::Separator(); ImGui::Text("Blur and step FX shaders");
+				ImGui::SliderInt("Blur passes", &paintblur_blurpasses, 0, 8, "%d", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("Blur Strength", &paintblur_shader_blurstrength, 0, 16.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("Blur Depth offset", &paintblur_shader_depthoffset, 0, 16.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::Checkbox("Blur ignore alpha", &paintblur_shader_ignore_alpha);
+				ImGui::SliderFloat("Smoothstep color t0", &paintstep_shader_t0_color, -1.f, 1.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("Smoothstep color t1", &paintstep_shader_t1_color, -1.f, 1.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("Smoothstep alpha t0", &paintstep_shader_t0_alpha, -1.f, 1.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("Smoothstep alpha t1", &paintstep_shader_t1_alpha, -1.f, 1.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
 			}
-			ImGui::PopID();
-			ImGui::Unindent();
-		}
-
-		// Light settings
-		if (ImGui::CollapsingHeader("Lights"))
-		{
-			ImGui::Indent();
-			ImGui::PushID(&point_lights);
-			if (ImGui::CollapsingHeader("Pointlights"))
+			if (ImGui::CollapsingHeader("Paintgun settings"))
 			{
-				if (ImGui::BeginCombo("Selected light##selcombo", "0")) // The second parameter is the label previewed before opening the combo.
+				ImGui::Separator(); ImGui::Text("Paintball");
+				ImGui::SliderFloat("Weight", &player.paintball_spawner->paintball_weight, 0, 10, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("Size", &player.paintball_spawner->paintball_size, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("Min size variation", &player.paintball_spawner->size_variation_min_multiplier, 0, 2, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("Max size variation", &player.paintball_spawner->size_variation_max_multiplier, 0, 2, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+
+				ImGui::Separator(); ImGui::Text("Gun properties");
+				ImGui::SliderFloat("Muzzle speed", &player.paintball_spawner->shooting_speed, 0, 100, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("Muzzle spread", &player.paintball_spawner->shooting_spread, 0, 3, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+				unsigned int rps_min = 1, rps_max = 200;
+				ImGui::SliderScalar("Rounds per Sec", ImGuiDataType_U32, &player.paintball_spawner->rounds_per_second, &rps_min, &rps_max, " %d", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::Checkbox("Hold to fire", &hold_to_fire);
+
+				ImGui::Separator(); ImGui::Text("Gun model");
+				ImGui::SliderFloat3("Viewmodel offset", glm::value_ptr(player.viewmodel_offset), -1, 1, "%.2f", 1);
+			}
+
+			// Paintball spawners
+			if (ImGui::CollapsingHeader("Paintball spawners"))
+			{
+				ImGui::Indent();
+				ImGui::PushID(&fountain_spawners);
+				for (int i = 0; i < fountain_spawners.size(); i++)
 				{
-					for (int n = 0; n < point_lights.size(); n++)
+					auto& fountain_spawner = fountain_spawners[i];
+					std::string fountain_label = fountain_spawner->parent()->display_name;
+
+					if (ImGui::CollapsingHeader(fountain_label.c_str()))
 					{
-						bool is_selected = (currentLight == point_lights[n]); // You can store your selection however you want, outside or inside your objects
-						if (ImGui::Selectable(std::to_string(n).c_str(), is_selected))
-							currentLight = point_lights[n];
+						ImGui::PushID(i);
+						ImGui::Indent();
+						ImGui::Separator(); ImGui::Text("Paintball material");
+						ImGui::ColorEdit4("Paint Color", glm::value_ptr(fountain_spawner->paintball_spawner.paint_color));
+						ImGui::SliderFloat("kA", &fountain_spawner->paintball_spawner.paintball_material.kA, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+						ImGui::SliderFloat("kD", &fountain_spawner->paintball_spawner.paintball_material.kD, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+						ImGui::SliderFloat("kS", &fountain_spawner->paintball_spawner.paintball_material.kS, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+						ImGui::ColorEdit4("Ambient", glm::value_ptr(fountain_spawner->paintball_spawner.paintball_material.ambient_color));
+						ImGui::ColorEdit4("Diffuse", glm::value_ptr(fountain_spawner->paintball_spawner.paintball_material.diffuse_color));
+						ImGui::ColorEdit4("Specular", glm::value_ptr(fountain_spawner->paintball_spawner.paintball_material.specular_color));
+						ImGui::SliderFloat("Shininess", &fountain_spawner->paintball_spawner.paintball_material.shininess, 0, 128.f, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+						ImGui::Checkbox("Receive shadows", &fountain_spawner->paintball_spawner.paintball_material.receive_shadows);
+
+						ImGui::Separator(); ImGui::Text("Paintball");
+						ImGui::SliderFloat("Weight", &fountain_spawner->paintball_spawner.paintball_weight, 0, 10, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+						ImGui::SliderFloat("Size", &fountain_spawner->paintball_spawner.paintball_size, 0, 1, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+						ImGui::SliderFloat("Min size variation", &fountain_spawner->paintball_spawner.size_variation_min_multiplier, 0, 2, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+						ImGui::SliderFloat("Max size variation", &fountain_spawner->paintball_spawner.size_variation_max_multiplier, 0, 2, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+
+						ImGui::Separator(); ImGui::Text("Shoot properties");
+						ImGui::SliderFloat("Shoot speed", &fountain_spawner->paintball_spawner.shooting_speed, 0, 100, " %.1f", ImGuiSliderFlags_AlwaysClamp);
+						ImGui::SliderFloat("Shoot spread", &fountain_spawner->paintball_spawner.shooting_spread, 0, 3, " %.2f", ImGuiSliderFlags_AlwaysClamp);
+						unsigned int rps_min = 1, rps_max = 200;
+						ImGui::SliderScalar("Rounds per Sec", ImGuiDataType_U32, &fountain_spawner->paintball_spawner.rounds_per_second, &rps_min, &rps_max, " %d", ImGuiSliderFlags_AlwaysClamp);
+
+						ImGui::Unindent();
+						ImGui::PopID();
 					}
-					ImGui::EndCombo();
 				}
-				if (ImGui::BeginCombo("Shadowmap resolution##rescombo", std::to_string(current_pl_res).c_str())) // The second parameter is the label previewed before opening the combo.
+				ImGui::PopID();
+				ImGui::Unindent();
+			}
+
+			// Light settings
+			if (ImGui::CollapsingHeader("Lights"))
+			{
+				ImGui::Indent();
+				ImGui::PushID(&point_lights);
+				if (ImGui::CollapsingHeader("Pointlights"))
 				{
-					for (int n = 0; n < shadowmap_res.size(); n++)
+					if (ImGui::BeginCombo("Selected light##selcombo", "0")) // The second parameter is the label previewed before opening the combo.
 					{
-						bool is_selected = (current_pl_res == shadowmap_res[n]); // You can store your selection however you want, outside or inside your objects
-						if (ImGui::Selectable(std::to_string(shadowmap_res[n]).c_str(), is_selected))
+						for (int n = 0; n < point_lights.size(); n++)
 						{
-							current_pl_res = shadowmap_res[n];
-							for (auto& pl : point_lights)
+							bool is_selected = (currentLight == point_lights[n]); // You can store your selection however you want, outside or inside your objects
+							if (ImGui::Selectable(std::to_string(n).c_str(), is_selected))
+								currentLight = point_lights[n];
+						}
+						ImGui::EndCombo();
+					}
+					if (ImGui::BeginCombo("Shadowmap resolution##rescombo", std::to_string(current_pl_res).c_str())) // The second parameter is the label previewed before opening the combo.
+					{
+						for (int n = 0; n < shadowmap_res.size(); n++)
+						{
+							bool is_selected = (current_pl_res == shadowmap_res[n]); // You can store your selection however you want, outside or inside your objects
+							if (ImGui::Selectable(std::to_string(shadowmap_res[n]).c_str(), is_selected))
 							{
-								pl->resize_shadowmap(current_pl_res);
+								current_pl_res = shadowmap_res[n];
+								for (auto& pl : point_lights)
+								{
+									pl->resize_shadowmap(current_pl_res);
+								}
 							}
 						}
+						ImGui::EndCombo();
 					}
-					ImGui::EndCombo();
-				}
-				for (int i = 0; i < point_lights.size(); i++)
-				{
-					ImGui::PushID(i);
-					std::string light_label = "Point light n." + std::to_string(i);
-					ImGui::Separator(); ImGui::Text(light_label.c_str());
-
-					ImGui::SliderFloat3("Pos", glm::value_ptr(point_lights[i]->position), -20, 20, "%.2f", 1);
-					ImGui::SliderFloat("Intensity", &point_lights[i]->intensity, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-					ImGui::ColorEdit4("Color", glm::value_ptr(point_lights[i]->color));
-
-					ImGui::SliderFloat("Att_const", &point_lights[i]->attenuation_constant, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-					ImGui::SliderFloat("Att_lin", &point_lights[i]->attenuation_linear, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-					ImGui::SliderFloat("Att_quad", &point_lights[i]->attenuation_quadratic, 0, 0.1f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
-
-					ImGui::PopID();
-				}
-			}
-			ImGui::PopID();
-
-			ImGui::PushID(&dir_lights);
-			if (ImGui::CollapsingHeader("Dir lights"))
-			{
-				if (ImGui::BeginCombo("Shadowmap resolution##rescombo", std::to_string(current_dl_res).c_str())) // The second parameter is the label previewed before opening the combo.
-				{
-					for (int n = 0; n < shadowmap_res.size(); n++)
+					for (int i = 0; i < point_lights.size(); i++)
 					{
-						bool is_selected = (current_dl_res == shadowmap_res[n]); // You can store your selection however you want, outside or inside your objects
-						if (ImGui::Selectable(std::to_string(shadowmap_res[n]).c_str(), is_selected))
+						ImGui::PushID(i);
+						std::string light_label = "Point light n." + std::to_string(i);
+						ImGui::Separator(); ImGui::Text(light_label.c_str());
+						ImGui::SliderFloat3("Pos", glm::value_ptr(point_lights[i]->position), -20, 20, "%.2f", 1);
+						ImGui::SliderFloat("Intensity", &point_lights[i]->intensity, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+						ImGui::ColorEdit4("Color", glm::value_ptr(point_lights[i]->color));
+
+						ImGui::SliderFloat("Att_const", &point_lights[i]->attenuation_constant, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+						ImGui::SliderFloat("Att_lin", &point_lights[i]->attenuation_linear, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+						ImGui::SliderFloat("Att_quad", &point_lights[i]->attenuation_quadratic, 0, 0.1f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+
+						ImGui::PopID();
+					}
+				}
+				ImGui::PopID();
+
+				ImGui::PushID(&dir_lights);
+				if (ImGui::CollapsingHeader("Dir lights"))
+				{
+					if (ImGui::BeginCombo("Shadowmap resolution##rescombo", std::to_string(current_dl_res).c_str())) // The second parameter is the label previewed before opening the combo.
+					{
+						for (int n = 0; n < shadowmap_res.size(); n++)
 						{
-							current_dl_res = shadowmap_res[n];
-							for (auto& dl : dir_lights)
+							bool is_selected = (current_dl_res == shadowmap_res[n]); // You can store your selection however you want, outside or inside your objects
+							if (ImGui::Selectable(std::to_string(shadowmap_res[n]).c_str(), is_selected))
 							{
-								dl->resize_shadowmap(current_dl_res);
+								current_dl_res = shadowmap_res[n];
+								for (auto& dl : dir_lights)
+								{
+									dl->resize_shadowmap(current_dl_res);
+								}
 							}
 						}
+						ImGui::EndCombo();
 					}
-					ImGui::EndCombo();
-				}
-				for (int i = 0; i < dir_lights.size(); i++)
-				{
-					ImGui::PushID(i);
-					std::string light_label = "Directional light n." + std::to_string(i);
-					ImGui::Separator(); ImGui::Text(light_label.c_str());
-					ImGui::SliderFloat3("Dir", glm::value_ptr(dir_lights[i]->direction), -1, 1, "%.2f", 1);
-					ImGui::SliderFloat("Intensity", &dir_lights[i]->intensity, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-					ImGui::ColorEdit4("Color", glm::value_ptr(dir_lights[i]->color));
+					for (int i = 0; i < dir_lights.size(); i++)
+					{
+						ImGui::PushID(i);
+						std::string light_label = "Directional light n." + std::to_string(i);
+						ImGui::Separator(); ImGui::Text(light_label.c_str());
+						ImGui::SliderFloat3("Dir", glm::value_ptr(dir_lights[i]->direction), -1, 1, "%.2f", 1);
+						ImGui::SliderFloat("Intensity", &dir_lights[i]->intensity, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+						ImGui::ColorEdit4("Color", glm::value_ptr(dir_lights[i]->color));
 
-					ImGui::SliderFloat("Dist bias", &dir_lights[i]->shadowmap_settings.distance_bias, 0, 100, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-					ImGui::SliderFloat("Near ", &dir_lights[i]->shadowmap_settings.frustum_near, 0, 100, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-					ImGui::SliderFloat("Far ", &dir_lights[i]->shadowmap_settings.frustum_far, 0, 100, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-					ImGui::SliderFloat("Frust ", &dir_lights[i]->shadowmap_settings.frustum_size, 0, 100, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-					ImGui::PopID();
+						ImGui::SliderFloat("Dist bias", &dir_lights[i]->shadowmap_settings.distance_bias, 0, 100, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+						ImGui::SliderFloat("Near ", &dir_lights[i]->shadowmap_settings.frustum_near, 0, 100, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+						ImGui::SliderFloat("Far ", &dir_lights[i]->shadowmap_settings.frustum_far, 0, 100, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+						ImGui::SliderFloat("Frust ", &dir_lights[i]->shadowmap_settings.frustum_size, 0, 100, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+						ImGui::PopID();
+					}
 				}
+				ImGui::PopID();
+				ImGui::Unindent();
 			}
-			ImGui::PopID();
-			ImGui::Unindent();
-		}
 
-		// Other settings
-		if (ImGui::CollapsingHeader("other coefficients and scales"))
-		{
-			ImGui::Text("Floor");
-			ImGui::SliderFloat("Repeat tex##floor", &floor_plane->material->uv_repeat, 0, 3000, " % .1f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Parallax Height Scale##floor", &floor_plane->material->parallax_heightscale, 0, 0.5, "%.3f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Paint normal bias##floor", &floor_plane->material->detail_normal_bias, 0, 0.5, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Paint threshold##floor", &floor_plane->material->detail_alpha_threshold, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::Separator(); ImGui::Text("Cube");
-			ImGui::SliderFloat("Repeat tex##cube", &cube->material->uv_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Parallax Height Scale##cube", &cube->material->parallax_heightscale, 0, 0.5, "%.3f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Paint threshold##cube", &cube->material->detail_alpha_threshold, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::Separator(); ImGui::Text("Front wall");
-			ImGui::SliderFloat("Repeat tex##front", &wall_plane->material->uv_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Parallax Height Scale##front", &wall_plane->material->parallax_heightscale, 0, 0.5, "%.3f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Paint threshold##front", &wall_plane->material->detail_alpha_threshold, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::Separator(); ImGui::Text("Bunny");
-			ImGui::SliderFloat("Repeat tex##bunny", &bunny->material->uv_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Parallax Height Scale##bunny", &bunny->material->parallax_heightscale, 0, 0.5, "%.3f", ImGuiSliderFlags_AlwaysClamp);
-			ImGui::SliderFloat("Paint threshold##bunny", &bunny->material->detail_alpha_threshold, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+			// Other settings
+			if (ImGui::CollapsingHeader("other coefficients and scales"))
+			{
+				ImGui::Text("Scene");
+				ImGui::Checkbox("Use frustum culling", &main_scene.use_frustum_culling);
+				ImGui::Text("Floor");
+				ImGui::SliderFloat("Repeat tex##floor", &floor_plane->material->uv_repeat, 0, 3000, " % .1f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("Parallax Height Scale##floor", &floor_plane->material->parallax_heightscale, 0, 0.5, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("Paint normal bias##floor", &floor_plane->material->detail_normal_bias, 0, 0.5, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("Paint threshold##floor", &floor_plane->material->detail_alpha_threshold, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::Separator(); ImGui::Text("Cube");
+				ImGui::SliderFloat("Repeat tex##cube", &cube->material->uv_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("Parallax Height Scale##cube", &cube->material->parallax_heightscale, 0, 0.5, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("Paint threshold##cube", &cube->material->detail_alpha_threshold, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::Separator(); ImGui::Text("Front wall");
+				ImGui::SliderFloat("Repeat tex##front", &wall_plane->material->uv_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("Parallax Height Scale##front", &wall_plane->material->parallax_heightscale, 0, 0.5, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("Paint threshold##front", &wall_plane->material->detail_alpha_threshold, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::Separator(); ImGui::Text("Bunny");
+				ImGui::SliderFloat("Repeat tex##bunny", &bunny->material->uv_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("Parallax Height Scale##bunny", &bunny->material->parallax_heightscale, 0, 0.5, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("Paint threshold##bunny", &bunny->material->detail_alpha_threshold, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+			}
 		}
-
 		ImGui::End();
 
 		// Renders the ImGUI elements
@@ -1171,6 +1213,8 @@ int main()
 #pragma endregion rendering_loop
 
 #pragma region post-loop_cleanup
+	std::cout << " Avg.fps : " << (avg_fps) << " | Avg. frametime (ms) :" << avg_ms_per_frame;
+	ImPlot::DestroyContext();
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();

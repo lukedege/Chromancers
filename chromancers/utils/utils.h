@@ -1,6 +1,8 @@
 #pragma once
 #include <string>
 
+#include <vector>
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_inverse.hpp>
 
@@ -135,4 +137,25 @@ namespace utils::graphics::opengl
 		glBufferSubData(target, offset, element_amount * element_size, data);
 		glBindBuffer(target, 0);
 	}
+}
+
+namespace utils::containers
+{
+	template <typename T, int MaxLen>
+	class FixedQueue : public std::vector<T> {
+	public:
+		FixedQueue() :
+			std::vector<T>()
+		{
+			this->resize(MaxLen);
+		}
+
+		void push_back(const T& value) 
+		{
+			if (this->size() == MaxLen) {
+				this->erase(this->begin());
+			}
+			std::vector<T>::push_back(value);
+		}
+	};
 }

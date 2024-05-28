@@ -72,14 +72,14 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>..\..\..\Libraries\bitmap_image\include;..\..\..\Libraries\magic_enum\include;..\..\..\Libraries\GSL-4.0.0\include;..\..\..\Libraries\bullet\include;..\..\..\Libraries\imgui-1.88;..\..\..\Libraries\imgui-1.88\backends;..\..\..\Libraries\glfw\include;..\..\..\Libraries\glm;..\..\..\Libraries\glad;..\..\..\Libraries\assimp\include;..\..\..\Libraries\stb_image;$(VC_IncludePath)</IncludePath>
+    <IncludePath>..\..\..\Libraries\magic_enum\include;..\..\..\Libraries\GSL-4.0.0\include;..\..\..\Libraries\bullet\include;..\..\..\Libraries\imgui-1.90.7;..\..\..\Libraries\imgui-1.90.7\backends;..\..\..\Libraries\implot-master;..\..\..\Libraries\glfw\include;..\..\..\Libraries\glm;..\..\..\Libraries\glad;..\..\..\Libraries\assimp\include;..\..\..\Libraries\stb_image;$(VC_IncludePath)</IncludePath>
     <LibraryPath>..\..\..\Libraries\bullet\lib\win\debug;..\..\..\Libraries\glfw\lib-vc2022;..\..\..\Libraries\assimp\lib\Debug;..\..\..\Libraries\various;$(LibraryPath)</LibraryPath>
     <SourcePath>..\..\..\Libraries\glad;..\..\..\Libraries\bullet\include\bullet\BulletCollision\CollisionShapes;$(SourcePath)</SourcePath>
     <ReferencePath>$(ReferencePath)</ReferencePath>
     <CodeAnalysisRuleSet>NativeRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>..\..\..\Libraries\bitmap_image\include;..\..\..\Libraries\magic_enum\include;..\..\..\Libraries\GSL-4.0.0\include;..\..\..\Libraries\bullet\include;..\..\..\Libraries\imgui-1.88;..\..\..\Libraries\imgui-1.88\backends;..\..\..\Libraries\glfw\include;..\..\..\Libraries\glm;..\..\..\Libraries\glad;..\..\..\Libraries\assimp\include;..\..\..\Libraries\stb_image;$(VC_IncludePath)</IncludePath>
+    <IncludePath>..\..\..\Libraries\magic_enum\include;..\..\..\Libraries\GSL-4.0.0\include;..\..\..\Libraries\bullet\include;..\..\..\Libraries\imgui-1.90.7;..\..\..\Libraries\imgui-1.90.7\backends;..\..\..\Libraries\implot-master;..\..\..\Libraries\glfw\include;..\..\..\Libraries\glm;..\..\..\Libraries\glad;..\..\..\Libraries\assimp\include;..\..\..\Libraries\stb_image;$(VC_IncludePath)</IncludePath>
     <LibraryPath>..\..\..\Libraries\bullet\lib\win\release;..\..\..\Libraries\glfw\lib-vc2022;..\..\..\Libraries\assimp\lib\Release;..\..\..\Libraries\various;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
     <SourcePath>..\..\..\Libraries\glad;$(VC_SourcePath);</SourcePath>
     <CodeAnalysisRuleSet>NativeRecommendedRules.ruleset</CodeAnalysisRuleSet>
@@ -154,12 +154,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Libraries\glad\glad.c" />
-    <ClCompile Include="..\..\..\Libraries\imgui-1.88\backends\imgui_impl_glfw.cpp" />
-    <ClCompile Include="..\..\..\Libraries\imgui-1.88\backends\imgui_impl_opengl3.cpp" />
-    <ClCompile Include="..\..\..\Libraries\imgui-1.88\imgui.cpp" />
-    <ClCompile Include="..\..\..\Libraries\imgui-1.88\imgui_draw.cpp" />
-    <ClCompile Include="..\..\..\Libraries\imgui-1.88\imgui_tables.cpp" />
-    <ClCompile Include="..\..\..\Libraries\imgui-1.88\imgui_widgets.cpp" />
+    <ClCompile Include="..\..\..\Libraries\imgui-1.90.7\backends\imgui_impl_glfw.cpp" />
+    <ClCompile Include="..\..\..\Libraries\imgui-1.90.7\backends\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="..\..\..\Libraries\imgui-1.90.7\imgui.cpp" />
+    <ClCompile Include="..\..\..\Libraries\imgui-1.90.7\imgui_draw.cpp" />
+    <ClCompile Include="..\..\..\Libraries\imgui-1.90.7\imgui_tables.cpp" />
+    <ClCompile Include="..\..\..\Libraries\imgui-1.90.7\imgui_widgets.cpp" />
+    <ClCompile Include="..\..\..\Libraries\implot-master\implot.cpp" />
+    <ClCompile Include="..\..\..\Libraries\implot-master\implot_items.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="quick_tests.cpp" />
     <ClCompile Include="stb_image.cpp" />
