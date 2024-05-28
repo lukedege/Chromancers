@@ -5,6 +5,7 @@
 #include <sstream>
 #include <iostream>
 #include <vector>
+#include <unordered_map>
 
 #include <gsl/gsl>
 
@@ -26,6 +27,8 @@ namespace engine::resources
 		std::string vertPath, fragPath;
 		GLuint _program;
 		std::string _name;
+
+		mutable std::unordered_map<std::string, GLint> _uniformLocationCache;
 
 	public:
 		Shader(std::string name, const GLchar* vertPath, const GLchar* fragPath, GLuint glMajor, GLuint glMinor, const GLchar* geomPath = 0, std::vector<const GLchar*> utilPaths = {}) :
@@ -143,7 +146,13 @@ namespace engine::resources
 #pragma region utility_uniform_functions
 		GLint getUniformLocation(const std::string& name) const
 		{
+			// If the uniform was already cached, we dont need an expensive gl call
+			if (_uniformLocationCache.find(name) != _uniformLocationCache.end())
+				return _uniformLocationCache[name];
+
 			GLint location = glGetUniformLocation(_program, name.c_str());
+			_uniformLocationCache[name] = location; // we cache the new uniform
+
 			#ifdef DEBUG_UNIFORM
 			if (location == -1)
 			{
