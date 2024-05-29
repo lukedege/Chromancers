@@ -1,0 +1,13 @@
+# Blender 4.0.2 MTL File: 'None'
+# www.blender.org
+
+newmtl map_MarkerGun3_01.006
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd map_MarkerGun3_01_BaseColor.png
+map_Ns map_MarkerGun3_01_Roughness.png
+map_refl map_MarkerGun3_01_Metallic.png
