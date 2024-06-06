@@ -455,6 +455,7 @@ int main()
 	Entity* fountain        = main_scene.emplace_entity("fountain", "Water fountain", cube_model, fountain_material);
 	Entity* fountain_bunny1 = main_scene.emplace_entity("bunny fountain", "Bunny left fountain", cube_model, fountain_material);
 	Entity* fountain_bunny2 = main_scene.emplace_entity("bunny fountain", "Bunny right fountain", cube_model, fountain_material);
+	Entity* hor_stream      = main_scene.emplace_entity("hor_stream", "Horizontal stream", cube_model, fountain_material);
 
 	// Map cursor setup
 	Model triangle_mesh{ Mesh::simple_triangle_mesh() };
@@ -515,6 +516,10 @@ int main()
 		fountain_bunny2->set_size(glm::vec3(0.1f));
 		fountain_bunny2->set_orientation(glm::vec3(0.0f, 90.0f, 0.0f));
 		fountain_bunny2->set_position(glm::vec3(9.0f, 10.0f, -2.f));
+
+		hor_stream->set_size(glm::vec3(0.1f));
+		hor_stream->set_orientation(glm::vec3(0.0f, 180.0f, 0.0f));
+		hor_stream->set_position(glm::vec3(9.0f, 0.0f, 20.f));
 
 		for (auto& lightcube_entity : lightcube_entites)
 		{
@@ -580,9 +585,13 @@ int main()
 	PaintballSpawnerComponent* fountain_bunny_spawner_dx = static_cast<PaintballSpawnerComponent*> 
 		(fountain_bunny2 -> emplace_component<PaintballSpawnerComponent>(physics_engine, rng, paintball_model, default_lit_instanced));
 
+	PaintballSpawnerComponent* hor_spawner = static_cast<PaintballSpawnerComponent*> 
+		(hor_stream -> emplace_component<PaintballSpawnerComponent>(physics_engine, rng, paintball_model, default_lit_instanced));
+
 	std::vector<PaintballSpawnerComponent*> fountain_spawners; 
 	fountain_spawners.push_back(fountain_spawner); 
 	fountain_spawners.push_back(fountain_bunny_spawner_sx);  fountain_spawners.push_back(fountain_bunny_spawner_dx);
+	fountain_spawners.push_back(hor_spawner);
 
 	// shared spawner settings
 	for (auto& f : fountain_spawners)
@@ -606,6 +615,8 @@ int main()
 	fountain_bunny_spawner_dx->paintball_spawner.paint_color = { 0.5f, 0.f, 0.5f, 1.f };
 	fountain_bunny_spawner_dx->paintball_spawner.shooting_spread = 3.f;
 	fountain_bunny_spawner_dx->paintball_spawner.shooting_speed = 3.f;
+
+	hor_spawner->paintball_spawner.paint_color = { 1.f, 0.85f, 0.f, 1.f };
 	
 #pragma endregion entities_setup
 
@@ -1029,7 +1040,7 @@ int main()
 				ImGui::Separator(); ImGui::Text("Gun properties");
 				ImGui::SliderFloat("Muzzle speed", &player.paintball_spawner->shooting_speed, 0, 100, " %.1f", ImGuiSliderFlags_AlwaysClamp);
 				ImGui::SliderFloat("Muzzle spread", &player.paintball_spawner->shooting_spread, 0, 3, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-				unsigned int rps_min = 1, rps_max = 200;
+				unsigned int rps_min = 0, rps_max = 200;
 				ImGui::SliderScalar("Rounds per Sec", ImGuiDataType_U32, &player.paintball_spawner->rounds_per_second, &rps_min, &rps_max, " %d", ImGuiSliderFlags_AlwaysClamp);
 				ImGui::Checkbox("Hold to fire", &hold_to_fire);
 
@@ -1177,19 +1188,28 @@ int main()
 			{
 				ImGui::Text("Scene");
 				ImGui::Checkbox("Use frustum culling", &main_scene.use_frustum_culling);
-				ImGui::Text("Floor");
+
+				ImGui::Separator(); ImGui::Text("Paintspace proj params");
+				ImGui::SliderFloat("Near plane##paint", &PaintballComponent::paint_near_plane, 0, 2, " % .2f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("Far plane##paint", &PaintballComponent::paint_far_plane, 0, 100, " % .2f", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::SliderFloat("Distance bias##paint", &PaintballComponent::distance_bias, 0, 100, " % .2f", ImGuiSliderFlags_AlwaysClamp);
+
+				ImGui::Separator(); ImGui::Text("Floor");
 				ImGui::SliderFloat("Repeat tex##floor", &floor_plane->material->uv_repeat, 0, 3000, " % .1f", ImGuiSliderFlags_AlwaysClamp);
 				ImGui::SliderFloat("Parallax Height Scale##floor", &floor_plane->material->parallax_heightscale, 0, 0.5, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 				ImGui::SliderFloat("Paint normal bias##floor", &floor_plane->material->detail_normal_bias, 0, 0.5, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 				ImGui::SliderFloat("Paint threshold##floor", &floor_plane->material->detail_alpha_threshold, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+
 				ImGui::Separator(); ImGui::Text("Cube");
 				ImGui::SliderFloat("Repeat tex##cube", &cube->material->uv_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
 				ImGui::SliderFloat("Parallax Height Scale##cube", &cube->material->parallax_heightscale, 0, 0.5, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 				ImGui::SliderFloat("Paint threshold##cube", &cube->material->detail_alpha_threshold, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+
 				ImGui::Separator(); ImGui::Text("Front wall");
 				ImGui::SliderFloat("Repeat tex##front", &wall_plane->material->uv_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
 				ImGui::SliderFloat("Parallax Height Scale##front", &wall_plane->material->parallax_heightscale, 0, 0.5, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 				ImGui::SliderFloat("Paint threshold##front", &wall_plane->material->detail_alpha_threshold, 0, 1, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+
 				ImGui::Separator(); ImGui::Text("Bunny");
 				ImGui::SliderFloat("Repeat tex##bunny", &bunny->material->uv_repeat, 0, 100, " % .1f", ImGuiSliderFlags_AlwaysClamp);
 				ImGui::SliderFloat("Parallax Height Scale##bunny", &bunny->material->parallax_heightscale, 0, 0.5, "%.3f", ImGuiSliderFlags_AlwaysClamp);

@@ -206,7 +206,6 @@
     <None Include="shaders\text\generic\fullcolor.frag" />
     <None Include="shaders\text\generic\merge_fbo.frag" />
     <None Include="shaders\text\generic\mvp.vert" />
-    <None Include="shaders\text\generic\normals.frag" />
     <None Include="shaders\text\generic\paintblur.frag" />
     <None Include="shaders\text\generic\paintblur_optimized.frag" />
     <None Include="shaders\text\generic\paintstep.frag" />
@@ -220,7 +219,6 @@
     <None Include="shaders\text\generic\texpainter.vert" />
     <None Include="shaders\text\generic\textured.frag" />
     <None Include="shaders\text\generic\textured.vert" />
-    <None Include="shaders\text\generic\uvs.frag" />
     <None Include="shaders\types.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

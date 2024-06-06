@@ -9,6 +9,8 @@ uniform float t1_color = 0.5f;
 uniform float t0_alpha = 0.7f;
 uniform float t1_alpha = 0.9f;
 
+// Shader for color level adjustment in screen-space through the usage of the smoothstep function
+// Effect is customizable through the previous uniform parameters
 void main()
 {             
     vec4 sampled = texture(image, TexCoords);

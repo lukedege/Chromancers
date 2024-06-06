@@ -25,6 +25,11 @@ namespace engine::components
 	public:
 		constexpr static auto COMPONENT_ID = 1;
 
+		// Paint-space projection attributes
+		inline static float paint_near_plane = 0.05f ;
+		inline static float paint_far_plane  = 3.f;
+		inline static float distance_bias    = 1.f;
+
 		PaintballComponent(scene::Entity& parent, glm::vec4 paint_color) :
 			Component(parent),
 			paint_color { paint_color },
@@ -81,7 +86,7 @@ namespace engine::components
 				glm::vec3 paintball_up = glm::normalize(glm::cross(paintball_direction, paintball_lateral));
 				
 				// Create paintspace viewprojection
-				float paint_near_plane = 0.05f, paint_far_plane = 5.f, frustum_size = paintball_size.x * 2, distance_bias = 1.f;
+				float frustum_size = paintball_size.x * 2;
 				glm::mat4 paintProjection = glm::ortho(-frustum_size, frustum_size, -frustum_size, frustum_size, paint_near_plane, paint_far_plane);
 				glm::mat4 paintView = glm::lookAt(paintball_position - paintball_direction * distance_bias, paintball_position + paintball_direction, paintball_up);
 

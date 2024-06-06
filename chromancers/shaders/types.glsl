@@ -1,5 +1,6 @@
 // #version 410 core
-// TODO watch out for data alignment and similar errors coming from it
+
+// Utility shader containing structure definitions for shader usage
 
 struct PointLight
 {

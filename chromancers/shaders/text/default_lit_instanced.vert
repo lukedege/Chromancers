@@ -1,5 +1,10 @@
 #version 430 core
 
+// Complex vertex shader which transforms vertex data
+// into various spaces (world, tangent, light...) for easier lighting 
+// and texturing computation in the fragment shader
+// This shader has been specialized for instanced drawing
+
 layout (location = 0) in vec3 position;  // vertex position in world coordinates
 layout (location = 1) in vec3 normal;    // vertex normal
 layout (location = 2) in vec2 UV;        // UV texture coordinates

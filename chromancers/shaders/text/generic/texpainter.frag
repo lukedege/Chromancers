@@ -27,25 +27,28 @@ uniform vec4 paintBallColor;
 // The direction of the paintball in world coordinates
 uniform vec3 paintBallDirection;
 
+// Shader which updates a paintmap through load/store operations
+// given the paintball impact coordinates in paint space
 void main()
 {
     // Compute the integer coordinates from the interpolated normalized uvs, aka from [0, 1] to [0, paintmap_size] 
     // This is needed for imageStore as the coordinates required are integers
     ivec2 uv_pixels = ivec2(fs_in.interp_UV * paintmap_size);
     vec4 prev_color = imageLoad(paint_map, uv_pixels);
-
+	
     // Compute perspective divide and normalize fragments projected coordinates into a [0, 1] range
     vec3 projCoords = fs_in.pwFragPos.xyz / fs_in.pwFragPos.w;
     projCoords = projCoords * 0.5 + 0.5;
-
+	
     // Given the fragment coordinates, retrieve the corresponding alpha from mask
     float splatMaskAlpha = texture(splat_mask, projCoords.xy).r;
-
+	
     // Computes incidence angle between paint ball direction and face normal
+	// This is just an extra safety and consistency check 
     float incidence = dot(normalize(paintBallDirection), fs_in.wNormal);
-    
+	
     // If dot product < 0 then the face got hit by the paint
-    if (incidence < 0 && splatMaskAlpha > 0)
+    if (incidence < 0)
     {
         // Store new paint color value
         vec4 final_color = mix(prev_color, paintBallColor, splatMaskAlpha);

@@ -22,6 +22,8 @@ out VS_OUT
     vec4 pwFragPos;
 } vs_out;
 
+// Simple vertex shader, transforming raw vertex position into world then paint space
+// while also relaying other attributes like normals and uvs
 void main()
 {
     mat3 worldNormalMatrix = transpose(inverse(mat3(modelMatrix))); // this matrix updates normals to follow world/model matrix transformations

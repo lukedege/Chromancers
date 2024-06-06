@@ -1,12 +1,11 @@
 #version 430 core
 
-// output shader variable
-out vec4 colorFrag;
+out vec4 color;
 
-// color to assign to the fragments: it is passed from the application
 uniform vec3 colorIn;
 
+// Simple fragment shader, retrieves from a uniform the color to assign to the fragment 
 void main()
 {
-    colorFrag = vec4(colorIn,1.0);
+    color = vec4(colorIn, 1.0);
 }

@@ -72,6 +72,7 @@ namespace engine::components
 			{
 				painter_shader->bind();
 				{
+					glClear(GL_DEPTH_BUFFER_BIT);
 					// Setup uniforms
 					painter_shader->setMat4("paintSpaceMatrix", paintspace_matrix);
 					painter_shader->setVec3("paintBallDirection", paint_direction);

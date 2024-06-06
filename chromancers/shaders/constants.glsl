@@ -1,5 +1,7 @@
 // #version 410 core
 
+// Utility shader containing various constants
+
 // Math
 #define PI 3.14159265359f;
 

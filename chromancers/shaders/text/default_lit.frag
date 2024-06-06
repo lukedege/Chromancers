@@ -1,5 +1,8 @@
 #version 430 core
 
+// Complex fragment shader which samples various textures 
+// and computes lighting from directional and pointlights
+
 // output variable for the fragment shader
 out vec4 colorFrag;
 
@@ -179,6 +182,7 @@ vec3 calculateNormal(sampler2D normal_map, int sample_normal_map, vec3 vertexNor
 	return normal;
 }
 
+// Simple averaging filter to soften the edges of a texture read (usually used with shadowmaps)
 vec4 texturePCF(sampler2D map, vec2 interp_UV)
 {
 	vec4 sampled = vec4(0);
@@ -196,7 +200,7 @@ vec4 texturePCF(sampler2D map, vec2 interp_UV)
 	return sampled;
 }
 
-
+// Compute shadow from a directional shadow map
 float calculateShadow(sampler2D shadow_map, vec4 lwFragPos, vec3 wLightDir, vec3 normal)
 {
 	// perform perspective divide
@@ -239,6 +243,7 @@ float calculateShadow(sampler2D shadow_map, vec4 lwFragPos, vec3 wLightDir, vec3
 	return shadow;
 }
 
+// Compute shadow from a pointlight shadow cube
 float calculateShadow(samplerCube shadow_cube, vec3 wFragPos, vec3 wLightPos, float far_plane /* TODO temp*/)
 {
     // get vector between fragment position and light position
@@ -253,11 +258,12 @@ float calculateShadow(samplerCube shadow_cube, vec3 wFragPos, vec3 wLightPos, fl
     float bias = 0.05; 
     float shadow = currentDepth -  bias > closestDepth ? 1.0 : 0.0;
 
-	// No PCF or performance tanks :(
+	// No PCF for shadow cube or performance tanks :(
 
     return shadow;
 } 
 
+// Simple blinn phong lighting solution
 vec3 BlinnPhong()
 {
 	float shininess_factor = shininess;
@@ -284,11 +290,12 @@ vec3 BlinnPhong()
 	{
 		if(detail_diffuse_color.a > detail_alpha_threshold)
 		{
-			N += calculateNormal(detail_normal_map, sample_detail_normal_map, fs_in.twNormal, finalTexCoords) * detail_normal_bias * detail_diffuse_color.a;
-			shininess_factor = 512.f;
-			vec4 color0 = detail_diffuse_color * detail_diffuse_bias;
-			vec4 color1 = surface_color;
-			surface_color = color0 * color0.a + color1 * (1 - color0.a);
+			float ft = detail_diffuse_color.a;
+			N += calculateNormal(detail_normal_map, sample_detail_normal_map, fs_in.twNormal, finalTexCoords) * detail_normal_bias * ft;
+			surface_color = mix(surface_color, detail_diffuse_color * detail_diffuse_bias, ft);
+			
+			float detail_shininess = 512.f;
+			shininess_factor = mix(shininess_factor, detail_shininess, ft);
 		}
 	}
 	
@@ -324,6 +331,7 @@ vec3 BlinnPhong()
 	return final_color;
 }
 
+// Compute fragment's lighting from pointlights 
 vec3 calculatePointLights()
 {
 	vec3 color = vec3(0);
@@ -345,6 +353,7 @@ vec3 calculatePointLights()
 	return color;
 }
 
+// Compute fragment's lighting from directional lights 
 vec3 calculateDirLights()
 {
 	vec3 color = vec3(0);
@@ -353,7 +362,6 @@ vec3 calculateDirLights()
 	{
 		curr_twLightDir = normalize(fs_in.twDirLightDir[i]);
 
-		//float shadow = calculateShadow(directional_shadow_maps[i], fs_in.lwDirFragPos[i], curr_twLightDir, finalNormal) * sample_shadow_map;
 		float shadow = calculateShadow(directional_shadow_maps[i], fs_in.lwDirFragPos[i], fs_in.wDirLightDir[i], finalNormal) * sample_shadow_map;
 
 		color += (1 - shadow) * BlinnPhong() * directionalLights[i].color.rgb * directionalLights[i].intensity;
@@ -361,8 +369,6 @@ vec3 calculateDirLights()
 
 	return color;
 }
-
-
 
 void main()
 {

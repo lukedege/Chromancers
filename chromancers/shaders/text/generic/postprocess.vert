@@ -5,6 +5,8 @@ layout (location = 2) in vec2 tex_coords;
 
 out vec2 TexCoords;
 
+// Simple vertex shader, relaying raw 2D position and tex coordinates
+// useful for full-screen quads
 void main()
 {
    TexCoords = tex_coords;

@@ -1,5 +1,9 @@
 #version 430 core
 
+// Complex vertex shader which transforms vertex data
+// into various spaces (world, tangent, light...) for easier lighting 
+// and texturing computation in the fragment shader
+
 layout (location = 0) in vec3 position;  // vertex position in world coordinates
 layout (location = 1) in vec3 normal;    // vertex normal
 layout (location = 2) in vec2 UV;        // UV texture coordinates
@@ -100,9 +104,11 @@ mat3 calculateInverseTBN(mat3 worldNormalMatrix, vec3 normal_vec, vec3 tangent_v
 
 void main()
 {
-	// we calculate the inverse transform matrix to transform coords world space -> tangent space
 	// we prefer calcs in the vertex shader since it is called less, thus less expensive computationally over time
 	mat3 worldNormalMatrix = transpose(inverse(mat3(modelMatrix))); // this matrix updates normals to follow world/model matrix transformations
+
+	// we calculate the inverse transform matrix to transform coords world space -> tangent space
+	// this is necessary to keep normals independent from objects' orientation 
 	invTBN = calculateInverseTBN(worldNormalMatrix, normal, tangent, bitangent); 
 
 	// calculate world space output data

@@ -97,7 +97,7 @@ vec4 rgb_blur(vec2 tex_offset)
 
 void main()
 {	
-	float linear_depth = LinearizeDepth(texture(depth_image, TexCoords).r) + depth_offset;
+	float linear_depth = LinearizeDepth(texture(depth_image, TexCoords).r) + depth_offset; // linearize depth value to use depth as a way to tell distance
 	float depthbased_blur_strength = blur_strength / linear_depth; // sample depthmap, the deeper the fragment, the less it is blurred
 	vec2 tex_offset = depthbased_blur_strength / textureSize(image, 0); // gets size of single texel
 

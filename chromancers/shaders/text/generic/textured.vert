@@ -4,6 +4,7 @@ layout (location = 2) in vec2 tex_coords;
 
 out vec2 TexCoords;
 
+// Simple vertex shader, relaying raw position and tex coordinates
 void main()
 {
     TexCoords = tex_coords;

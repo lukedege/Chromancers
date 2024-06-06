@@ -31,6 +31,7 @@ float LinearizeDepth(float depth)
     return (2.0 * near_plane * far_plane) / (far_plane + near_plane - z * (far_plane - near_plane));	
 }
 
+// Calculate blur in a certain direction (horizontal or vertical)
 vec4 rgba_blur(vec2 tex_offset)
 {
     vec4 result = texture(image, TexCoords) * weights[0]; // current fragment's contribution
@@ -55,7 +56,7 @@ vec4 rgba_blur(vec2 tex_offset)
 	return result;
 }
 
-
+// Calculate blur ignoring the alpha channel
 vec4 rgb_blur(vec2 tex_offset)
 {
     vec4 result = rgba_blur(tex_offset);
@@ -65,7 +66,7 @@ vec4 rgb_blur(vec2 tex_offset)
 
 void main()
 {	
-	float linear_depth = LinearizeDepth(texture(depth_image, TexCoords).r) + depth_offset;
+	float linear_depth = LinearizeDepth(texture(depth_image, TexCoords).r) + depth_offset; // linearize depth value to use depth as a way to tell distance
 	float depthbased_blur_strength = blur_strength / linear_depth; // sample depthmap, the deeper the fragment, the less it is blurred
 	vec2 tex_offset = depthbased_blur_strength / textureSize(image, 0); // gets size of single texel
 

@@ -25,9 +25,6 @@
     <Filter Include="Shaders\text">
       <UniqueIdentifier>{503c538c-2705-497a-9deb-016b2ed940a9}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Shaders\text\scene">
-      <UniqueIdentifier>{755497bb-a101-4660-a8ee-c949c4480580}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Shaders\text\generic">
       <UniqueIdentifier>{3d9a3b77-4b74-40ad-b1c5-7b724c3feec7}</UniqueIdentifier>
     </Filter>
@@ -197,12 +194,6 @@
       <Filter>Shaders\text\generic</Filter>
     </None>
     <None Include="shaders\text\generic\mvp.vert">
-      <Filter>Shaders\text\generic</Filter>
-    </None>
-    <None Include="shaders\text\generic\normals.frag">
-      <Filter>Shaders\text\generic</Filter>
-    </None>
-    <None Include="shaders\text\generic\uvs.frag">
       <Filter>Shaders\text\generic</Filter>
     </None>
     <None Include="shaders\text\default_lit.frag">
