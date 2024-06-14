@@ -7,7 +7,6 @@
 #include <glm/gtc/matrix_inverse.hpp>
 
 // Various and miscellaneous utilities are located here
-
 namespace utils::strings
 {
 	// Erases the whole line at the specified string index (if valid)
@@ -56,6 +55,7 @@ namespace utils::strings
 
 namespace utils::math
 {
+	// Simple mathematical plane
 	struct Plane
 	{
 		glm::vec3 normal   { 0.f, 1.f, 0.f }; // Unit vector
@@ -74,6 +74,7 @@ namespace utils::math
 		}
 	};
    
+	// Simple frustum volume representation
 	struct Frustum
 	{
 		Plane topFace;
@@ -112,11 +113,12 @@ namespace utils::math
 
 namespace utils::graphics::opengl
 {
-	inline void setup_buffer_object(GLuint& buffer_object, GLenum target, int bind_index, size_t alloc_size, void* data)
+	// Setups an OpenGL buffer object and fills it with the provided data
+	inline void setup_buffer_object(GLuint& buffer_object, GLenum target, int bind_index, size_t alloc_size, GLenum usage, void* data = nullptr)
 	{
 		glBindBuffer(target, buffer_object);
 
-		glBufferData(target, alloc_size, NULL, GL_DYNAMIC_DRAW); // allocate alloc_size bytes of memory
+		glBufferData(target, alloc_size, NULL, usage); // allocate alloc_size bytes of memory
 		glBindBufferBase(target, bind_index, buffer_object);
 
 		if (data != 0)
@@ -125,22 +127,28 @@ namespace utils::graphics::opengl
 		glBindBuffer(target, 0);
 	}
 
-	inline void setup_buffer_object(GLuint& buffer_object, GLenum target, int bind_index, size_t element_size, size_t element_amount, void* data)
+	// Setups an OpenGL buffer object and fills it with the provided data (overload that automatically calculates allocation size given size and amount)
+	inline void setup_buffer_object(GLuint& buffer_object, GLenum target, int bind_index, size_t element_size, size_t element_amount, GLenum usage, void* data = nullptr)
 	{
 		size_t alloc_size = element_size * element_amount;
-		setup_buffer_object(buffer_object, target, bind_index, alloc_size, data);
+		setup_buffer_object(buffer_object, target, bind_index, alloc_size, usage, data);
 	}	
 
-	inline void update_buffer_object(GLuint& buffer_object, GLenum target, size_t offset, size_t element_size, size_t element_amount, void* data)
+	// Updates the content of an OpenGL buffer object at the required offset with the provided data
+	inline void update_buffer_object(GLuint& buffer_object, GLenum target, size_t offset, size_t element_size, size_t element_amount, void* data = nullptr)
 	{
+		size_t alloc_size = element_size * element_amount;
 		glBindBuffer(target, buffer_object);
-		glBufferSubData(target, offset, element_amount * element_size, data);
+		glBufferSubData(target, offset, alloc_size, data);
 		glBindBuffer(target, 0);
 	}
 }
 
 namespace utils::containers
 {
+	// Custom limited-size queue implementation 
+	// T      : type of contained object
+	// MaxLen : maximum size 
 	template <typename T, int MaxLen>
 	class FixedQueue : public std::vector<T> {
 	public:
@@ -150,6 +158,7 @@ namespace utils::containers
 			this->resize(MaxLen);
 		}
 
+		// When adding a new value, delete the oldest one (in our case, the one in the front)
 		void push_back(const T& value) 
 		{
 			if (this->size() == MaxLen) {

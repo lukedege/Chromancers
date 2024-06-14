@@ -40,6 +40,7 @@ namespace engine::scene
 
 	private:
 		float fire_cooldown_timer { 1.f / rounds_per_second }; // Inner variable for the amount of time left before the next paintball is generated and shot
+		unsigned int amount_to_spawn{ 1 }; // The amount of paintballs to spawn in a step (useful for when we the fire_cooldown_timer is smaller than the delta time, avoiding framerate ties to the application)
 
 	public:
 		PaintballSpawner(PhysicsEngine<Entity>& physics_engine, utils::random::generator& rng, Shader& paintball_shader) :
@@ -57,6 +58,8 @@ namespace engine::scene
 			// We freeze the value to avoid underflows
 			if (fire_cooldown_timer <= 0) { fire_cooldown_timer = 0; }
 			else { fire_cooldown_timer -= delta_time; }
+
+			amount_to_spawn = static_cast<unsigned int>(std::ceil(rounds_per_second * delta_time));
 		}
 
 		// Generates and shoot a paintball given a spawn position, orientation and direction if cooldown is up
@@ -64,10 +67,15 @@ namespace engine::scene
 		{
 			if (fire_cooldown_timer <= 0)
 			{
-				shoot_pb(spawn_position, spawn_orientation, shoot_direction);
-
 				// reset cooldown after shooting
-				fire_cooldown_timer = 1.f/rounds_per_second;
+				if (rounds_per_second > 0)
+				{
+					for (unsigned int i = 0; i < amount_to_spawn; i++)
+					{
+						shoot_pb(spawn_position, spawn_orientation, shoot_direction);
+						fire_cooldown_timer = 1.f / rounds_per_second;
+					}
+				}
 			}
 		}
 

@@ -476,7 +476,7 @@ int main()
 	}
 
 	// Scene entities setup
-	// We are setting this as a lambda so we can reset every transform to this initial configuration later
+	// We are setting this as a lambda so we can reset every transform to this initial configuration even at runtime
 	scene_setup = [&]()
 	{
 		floor_plane->set_size(glm::vec3(25.0f, 0.2f, 25.0f));
@@ -510,11 +510,11 @@ int main()
 		fountain->set_position(glm::vec3(-12.0f, 2.0f, 5.f));
 		
 		fountain_bunny1->set_size(glm::vec3(0.1f));
-		fountain_bunny1->set_orientation(glm::vec3(0.0f, -90.0f, 0.0f));
+		fountain_bunny1->set_orientation(glm::vec3(0.0f, -90.0f, 45.0f));
 		fountain_bunny1->set_position(glm::vec3(0.0f, 10.0f, -2.f));
 
 		fountain_bunny2->set_size(glm::vec3(0.1f));
-		fountain_bunny2->set_orientation(glm::vec3(0.0f, 90.0f, 0.0f));
+		fountain_bunny2->set_orientation(glm::vec3(0.0f, 90.0f, 45.0f));
 		fountain_bunny2->set_position(glm::vec3(9.0f, 10.0f, -2.f));
 
 		hor_stream->set_size(glm::vec3(0.1f));
@@ -528,7 +528,7 @@ int main()
 
 		cursor.set_size(glm::vec3(3.0f));
 	};
-	scene_setup(); // We call the lambda for the first time
+	scene_setup(); // We call the lambda for the first time to setup the scene
 
 	// Player setup
 	Entity gun{"gun", gun_model, gun_mat}; // we don't treat player entities like other objects on the scene because we have a different update/drawing logic
@@ -597,7 +597,7 @@ int main()
 	for (auto& f : fountain_spawners)
 	{
 		f->paintball_spawner.shooting_speed = 8.f; f->paintball_spawner.shooting_spread = 1.f;
-		f->paintball_spawner.rounds_per_second = 200;
+		f->paintball_spawner.rounds_per_second = 100;
 		f->paintball_spawner.size_variation_min_multiplier = 0.75f;
 		f->paintball_spawner.size_variation_max_multiplier = 1.25f;
 		f->paintball_spawner.paint_color = { 0.1f, 0.64f, 0.92f, 1.f };
@@ -610,11 +610,11 @@ int main()
 
 	// specific spawner settings
 	fountain_bunny_spawner_sx->paintball_spawner.paint_color = { 0.1f, 0.5f, 0.f, 1.f };
-	fountain_bunny_spawner_sx->paintball_spawner.shooting_spread = 3.f;
-	fountain_bunny_spawner_sx->paintball_spawner.shooting_speed = 3.f;
+	fountain_bunny_spawner_sx->paintball_spawner.shooting_spread = 2.f;
+	fountain_bunny_spawner_sx->paintball_spawner.shooting_speed = 6.f;
 	fountain_bunny_spawner_dx->paintball_spawner.paint_color = { 0.5f, 0.f, 0.5f, 1.f };
-	fountain_bunny_spawner_dx->paintball_spawner.shooting_spread = 3.f;
-	fountain_bunny_spawner_dx->paintball_spawner.shooting_speed = 3.f;
+	fountain_bunny_spawner_dx->paintball_spawner.shooting_spread = 2.f;
+	fountain_bunny_spawner_dx->paintball_spawner.shooting_speed = 6.f;
 
 	hor_spawner->paintball_spawner.paint_color = { 1.f, 0.85f, 0.f, 1.f };
 	
@@ -991,8 +991,10 @@ int main()
 			std::string ms_frame_counter = "Time per frame: " + std::to_string(avg_ms_per_frame) + "ms";
 			std::string min_record = "Min fps:" + std::to_string(min_fps) + "ms";
 			std::string max_record = "Max fps:" + std::to_string(max_fps) + "ms";
+			std::string pballs_amount = "Current paintballs amount:" + std::to_string(main_scene.get_instances_amount()) + "ms";
 			ImGui::Text(my_fps_counter.c_str()); ImGui::Text(ms_frame_counter.c_str());
 			ImGui::Text(min_record.c_str()); ImGui::Text(max_record.c_str());
+			ImGui::Text(pballs_amount.c_str());
 			ImGui::SliderFloat("Time offset", &time_offset, 0, 10, " %.1f", ImGuiSliderFlags_AlwaysClamp);
 			ImGui::SliderFloat("Fps offset", &fps_offset, 0, 200, " %.1f", ImGuiSliderFlags_AlwaysClamp);
 			if (ImPlot::BeginPlot("##Fps Plot"))
@@ -1040,7 +1042,7 @@ int main()
 				ImGui::Separator(); ImGui::Text("Gun properties");
 				ImGui::SliderFloat("Muzzle speed", &player.paintball_spawner->shooting_speed, 0, 100, " %.1f", ImGuiSliderFlags_AlwaysClamp);
 				ImGui::SliderFloat("Muzzle spread", &player.paintball_spawner->shooting_spread, 0, 3, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-				unsigned int rps_min = 0, rps_max = 200;
+				unsigned int rps_min = 0, rps_max = 1000;
 				ImGui::SliderScalar("Rounds per Sec", ImGuiDataType_U32, &player.paintball_spawner->rounds_per_second, &rps_min, &rps_max, " %d", ImGuiSliderFlags_AlwaysClamp);
 				ImGui::Checkbox("Hold to fire", &hold_to_fire);
 
@@ -1082,7 +1084,7 @@ int main()
 						ImGui::Separator(); ImGui::Text("Shoot properties");
 						ImGui::SliderFloat("Shoot speed", &fountain_spawner->paintball_spawner.shooting_speed, 0, 100, " %.1f", ImGuiSliderFlags_AlwaysClamp);
 						ImGui::SliderFloat("Shoot spread", &fountain_spawner->paintball_spawner.shooting_spread, 0, 3, " %.2f", ImGuiSliderFlags_AlwaysClamp);
-						unsigned int rps_min = 1, rps_max = 200;
+						unsigned int rps_min = 0, rps_max = 1000;
 						ImGui::SliderScalar("Rounds per Sec", ImGuiDataType_U32, &fountain_spawner->paintball_spawner.rounds_per_second, &rps_min, &rps_max, " %d", ImGuiSliderFlags_AlwaysClamp);
 
 						ImGui::Unindent();

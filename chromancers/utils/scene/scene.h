@@ -28,7 +28,7 @@ namespace engine::scene
 		};
 	}
 
-	// Class that represents a collection of entities 
+	// Class that contains and manages a collection of entities 
 	class Scene
 	{
 	private:
@@ -94,6 +94,8 @@ namespace engine::scene
 			
 			return newly_added_entity; // return the raw pointer
 		}
+
+		size_t get_instances_amount() const;
 
 		// Marks an entity for removal given its id (and optionally its group_id if its an instanced entity)
 		void mark_for_removal(const std::string& id_to_remove, std::optional<std::string> group_id = std::nullopt);

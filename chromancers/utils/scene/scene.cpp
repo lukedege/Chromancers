@@ -2,7 +2,18 @@
 
 namespace engine::scene
 {
-	void Scene::mark_for_removal(const std::string& id_to_remove, std::optional<std::string> group_id)
+    size_t Scene::get_instances_amount() const
+    {
+		size_t amount = 0;
+
+		for (auto& [group_id, instanced_group] : instanced_entities_groups)
+		{
+			amount += instanced_group.size();
+		}
+        return amount;
+    }
+
+    void Scene::mark_for_removal(const std::string& id_to_remove, std::optional<std::string> group_id)
 	{
 		// If group_id was provided, we are marking an instanced entity
 		if(group_id.has_value())
@@ -150,7 +161,8 @@ namespace engine::scene
 
 			}
 			// Fill the shader's ubo/ssbo with the gathered transform data
-			utils::graphics::opengl::setup_buffer_object(instanced_ssbo, GL_SHADER_STORAGE_BUFFER, 0, sizeof(glm::mat4), instance_group_transforms.size(), glm::value_ptr(instance_group_transforms[0]));
+			utils::graphics::opengl::setup_buffer_object(instanced_ssbo, GL_SHADER_STORAGE_BUFFER, 0, sizeof(glm::mat4), instance_group_transforms.size(),
+				GL_DYNAMIC_DRAW, glm::value_ptr(instance_group_transforms[0]));
 
 			// Perform the instanced draw on the common model of the group
 			instanced_group.begin()->second->model->draw_instanced(instance_group_transforms.size());
